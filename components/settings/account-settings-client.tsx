@@ -1,6 +1,6 @@
 "use client";
 
-import { signOut, useSession } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ export type AccountProfileInitial = {
   hasPassword: boolean;
   emailVerified: boolean;
   smtpConfigured: boolean;
+  googleConnected: boolean;
+  googleOAuthAvailable: boolean;
 };
 
 type Props = {
@@ -24,6 +26,12 @@ export function AccountSettingsClient({ initial }: Props) {
   const { update } = useSession();
   const [username, setUsername] = useState(initial.username ?? "");
   const [displayName, setDisplayName] = useState(initial.displayName ?? "");
+  const [hasPassword, setHasPassword] = useState(initial.hasPassword);
+  const [googleConnected, setGoogleConnected] = useState(initial.googleConnected);
+  const [savedProfile, setSavedProfile] = useState({
+    username: initial.username ?? "",
+    displayName: initial.displayName ?? ""
+  });
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -32,6 +40,17 @@ export function AccountSettingsClient({ initial }: Props) {
   const [resendLoading, setResendLoading] = useState(false);
 
   const [exportLoading, setExportLoading] = useState(false);
+
+  const [passwordCurrent, setPasswordCurrent] = useState("");
+  const [passwordNext, setPasswordNext] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordStatus, setPasswordStatus] = useState<string | null>(null);
+
+  const [providerLoading, setProviderLoading] = useState(false);
+  const [providerError, setProviderError] = useState<string | null>(null);
+  const [providerStatus, setProviderStatus] = useState<string | null>(null);
 
   const [deletePhrase, setDeletePhrase] = useState("");
   const [deletePassword, setDeletePassword] = useState("");
@@ -47,10 +66,10 @@ export function AccountSettingsClient({ initial }: Props) {
     const payload: { username?: string; displayName?: string } = {};
     const trimmedUser = username.trim().toLowerCase();
     const trimmedDisplay = displayName.trim();
-    if (trimmedUser !== (initial.username ?? "").toLowerCase()) {
+    if (trimmedUser !== savedProfile.username.toLowerCase()) {
       payload.username = trimmedUser;
     }
-    if (trimmedDisplay !== (initial.displayName ?? "")) {
+    if (trimmedDisplay !== savedProfile.displayName) {
       payload.displayName = trimmedDisplay;
     }
 
@@ -84,6 +103,10 @@ export function AccountSettingsClient({ initial }: Props) {
     if (body.displayName !== undefined) {
       setDisplayName(body.displayName ?? "");
     }
+    setSavedProfile({
+      username: typeof body.username === "string" ? body.username : trimmedUser,
+      displayName: body.displayName !== undefined ? body.displayName ?? "" : trimmedDisplay
+    });
 
     await update();
     setStatus("Profile saved.");
@@ -130,6 +153,108 @@ export function AccountSettingsClient({ initial }: Props) {
     }
   }
 
+  async function handlePasswordSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPasswordLoading(true);
+    setPasswordError(null);
+    setPasswordStatus(null);
+
+    const creatingPassword = !hasPassword;
+    const nextPassword = passwordNext;
+
+    if (hasPassword && !passwordCurrent) {
+      setPasswordError("Current password is required.");
+      setPasswordLoading(false);
+      return;
+    }
+
+    if (nextPassword.length < 8) {
+      setPasswordError("Password must be at least 8 characters.");
+      setPasswordLoading(false);
+      return;
+    }
+
+    if (nextPassword !== passwordConfirm) {
+      setPasswordError("New password and confirmation do not match.");
+      setPasswordLoading(false);
+      return;
+    }
+
+    const response = await fetch("/api/settings/account/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        currentPassword: hasPassword ? passwordCurrent : undefined,
+        newPassword: nextPassword
+      })
+    });
+
+    const body = (await response.json().catch(() => null)) as {
+      error?: string;
+      hasPassword?: boolean;
+      revokedOtherSessions?: boolean;
+    } | null;
+
+    if (!response.ok) {
+      setPasswordError(body?.error ?? "Could not update password.");
+      setPasswordLoading(false);
+      return;
+    }
+
+    setHasPassword(body?.hasPassword ?? true);
+    setPasswordCurrent("");
+    setPasswordNext("");
+    setPasswordConfirm("");
+    setProviderError(null);
+    setProviderStatus(null);
+    setPasswordStatus(
+      body?.revokedOtherSessions
+        ? creatingPassword
+          ? "Password created. Other sessions were signed out."
+          : "Password updated. Other sessions were signed out."
+        : creatingPassword
+          ? "Password created."
+          : "Password updated."
+    );
+    setPasswordLoading(false);
+  }
+
+  async function handleDisconnectGoogle() {
+    if (!hasPassword) {
+      setProviderError("Create a password before disconnecting Google.");
+      setProviderStatus(null);
+      return;
+    }
+
+    setProviderLoading(true);
+    setProviderError(null);
+    setProviderStatus(null);
+
+    const response = await fetch("/api/settings/account/providers/google", {
+      method: "DELETE"
+    });
+
+    const body = (await response.json().catch(() => null)) as {
+      error?: string;
+      googleConnected?: boolean;
+      revokedOtherSessions?: boolean;
+    } | null;
+
+    if (!response.ok) {
+      setProviderError(body?.error ?? "Could not disconnect Google.");
+      setProviderLoading(false);
+      return;
+    }
+
+    setGoogleConnected(body?.googleConnected ?? false);
+    setProviderStatus(
+      body?.revokedOtherSessions
+        ? "Google disconnected. Other sessions were signed out."
+        : "Google disconnected."
+    );
+    setProviderLoading(false);
+  }
+
   async function handleDeleteAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setDeleteLoading(true);
@@ -140,7 +265,7 @@ export function AccountSettingsClient({ initial }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         confirmPhrase: deletePhrase.trim(),
-        password: initial.hasPassword ? deletePassword : undefined
+        password: hasPassword ? deletePassword : undefined
       })
     });
 
@@ -155,8 +280,7 @@ export function AccountSettingsClient({ initial }: Props) {
     await signOut({ callbackUrl: "/" });
   }
 
-  const showVerifyBanner =
-    initial.smtpConfigured && initial.email && !initial.emailVerified;
+  const showVerifyBanner = initial.smtpConfigured && initial.email && !initial.emailVerified;
 
   return (
     <div className="space-y-6">
@@ -200,13 +324,7 @@ export function AccountSettingsClient({ initial }: Props) {
               <label className="text-sm font-medium text-foreground" htmlFor="account-email">
                 Email
               </label>
-              <Input
-                className="bg-muted/40"
-                disabled
-                id="account-email"
-                readOnly
-                value={initial.email ?? "—"}
-              />
+              <Input className="bg-muted/40" disabled id="account-email" readOnly value={initial.email ?? "—"} />
               <p className="text-xs text-muted-foreground">
                 Email is tied to your sign-in provider and cannot be changed here yet.
               </p>
@@ -243,16 +361,15 @@ export function AccountSettingsClient({ initial }: Props) {
             </div>
 
             <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-              {initial.hasPassword ? (
+              {hasPassword ? (
                 <p>
-                  You sign in with <span className="font-medium text-foreground">email and password</span>. Changing your
-                  password from this screen is not available yet (add a reset-email flow on your deployment if you need it).
+                  Password sign-in is enabled on this account. Use the security section below to change it or keep Google
+                  linked as a second sign-in method.
                 </p>
               ) : (
                 <p>
-                  No password on file — you probably use <span className="font-medium text-foreground">Google</span>,{" "}
-                  <span className="font-medium text-foreground">magic link</span>, or another OAuth provider. Manage your
-                  email with that provider; use the fields above for how you appear in WOX-Bin.
+                  No password on file yet. If you want to disconnect Google later, create a password first and keep that
+                  credential on the account.
                 </p>
               )}
             </div>
@@ -264,6 +381,156 @@ export function AccountSettingsClient({ initial }: Props) {
               {loading ? "Saving…" : "Save profile"}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-5 pt-6">
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Security</p>
+            <h2 className="mt-2 text-xl font-semibold">Sign-in methods</h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Keep at least one stable way back into the account. Google can only be disconnected after a password exists.
+            </p>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border border-border bg-muted/20 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Password</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {hasPassword ? "Enabled for direct sign-in." : "Not set yet."}
+                  </p>
+                </div>
+                <span className="rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground">
+                  {hasPassword ? "Active" : "Required for Google disconnect"}
+                </span>
+              </div>
+
+              <form className="mt-4 space-y-3" onSubmit={(e) => void handlePasswordSubmit(e)}>
+                {hasPassword ? (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground" htmlFor="account-password-current">
+                      Current password
+                    </label>
+                    <Input
+                      autoComplete="current-password"
+                      id="account-password-current"
+                      onChange={(e) => setPasswordCurrent(e.target.value)}
+                      type="password"
+                      value={passwordCurrent}
+                    />
+                  </div>
+                ) : null}
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground" htmlFor="account-password-next">
+                    {hasPassword ? "New password" : "Create password"}
+                  </label>
+                  <Input
+                    autoComplete="new-password"
+                    id="account-password-next"
+                    onChange={(e) => setPasswordNext(e.target.value)}
+                    type="password"
+                    value={passwordNext}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground" htmlFor="account-password-confirm">
+                    Confirm password
+                  </label>
+                  <Input
+                    autoComplete="new-password"
+                    id="account-password-confirm"
+                    onChange={(e) => setPasswordConfirm(e.target.value)}
+                    type="password"
+                    value={passwordConfirm}
+                  />
+                </div>
+
+                {passwordError ? <p className="text-sm text-destructive">{passwordError}</p> : null}
+                {passwordStatus ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{passwordStatus}</p> : null}
+
+                <Button disabled={passwordLoading} type="submit">
+                  {passwordLoading
+                    ? hasPassword
+                      ? "Updating…"
+                      : "Creating…"
+                    : hasPassword
+                      ? "Change password"
+                      : "Create password"}
+                </Button>
+              </form>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-muted/20 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Google</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {googleConnected
+                      ? "Connected to this WOX-Bin account."
+                      : initial.googleOAuthAvailable && initial.email
+                        ? "Not connected yet."
+                        : initial.googleOAuthAvailable
+                          ? "Add an email to this account before linking Google."
+                          : "Google sign-in is not enabled on this deployment."}
+                  </p>
+                </div>
+                <span className="rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground">
+                  {googleConnected ? "Connected" : "Not connected"}
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-3 text-sm text-muted-foreground">
+                {googleConnected ? (
+                  <p>
+                    Disconnecting Google keeps the current session alive, but future Google sign-ins stop working. A
+                    password must already exist before this can be removed.
+                  </p>
+                ) : initial.googleOAuthAvailable && initial.email ? (
+                  <p>
+                    To link Google to this account, continue with Google using the same email address already stored on
+                    your WOX-Bin account.
+                  </p>
+                ) : initial.googleOAuthAvailable ? (
+                  <p>Google linking needs an account email first. This deployment cannot attach Google to an email-less user.</p>
+                ) : (
+                  <p>Ask the site operator to configure Google OAuth if you want Google sign-in on this deployment.</p>
+                )}
+
+                <div className="flex flex-wrap gap-3">
+                  {!googleConnected && initial.googleOAuthAvailable && initial.email ? (
+                    <Button type="button" variant="outline" onClick={() => signIn("google", { callbackUrl: "/settings/account" })}>
+                      Connect Google
+                    </Button>
+                  ) : null}
+
+                  {googleConnected ? (
+                    <Button
+                      disabled={providerLoading || !hasPassword}
+                      type="button"
+                      variant="outline"
+                      onClick={() => void handleDisconnectGoogle()}
+                    >
+                      {providerLoading ? "Disconnecting…" : "Disconnect Google"}
+                    </Button>
+                  ) : null}
+                </div>
+
+                {!hasPassword && googleConnected ? (
+                  <p className="text-xs text-amber-500/90">
+                    Create a password in the left panel before Google can be disconnected.
+                  </p>
+                ) : null}
+
+                {providerError ? <p className="text-sm text-destructive">{providerError}</p> : null}
+                {providerStatus ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{providerStatus}</p> : null}
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -307,7 +574,7 @@ export function AccountSettingsClient({ initial }: Props) {
                 value={deletePhrase}
               />
             </div>
-            {initial.hasPassword ? (
+            {hasPassword ? (
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="delete-password">
                   Account password

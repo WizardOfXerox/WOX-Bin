@@ -1,11 +1,12 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { AccountSettingsClient } from "@/components/settings/account-settings-client";
 import { SettingsNav } from "@/components/settings/settings-nav";
 import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { accounts, users } from "@/lib/db/schema";
+import { env } from "@/lib/env";
 import { isSmtpConfigured } from "@/lib/mail";
 
 export default async function AccountSettingsPage() {
@@ -18,16 +19,23 @@ export default async function AccountSettingsPage() {
     redirect("/account/onboarding");
   }
 
-  const row = await db.query.users.findFirst({
-    where: eq(users.id, session.user.id),
-    columns: {
-      email: true,
-      username: true,
-      displayName: true,
-      passwordHash: true,
-      emailVerified: true
-    }
-  });
+  const [row, googleAccount] = await Promise.all([
+    db.query.users.findFirst({
+      where: eq(users.id, session.user.id),
+      columns: {
+        email: true,
+        username: true,
+        displayName: true,
+        passwordHash: true,
+        emailVerified: true
+      }
+    }),
+    db
+      .select({ provider: accounts.provider })
+      .from(accounts)
+      .where(and(eq(accounts.userId, session.user.id), eq(accounts.provider, "google")))
+      .limit(1)
+  ]);
 
   if (!row) {
     redirect("/sign-in");
@@ -39,7 +47,9 @@ export default async function AccountSettingsPage() {
     displayName: row.displayName,
     hasPassword: Boolean(row.passwordHash),
     emailVerified: Boolean(row.emailVerified),
-    smtpConfigured: isSmtpConfigured()
+    smtpConfigured: isSmtpConfigured(),
+    googleConnected: Boolean(googleAccount[0]),
+    googleOAuthAvailable: Boolean(env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET)
   };
 
   return (

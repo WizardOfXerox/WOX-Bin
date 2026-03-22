@@ -1,10 +1,10 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { verifyPassword } from "@/lib/crypto";
 import { db } from "@/lib/db";
-import { teamMembers, teams, users } from "@/lib/db/schema";
+import { accounts, teamMembers, teams, users } from "@/lib/db/schema";
 import { jsonError } from "@/lib/http";
 import { logAudit } from "@/lib/audit";
 import { getRequestIp } from "@/lib/request";
@@ -33,6 +33,12 @@ export async function GET() {
     return jsonError("User not found.", 404);
   }
 
+  const [googleAccount] = await db
+    .select({ provider: accounts.provider })
+    .from(accounts)
+    .where(and(eq(accounts.userId, session.user.id), eq(accounts.provider, "google")))
+    .limit(1);
+
   return NextResponse.json({
     username: row.username,
     displayName: row.displayName,
@@ -40,7 +46,8 @@ export async function GET() {
     name: row.name,
     image: row.image,
     emailVerified: row.emailVerified ? row.emailVerified.toISOString() : null,
-    hasPassword: Boolean(row.passwordHash)
+    hasPassword: Boolean(row.passwordHash),
+    googleConnected: Boolean(googleAccount)
   });
 }
 

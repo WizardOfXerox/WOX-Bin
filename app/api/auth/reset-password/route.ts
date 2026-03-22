@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { passwordResetTokens, users } from "@/lib/db/schema";
+import { browserSessions, passwordResetTokens, users } from "@/lib/db/schema";
 import { hashPassword, hashToken } from "@/lib/crypto";
 import { jsonError } from "@/lib/http";
 import { getRequestIp } from "@/lib/request";
@@ -43,6 +43,10 @@ export async function POST(request: Request) {
   await db.transaction(async (tx) => {
     await tx.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, row.userId));
     await tx.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, row.userId));
+    await tx
+      .update(browserSessions)
+      .set({ revokedAt: new Date() })
+      .where(and(eq(browserSessions.userId, row.userId), isNull(browserSessions.revokedAt)));
   });
 
   await logAudit({

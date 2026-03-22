@@ -218,6 +218,18 @@ export function PricingPage({ cards, links, signedIn }: Props) {
           <span aria-hidden className="text-border">
             ·
           </span>
+          <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/help">
+            Help
+          </Link>
+          <span aria-hidden className="text-border">
+            ·
+          </span>
+          <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/support">
+            Support
+          </Link>
+          <span aria-hidden className="text-border">
+            ·
+          </span>
           <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/terms">
             Terms of Service
           </Link>

@@ -197,6 +197,11 @@ export const accountDeleteSchema = z.object({
   password: z.string().optional()
 });
 
+export const accountPasswordSchema = z.object({
+  currentPassword: z.string().max(128).optional(),
+  newPassword: z.string().min(8).max(128)
+});
+
 export const webhookSettingsSchema = z.object({
   webhookUrl: z
     .string()

@@ -258,6 +258,16 @@ export function LandingPage() {
                       API &amp; documentation
                     </Link>
                   </li>
+                  <li>
+                    <Link className="text-primary underline-offset-4 hover:underline" href="/help">
+                      Help &amp; answers
+                    </Link>
+                  </li>
+                  <li>
+                    <Link className="text-primary underline-offset-4 hover:underline" href="/support">
+                      Support
+                    </Link>
+                  </li>
                   {TOOLS_ENABLED ? (
                     <li>
                       <Link className="text-primary underline-offset-4 hover:underline" href="/tools">
@@ -332,6 +342,18 @@ export function LandingPage() {
           </span>
           <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/pricing">
             Pricing
+          </Link>
+          <span aria-hidden className="text-border">
+            ·
+          </span>
+          <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/help">
+            Help
+          </Link>
+          <span aria-hidden className="text-border">
+            ·
+          </span>
+          <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/support">
+            Support
           </Link>
           <span aria-hidden className="text-border">
             ·
