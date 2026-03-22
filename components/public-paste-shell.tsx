@@ -29,6 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PasteLineageBanner } from "@/components/paste-lineage-banner";
 import { CodeImageDialog } from "@/components/workspace/code-image-dialog";
 import { PrismLineMap } from "@/components/workspace/prism-line-map";
+import { buildThreadedComments, commentAuthorLabel } from "@/lib/comment-thread";
 import { parseUserMarkdown } from "@/lib/markdown/parse-user-markdown";
 import {
   readHtmlViewPref,
@@ -214,6 +215,7 @@ export function PublicPasteShell({
   const [comment, setComment] = useState("");
   const [commentError, setCommentError] = useState<string | null>(null);
   const [pendingComment, setPendingComment] = useState(false);
+  const [replyToId, setReplyToId] = useState<number | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState("Spam");
   const [reportNotes, setReportNotes] = useState("");
@@ -225,6 +227,9 @@ export function PublicPasteShell({
   const [mdView, setMdView] = useState<PublicPasteMdView>("source");
   const [htmlView, setHtmlView] = useState<PublicPasteHtmlView>("source");
   const [viewerPrefsReady, setViewerPrefsReady] = useState(false);
+
+  const threadedComments = useMemo(() => buildThreadedComments(comments), [comments]);
+  const replyTarget = replyToId != null ? comments.find((entry) => entry.id === replyToId) ?? null : null;
 
   useEffect(() => {
     void Promise.resolve().then(() => {
@@ -357,7 +362,8 @@ export function PublicPasteShell({
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        content: comment
+        content: comment,
+        parentId: replyTarget?.id ?? null
       })
     });
 
@@ -369,6 +375,7 @@ export function PublicPasteShell({
     }
 
     setComment("");
+    setReplyToId(null);
     await refreshPaste();
     setPendingComment(false);
   }
@@ -473,9 +480,9 @@ export function PublicPasteShell({
                 </Link>
               </Button>
               <Button asChild className="w-full sm:w-auto" type="button" variant="outline">
-                <Link href={replyHref} prefetch={false} title="Open workspace with a reply draft">
+                <Link href={replyHref} prefetch={false} title="Open workspace with a reply paste draft">
                   <MessageSquareReply className="h-4 w-4" />
-                  Reply
+                  Reply as paste
                 </Link>
               </Button>
               <Button className="w-full sm:w-auto" type="button" variant="outline" onClick={handlePrintPaste}>
@@ -760,25 +767,44 @@ export function PublicPasteShell({
             <Separator />
             {locked ? (
               <p className="text-sm text-muted-foreground">Unlock the paste to read or post comments.</p>
-            ) : comments.length === 0 ? (
+            ) : threadedComments.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No comments yet. The first reply usually sets the tone.
               </p>
             ) : (
               <div className="space-y-4">
-                {comments.map((entry) => (
-                  <div key={entry.id} className="rounded-[1.25rem] border border-white/10 bg-white/[0.03] p-4">
+                {threadedComments.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="rounded-[1.25rem] border border-white/10 bg-white/[0.03] p-4"
+                    style={{ marginLeft: `${entry.depth * 16}px` }}
+                  >
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="font-medium text-foreground">
-                        {entry.displayName || entry.username}
-                      </div>
+                      <div className="font-medium text-foreground">{commentAuthorLabel(entry)}</div>
                       <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
                         {formatDate(entry.createdAt)}
                       </div>
                     </div>
+                    {entry.parentAuthor ? (
+                      <p className="mt-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                        Replying to {entry.parentAuthor}
+                      </p>
+                    ) : null}
                     <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-muted-foreground">
                       {entry.content}
                     </p>
+                    {signedIn ? (
+                      <div className="mt-3 flex">
+                        <Button
+                          onClick={() => setReplyToId((current) => (current === entry.id ? null : entry.id))}
+                          size="sm"
+                          type="button"
+                          variant={replyToId === entry.id ? "secondary" : "ghost"}
+                        >
+                          {replyToId === entry.id ? "Cancel reply" : "Reply"}
+                        </Button>
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -787,15 +813,20 @@ export function PublicPasteShell({
             {!locked ? (
               signedIn ? (
                 <form className="space-y-4" onSubmit={handleComment}>
+                  {replyTarget ? (
+                    <div className="rounded-[1rem] border border-white/10 bg-white/[0.03] px-4 py-3 text-xs text-muted-foreground">
+                      Replying to <span className="font-medium text-foreground">{commentAuthorLabel(replyTarget)}</span>
+                    </div>
+                  ) : null}
                   <Textarea
                     onChange={(event) => setComment(event.target.value)}
-                    placeholder="Add a thoughtful comment"
+                    placeholder={replyTarget ? `Reply to ${commentAuthorLabel(replyTarget)}` : "Add a thoughtful comment"}
                     value={comment}
                   />
                   {commentError ? <p className="text-sm text-destructive">{commentError}</p> : null}
                   <Button disabled={pendingComment || !comment.trim()} type="submit">
                     <MessageSquare className="h-4 w-4" />
-                    {pendingComment ? "Posting..." : "Post comment"}
+                    {pendingComment ? "Posting..." : replyTarget ? "Post reply" : "Post comment"}
                   </Button>
                 </form>
               ) : (

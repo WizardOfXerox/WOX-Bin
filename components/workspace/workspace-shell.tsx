@@ -3203,7 +3203,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialReplySlug 
                     </ContextMenuItem>
                     <ContextMenuItem onSelect={() => replyPasteById(paste.id)}>
                       <MessageSquareReply className="mr-2 h-4 w-4" />
-                      Reply as new
+                      Reply as paste
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem
@@ -3455,7 +3455,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialReplySlug 
                           variant="outline"
                         >
                           <MessageSquareReply className="h-4 w-4" />
-                          Reply
+                          Reply as paste
                         </Button>
                         <Button
                           disabled={!selectedPasteInWorkspace}
@@ -3935,7 +3935,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialReplySlug 
                     </ContextMenuItem>
                     <ContextMenuItem onSelect={handleReplyPaste}>
                       <MessageSquareReply className="mr-2 h-4 w-4" />
-                      Reply as new paste
+                      Reply as paste
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem

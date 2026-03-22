@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Loader2, MessageSquare } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { buildThreadedComments, commentAuthorLabel } from "@/lib/comment-thread";
 import { formatDate } from "@/lib/utils";
 
 type CommentRow = {
@@ -28,10 +29,15 @@ export function WorkspacePasteComments({ slug, signedIn }: Props) {
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
+  const [replyToId, setReplyToId] = useState<number | null>(null);
+
+  const threadedComments = useMemo(() => buildThreadedComments(comments), [comments]);
+  const replyTarget = replyToId != null ? comments.find((comment) => comment.id === replyToId) ?? null : null;
 
   const load = useCallback(async () => {
     if (!slug) {
       setComments([]);
+      setReplyToId(null);
       return;
     }
     setLoading(true);
@@ -68,13 +74,17 @@ export function WorkspacePasteComments({ slug, signedIn }: Props) {
       const res = await fetch(`/api/pastes/${encodeURIComponent(slug)}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: draft.trim() })
+        body: JSON.stringify({
+          content: draft.trim(),
+          parentId: replyTarget?.id ?? null
+        })
       });
       const body = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) {
         throw new Error(body?.error ?? "Could not post comment.");
       }
       setDraft("");
+      setReplyToId(null);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Post failed.");
@@ -117,16 +127,35 @@ export function WorkspacePasteComments({ slug, signedIn }: Props) {
             <Loader2 className="h-4 w-4 animate-spin" />
             Loading…
           </p>
-        ) : comments.length === 0 ? (
+        ) : threadedComments.length === 0 ? (
           <p className="text-sm text-muted-foreground">No comments yet.</p>
         ) : (
           <ul className="max-h-48 space-y-3 overflow-y-auto pr-1 workspace-scrollbar-hide">
-            {comments.map((c) => (
-              <li className="rounded-lg border border-border bg-muted/50 p-3 text-sm dark:bg-black/20" key={c.id}>
-                <p className="text-xs text-muted-foreground">
-                  {(c.displayName || c.username || "User") + " · " + formatDate(c.createdAt)}
-                </p>
+            {threadedComments.map((c) => (
+              <li
+                className="rounded-lg border border-border bg-muted/50 p-3 text-sm dark:bg-black/20"
+                key={c.id}
+                style={{ marginLeft: `${c.depth * 16}px` }}
+              >
+                <p className="text-xs text-muted-foreground">{commentAuthorLabel(c) + " · " + formatDate(c.createdAt)}</p>
+                {c.parentAuthor ? (
+                  <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                    Replying to {c.parentAuthor}
+                  </p>
+                ) : null}
                 <p className="mt-1 whitespace-pre-wrap text-foreground">{c.content}</p>
+                {signedIn ? (
+                  <div className="mt-2 flex">
+                    <Button
+                      onClick={() => setReplyToId((current) => (current === c.id ? null : c.id))}
+                      size="sm"
+                      type="button"
+                      variant={replyToId === c.id ? "secondary" : "ghost"}
+                    >
+                      {replyToId === c.id ? "Cancel reply" : "Reply"}
+                    </Button>
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -136,14 +165,19 @@ export function WorkspacePasteComments({ slug, signedIn }: Props) {
 
         {signedIn ? (
           <form className="space-y-2" onSubmit={(e) => void handleSubmit(e)}>
+            {replyTarget ? (
+              <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground dark:bg-black/20">
+                Replying to <span className="font-medium text-foreground">{commentAuthorLabel(replyTarget)}</span>
+              </div>
+            ) : null}
             <Textarea
               onChange={(e) => setDraft(e.target.value)}
-              placeholder="Write a comment…"
+              placeholder={replyTarget ? `Reply to ${commentAuthorLabel(replyTarget)}…` : "Write a comment…"}
               rows={3}
               value={draft}
             />
             <Button disabled={posting || !draft.trim()} size="sm" type="submit">
-              {posting ? "Posting…" : "Post comment"}
+              {posting ? "Posting…" : replyTarget ? "Post reply" : "Post comment"}
             </Button>
           </form>
         ) : (
