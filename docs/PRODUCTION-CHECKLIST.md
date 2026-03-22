@@ -22,8 +22,8 @@ Use this before pointing a real domain at WOX-Bin.
 
 ## Billing (optional)
 
-- [ ] Checkout **`NEXT_PUBLIC_*`** URLs — [BILLING.md](./BILLING.md).
-- [ ] **Stripe webhook** — `STRIPE_WEBHOOK_SECRET`, price id env vars — [BILLING-WEBHOOKS.md](./BILLING-WEBHOOKS.md).
+- [ ] Checkout **`NEXT_PUBLIC_*`** URLs — [BILLING.md](./BILLING.md) / [PAYMONGO.md](./PAYMONGO.md).
+- [ ] **Stripe webhook** — `STRIPE_WEBHOOK_SECRET`, price id env vars — only if using Stripe automation — [BILLING-WEBHOOKS.md](./BILLING-WEBHOOKS.md).
 
 ## Ops
 

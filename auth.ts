@@ -3,7 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import Email from "next-auth/providers/email";
 import Google from "next-auth/providers/google";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { and, eq, or } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import type { Adapter } from "next-auth/adapters";
 
 import { db } from "@/lib/db";
@@ -16,12 +16,15 @@ import {
   verificationTokens
 } from "@/lib/db/schema";
 import { env } from "@/lib/env";
+import { getAccountRestrictionCode, getEffectiveAccountModeration } from "@/lib/account-moderation";
 import { verifyPassword } from "@/lib/crypto";
 import { logAudit } from "@/lib/audit";
+import { buildMagicLinkEmail } from "@/lib/email-templates";
 import { rateLimit } from "@/lib/rate-limit";
-import { getRequestIpFromHeaderRecord } from "@/lib/request";
+import { getAppOriginFromHeaderRecord, getRequestIpFromHeaderRecord } from "@/lib/request";
 import { credentialsIdentifierSchema } from "@/lib/validators";
-import { getSmtpTransportOptions, smtpFromAddress } from "@/lib/mail";
+import { getSmtpTransportOptions, isSmtpConfigured, sendMail, smtpFromAddress } from "@/lib/mail";
+import { sendSignupVerificationEmail } from "@/lib/email-verification";
 
 const providers: NonNullable<NextAuthOptions["providers"]> = [
   Credentials({
@@ -58,6 +61,37 @@ const providers: NonNullable<NextAuthOptions["providers"]> = [
         return null;
       }
 
+      const moderation = await getEffectiveAccountModeration(user.id);
+      if (moderation && getAccountRestrictionCode(moderation)) {
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name ?? user.displayName ?? user.username,
+          image: user.image,
+          username: user.username,
+          role: user.role,
+          plan: user.plan ?? "free",
+          planStatus: user.planStatus ?? "active",
+          onboardingComplete: user.onboardingComplete,
+          displayName: user.displayName
+        };
+      }
+
+      if (user.email && !user.emailVerified && isSmtpConfigured()) {
+        const verificationLimit = await rateLimit("resend-verification", `signin:${user.id}:${ip}`);
+        if (verificationLimit.success) {
+          try {
+            await sendSignupVerificationEmail(
+              getAppOriginFromHeaderRecord(req.headers as Record<string, unknown> | undefined),
+              user.id,
+              user.email
+            );
+          } catch (e) {
+            console.error("[auth] resend verification on sign-in failed", e);
+          }
+        }
+      }
+
       return {
         id: user.id,
         email: user.email,
@@ -89,7 +123,20 @@ if (smtpTransport) {
   providers.push(
     Email({
       server: smtpTransport,
-      from: smtpFromAddress()
+      from: smtpFromAddress(),
+      async sendVerificationRequest({ identifier, url, expires }) {
+        const email = buildMagicLinkEmail(url, expires);
+        const result = await sendMail({
+          to: identifier,
+          subject: email.subject,
+          text: email.text,
+          html: email.html
+        });
+
+        if (!result.ok) {
+          throw new Error(result.error);
+        }
+      }
     })
   );
 }
@@ -122,7 +169,9 @@ export const authOptions: NextAuthOptions = {
         plan: true,
         planStatus: true,
         onboardingComplete: true,
-        displayName: true
+        displayName: true,
+        accountStatus: true,
+        suspendedUntil: true
       } as const;
 
       const idleMinutes = env.SESSION_IDLE_MINUTES ?? 30;
@@ -134,6 +183,12 @@ export const authOptions: NextAuthOptions = {
           columns: tokenUserColumns
         });
         if (row) {
+          const moderation = await getEffectiveAccountModeration(userId);
+          const restriction = moderation ? getAccountRestrictionCode(moderation) : null;
+          if (restriction) {
+            token.error = restriction === "accountBanned" ? "AccountBanned" : "AccountSuspended";
+            return;
+          }
           token.id = row.id;
           token.username = row.username ?? null;
           token.role = row.role;
@@ -199,6 +254,12 @@ export const authOptions: NextAuthOptions = {
           columns: tokenUserColumns
         });
         if (row) {
+          const moderation = await getEffectiveAccountModeration(user.id);
+          const restriction = moderation ? getAccountRestrictionCode(moderation) : null;
+          if (restriction) {
+            token.error = restriction === "accountBanned" ? "AccountBanned" : "AccountSuspended";
+            return token;
+          }
           token.id = row.id;
           token.username = row.username ?? null;
           token.role = row.role;
@@ -253,20 +314,50 @@ export const authOptions: NextAuthOptions = {
         return false;
       }
 
-      if (account?.provider === "google") {
-        const existing = await db.query.users.findFirst({
-          where: and(eq(users.id, user.id))
-        });
-
-        if (existing && !existing.username) {
-          await db
-            .update(users)
-            .set({
-              onboardingComplete: false,
-              updatedAt: new Date()
-            })
-            .where(eq(users.id, user.id));
+      const existing = await db.query.users.findFirst({
+        where: eq(users.id, user.id),
+        columns: {
+          email: true,
+          emailVerified: true,
+          username: true,
+          accountStatus: true,
+          suspendedUntil: true
         }
+      });
+
+      const moderation = await getEffectiveAccountModeration(user.id);
+      const restriction = moderation ? getAccountRestrictionCode(moderation) : null;
+      if (restriction) {
+        await logAudit({
+          actorUserId: user.id,
+          action: `auth.sign_in_blocked_${restriction}`,
+          targetType: "user",
+          targetId: user.id,
+          metadata: {
+            provider: account?.provider ?? "unknown"
+          }
+        });
+        return `/sign-in?authError=${restriction}`;
+      }
+
+      if (account?.provider === "credentials" && existing?.email && !existing.emailVerified) {
+        await logAudit({
+          actorUserId: user.id,
+          action: "auth.sign_in_blocked_unverified_email",
+          targetType: "user",
+          targetId: user.id
+        });
+        return "/sign-in?authError=emailNotVerified";
+      }
+
+      if ((account?.provider === "google" || account?.provider === "email") && existing && !existing.username) {
+        await db
+          .update(users)
+          .set({
+            onboardingComplete: false,
+            updatedAt: new Date()
+          })
+          .where(eq(users.id, user.id));
       }
 
       return true;

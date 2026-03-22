@@ -41,7 +41,7 @@ export default function SignUpPage() {
       return;
     }
 
-    window.location.href = "/sign-in";
+    window.location.href = "/sign-in?emailVerify=pending";
   }
 
   return (
@@ -54,7 +54,10 @@ export default function SignUpPage() {
           </div>
           <form className="space-y-4" onSubmit={handleSubmit}>
             <Input autoComplete="username" name="username" placeholder="Username" required />
-            <Input autoComplete="email" name="email" placeholder="Email (optional; used for verification if SMTP is set)" type="email" />
+            <Input autoComplete="email" name="email" placeholder="Email" type="email" required />
+            <p className="-mt-2 text-xs text-muted-foreground">
+              Email is required. You will need to verify it before you can sign in.
+            </p>
             <Input autoComplete="new-password" name="password" placeholder="Password" type="password" required />
             <label className="flex cursor-pointer items-start gap-3 text-sm leading-snug text-muted-foreground">
               <input

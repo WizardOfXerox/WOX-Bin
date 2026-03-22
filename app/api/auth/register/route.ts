@@ -11,6 +11,7 @@ import { verifyTurnstile } from "@/lib/turnstile";
 import { registerSchema } from "@/lib/validators";
 import { logAudit } from "@/lib/audit";
 import { sendSignupVerificationEmail } from "@/lib/email-verification";
+import { isSmtpConfigured } from "@/lib/mail";
 
 export async function POST(request: Request) {
   const ip = getRequestIp(request) ?? "unknown";
@@ -27,6 +28,10 @@ export async function POST(request: Request) {
     return jsonError(parsed.error.issues[0]?.message ?? "Invalid registration payload.");
   }
 
+  if (!isSmtpConfigured()) {
+    return jsonError("Email verification is required on this deployment, but SMTP is not configured.", 503);
+  }
+
   const turnstile = await verifyTurnstile(parsed.data.turnstileToken, ip);
   if (!turnstile.ok) {
     return jsonError("Turnstile verification failed.", 400, {
@@ -35,12 +40,12 @@ export async function POST(request: Request) {
   }
 
   const username = parsed.data.username.toLowerCase();
-  const email = parsed.data.email ? parsed.data.email.toLowerCase() : null;
+  const email = parsed.data.email;
 
   const [existing] = await db
     .select({ id: users.id })
     .from(users)
-    .where(or(eq(users.username, username), email ? eq(users.email, email) : eq(users.username, "__never__")))
+    .where(or(eq(users.username, username), eq(users.email, email)))
     .limit(1);
 
   if (existing) {
@@ -75,12 +80,10 @@ export async function POST(request: Request) {
     ip
   });
 
-  if (user.email) {
-    try {
-      await sendSignupVerificationEmail(request, user.id, user.email);
-    } catch (e) {
-      console.error("[register] verification email failed", e);
-    }
+  try {
+    await sendSignupVerificationEmail(request, user.id, email);
+  } catch (e) {
+    console.error("[register] verification email failed", e);
   }
 
   return NextResponse.json({

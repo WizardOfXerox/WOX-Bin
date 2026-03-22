@@ -8,6 +8,8 @@ import { getFfmpegWorkerPlan } from "@/lib/convert/ffmpeg-plan";
 import { parseConversionPath } from "@/lib/convert/parse-path";
 import { ensureDatabaseUrl } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
+import { toolsDisabledResponse } from "@/lib/tools/disabled-response";
+import { TOOLS_ENABLED } from "@/lib/tools/availability";
 
 export const runtime = "nodejs";
 
@@ -22,6 +24,10 @@ const createBodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  if (!TOOLS_ENABLED) {
+    return toolsDisabledResponse();
+  }
+
   if (!isConvertStorageConfigured()) {
     return NextResponse.json(
       { error: "Object storage is not configured", code: "STORAGE_NOT_CONFIGURED" },

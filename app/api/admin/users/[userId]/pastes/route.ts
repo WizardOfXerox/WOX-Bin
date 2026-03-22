@@ -4,18 +4,26 @@ import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { auth } from "@/auth";
 import { isAdminSession } from "@/lib/admin-auth";
 import { db } from "@/lib/db";
-import { pastes, users } from "@/lib/db/schema";
+import { pastes } from "@/lib/db/schema";
 import { jsonError } from "@/lib/http";
 
-const DEFAULT_LIMIT = 50;
+const DEFAULT_LIMIT = 30;
 const MAX_LIMIT = 100;
-
 const STATUS_FILTER = ["all", "active", "hidden", "deleted"] as const;
 
-export async function GET(request: Request) {
+type Params = {
+  params: Promise<{ userId: string }>;
+};
+
+export async function GET(request: Request, { params }: Params) {
   const session = await auth();
   if (!isAdminSession(session)) {
     return jsonError("Admin access required.", 403);
+  }
+
+  const { userId } = await params;
+  if (!userId) {
+    return jsonError("Missing user id.");
   }
 
   const url = new URL(request.url);
@@ -24,31 +32,20 @@ export async function GET(request: Request) {
   const status = STATUS_FILTER.includes(statusParam as (typeof STATUS_FILTER)[number])
     ? (statusParam as (typeof STATUS_FILTER)[number])
     : "all";
-
-  const limit = Math.min(
-    Math.max(Number(url.searchParams.get("limit")) || DEFAULT_LIMIT, 1),
-    MAX_LIMIT
-  );
+  const limit = Math.min(Math.max(Number(url.searchParams.get("limit")) || DEFAULT_LIMIT, 1), MAX_LIMIT);
   const offset = Math.max(Number(url.searchParams.get("offset")) || 0, 0);
 
   const searchPattern = q ? `%${q.replace(/%/g, "\\%").replace(/_/g, "\\_")}%` : null;
 
-  const conditions = [];
+  const conditions = [eq(pastes.userId, userId)];
   if (status !== "all") {
     conditions.push(eq(pastes.status, status));
   }
   if (searchPattern) {
-    conditions.push(
-      or(
-        ilike(pastes.slug, searchPattern),
-        ilike(pastes.title, searchPattern),
-        ilike(users.username, searchPattern),
-        ilike(users.email, searchPattern)
-      )
-    );
+    conditions.push(or(ilike(pastes.slug, searchPattern), ilike(pastes.title, searchPattern))!);
   }
 
-  const whereClause = conditions.length ? (conditions.length === 1 ? conditions[0] : and(...conditions)) : undefined;
+  const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
 
   const [rows, countResult] = await Promise.all([
     db
@@ -58,34 +55,25 @@ export async function GET(request: Request) {
         title: pastes.title,
         status: pastes.status,
         visibility: pastes.visibility,
-        userId: pastes.userId,
-        ownerUsername: users.username,
-        ownerEmail: users.email,
+        viewCount: pastes.viewCount,
         createdAt: pastes.createdAt,
         updatedAt: pastes.updatedAt
       })
       .from(pastes)
-      .leftJoin(users, eq(pastes.userId, users.id))
       .where(whereClause)
       .orderBy(desc(pastes.updatedAt))
       .limit(limit)
       .offset(offset),
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(pastes)
-      .leftJoin(users, eq(pastes.userId, users.id))
-      .where(whereClause)
+    db.select({ count: sql<number>`count(*)::int` }).from(pastes).where(whereClause)
   ]);
 
-  const total = countResult[0]?.count ?? 0;
-
   return NextResponse.json({
-    pastes: rows.map((p) => ({
-      ...p,
-      createdAt: p.createdAt?.toISOString() ?? null,
-      updatedAt: p.updatedAt?.toISOString() ?? null
+    pastes: rows.map((row) => ({
+      ...row,
+      createdAt: row.createdAt?.toISOString() ?? null,
+      updatedAt: row.updatedAt?.toISOString() ?? null
     })),
-    total,
+    total: countResult[0]?.count ?? 0,
     limit,
     offset
   });

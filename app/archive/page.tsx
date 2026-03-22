@@ -3,6 +3,7 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 
 import { listFeedPastes } from "@/lib/paste-service";
+import { TOOLS_ENABLED } from "@/lib/tools/availability";
 import { cn } from "@/lib/utils";
 
 /** Always query the database at request time — avoid static prerender freezing the archive at build. */
@@ -47,18 +48,22 @@ export default async function ArchivePage() {
         <Link className="hover:underline" href="/app">
           Workspace
         </Link>
-        <span aria-hidden className="text-border">
-          /
-        </span>
-        <Link className="hover:underline" href="/tools">
-          Tools
-        </Link>
-        <span aria-hidden className="text-border">
-          /
-        </span>
-        <Link className="hover:underline" href="/tools/pdf-extract">
-          PDF extract
-        </Link>
+        {TOOLS_ENABLED ? (
+          <>
+            <span aria-hidden className="text-border">
+              /
+            </span>
+            <Link className="hover:underline" href="/tools">
+              Tools
+            </Link>
+            <span aria-hidden className="text-border">
+              /
+            </span>
+            <Link className="hover:underline" href="/tools/pdf-extract">
+              PDF extract
+            </Link>
+          </>
+        ) : null}
       </nav>
 
       <header className="glass-panel px-6 py-6">

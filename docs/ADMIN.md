@@ -20,12 +20,13 @@ Your next request refreshes role/plan from the database in the JWT callback, so 
 
 - **URL:** `/admin` (only users with `role = admin`)
 - **Deployment audit:** `/admin/deployment` and `GET /api/admin/deployment`
-- **Users:** search, change **role** (`user` / `moderator` / `admin`), **plan** (`free` / `pro` / `team` / `admin`), and **plan status** (`active` / `trialing` / `past_due` / `canceled`).
-- **Pastes:** filter and set moderation status (`active` / `hidden` / `deleted`). Same behavior as `POST /api/admin/pastes/[slug]/moderate` (also allowed for `moderator` via API).
+- **Users:** search, change **role** (`user` / `moderator` / `admin`), **plan** (`free` / `pro` / `team` / `admin`), **plan status** (`active` / `trialing` / `past_due` / `canceled`), and **account status** (`active` / `suspended` / `banned`).
+- **User detail:** inspect a user, resend verification, mark verified/unverified, set suspension expiry, add moderation reason, and optionally notify the user by email.
+- **Pastes:** filter and set moderation status (`active` / `hidden` / `deleted`) with an optional reason and owner notification email. Same behavior as `POST /api/admin/pastes/[slug]/moderate` (also allowed for `moderator` via API).
 
-The deployment page evaluates the current runtime and environment for Vercel readiness: database connectivity, auth/canonical URL config, Redis, Turnstile, SMTP, billing links, Stripe webhook sync, and off-platform worker/tooling concerns.
+The deployment page evaluates the current runtime and environment for Vercel readiness: database connectivity, auth/canonical URL config, Redis, Turnstile, SMTP, billing links, optional Stripe webhook sync, and off-platform worker/tooling concerns.
 
-User and plan updates are written to the audit log as `admin.user_update`. Paste moderation is logged as `moderation.*` (see `lib/paste-service.ts`).
+User and plan updates are written to the audit log as `admin.user_update`. Account moderation is logged as `admin.user_moderation.*`. Paste moderation is logged as `moderation.*` (see `lib/paste-service.ts`).
 
 ## Admin plan tier (operator limits)
 
@@ -55,9 +56,12 @@ Outbound mail is **optional**. The app uses **Nodemailer** (`lib/mail.ts`).
 |--------|------|-------------|
 | `GET` | `/api/admin/users?q=&limit=&offset=` | List users |
 | `GET` | `/api/admin/deployment` | Deployment readiness snapshot for the current runtime |
-| `PATCH` | `/api/admin/users/[userId]` | Body: `{ role?, plan?, planStatus? }` |
+| `PATCH` | `/api/admin/users/[userId]` | Body: `{ role?, plan?, planStatus?, emailVerified? }` |
+| `POST` | `/api/admin/users/[userId]/moderation` | Body: `{ accountStatus, suspendedUntil?, moderationReason?, notifyUser? }` |
+| `POST` | `/api/admin/users/[userId]/verification` | Resend signup verification email |
+| `GET` | `/api/admin/users/[userId]/pastes` | List one user’s pastes |
 | `GET` | `/api/admin/pastes?q=&status=&limit=&offset=` | List pastes (`status`: `all` or `active`/`hidden`/`deleted`) |
-| `POST` | `/api/admin/pastes/[slug]/moderate` | Body: `{ status }` — **moderator** or **admin** |
+| `POST` | `/api/admin/pastes/[slug]/moderate` | Body: `{ status, reason?, notifyOwner? }` — **moderator** or **admin** |
 | `GET` | `/api/admin/audit?format=json` or `format=csv` | Export audit rows (cap 10k) — **admin** only |
 | `GET` | `/api/admin/mail` | SMTP configured? — **admin** only |
 | `POST` | `/api/admin/mail` | Body `{ to }` — send test email — **admin** only |

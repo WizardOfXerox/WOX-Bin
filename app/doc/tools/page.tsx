@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { DocShell } from "@/components/doc/doc-shell";
+import { TOOLS_DISABLED_COPY, TOOLS_ENABLED } from "@/lib/tools/availability";
 
 export const metadata: Metadata = {
   title: "Tools — WOX-Bin",
@@ -9,6 +10,47 @@ export const metadata: Metadata = {
 };
 
 export default function DocToolsPage() {
+  if (!TOOLS_ENABLED) {
+    return (
+      <DocShell
+        subtitle="Status and planned routes for the tools surface."
+        title="Tools"
+      >
+        <p>{TOOLS_DISABLED_COPY.docsDescription}</p>
+
+        <h2>Status</h2>
+        <p>
+          Public <code>/tools</code> pages and <code>/api/convert/*</code> endpoints currently return disabled responses on
+          this deployment. The unfinished tools code remains in the repo and can be re-enabled later with the environment
+          flag.
+        </p>
+
+        <h2>Planned routes</h2>
+        <ul>
+          <li>
+            <code>/tools</code> — tools index
+          </li>
+          <li>
+            <code>/tools/convert</code> — converter hub and pair index
+          </li>
+          <li>
+            <code>/tools/c/[pair]</code> — per-pair routes
+          </li>
+          <li>
+            <code>/tools/pdf-extract</code>, <code>/tools/pdf-split</code>, <code>/tools/pdf-merge</code>
+          </li>
+          <li>
+            <code>/api/convert/capabilities</code> — capability snapshot for integrators
+          </li>
+        </ul>
+
+        <p className="text-xs">
+          Re-enable the surface with <code>WOX_ENABLE_TOOLS=1</code> after the product is ready.
+        </p>
+      </DocShell>
+    );
+  }
+
   return (
     <DocShell
       subtitle="Client-side and hybrid conversion utilities shipped with WOX-Bin."

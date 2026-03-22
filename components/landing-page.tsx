@@ -16,11 +16,19 @@ import {
 import { LandingDesktopAuthNav } from "@/components/landing-auth-nav";
 import { LandingMobileNav } from "@/components/landing-mobile-nav";
 import { APP_COPY } from "@/lib/constants";
+import { TOOLS_ENABLED } from "@/lib/tools/availability";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 export function LandingPage() {
+  const heroTail = TOOLS_ENABLED
+    ? "browser utilities live at "
+    : "The tools surface is temporarily disabled while it is being finished. See ";
+  const tagline = TOOLS_ENABLED
+    ? APP_COPY.tagline
+    : "A paste workspace with a real editor—ribbon tools, Prism and Markdown, multi-file pastes, local IndexedDB drafts, and account sync. Compare Free, Pro, and Team on the pricing page.";
+
   return (
     <main className="relative min-h-[100dvh] overflow-hidden bg-background">
       <div className="absolute inset-0 bg-hero-mesh opacity-70" />
@@ -37,13 +45,26 @@ export function LandingPage() {
             Local-first pasting, shareable links, and a workspace that scales with you.
           </h1>
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Write in the browser, stay offline-friendly, then sync to your account when you want hosted pastes, API access,
-            and team options. The paste workspace lives at{" "}
-            <span className="font-mono text-xs">/app</span>; browser utilities live at <span className="font-mono text-xs">/tools</span>. See{" "}
-            <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/pricing">
-              plans &amp; pricing
-            </Link>
-            .
+            Write in the browser, stay offline-friendly, then sync to your account when you want hosted pastes, API
+            access, and team options. The paste workspace lives at <span className="font-mono text-xs">/app</span>.{" "}
+            {TOOLS_ENABLED ? (
+              <>
+                {heroTail}
+                <span className="font-mono text-xs">/tools</span>. See{" "}
+                <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/pricing">
+                  plans &amp; pricing
+                </Link>
+                .
+              </>
+            ) : (
+              <>
+                The tools surface is temporarily disabled while it is being finished. See{" "}
+                <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/pricing">
+                  plans &amp; pricing
+                </Link>
+                .
+              </>
+            )}
           </p>
         </header>
 
@@ -55,10 +76,10 @@ export function LandingPage() {
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Multi-file pastes</Badge>
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Local + cloud sync</Badge>
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Free · Pro · Team</Badge>
-              <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Browser tools hub</Badge>
+              {TOOLS_ENABLED ? <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Browser tools hub</Badge> : null}
             </div>
             <p className="max-w-none text-base leading-7 text-muted-foreground sm:max-w-2xl sm:text-lg sm:leading-8 md:max-w-3xl md:text-xl xl:max-w-4xl">
-              {APP_COPY.tagline}
+              {tagline}
             </p>
             <div className="flex w-full flex-col gap-3 sm:max-w-2xl sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
               <Button asChild className="h-12 w-full min-h-12 touch-manipulation sm:h-auto sm:w-auto sm:min-h-0" size="lg">
@@ -87,12 +108,16 @@ export function LandingPage() {
               <span aria-hidden className="text-border">
                 ·
               </span>
-              <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/tools">
-                Tools
-              </Link>
-              <span aria-hidden className="text-border">
-                ·
-              </span>
+              {TOOLS_ENABLED ? (
+                <>
+                  <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/tools">
+                    Tools
+                  </Link>
+                  <span aria-hidden className="text-border">
+                    ·
+                  </span>
+                </>
+              ) : null}
               <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/archive">
                 Archive
               </Link>
@@ -160,24 +185,26 @@ export function LandingPage() {
                   </p>
                 </CardContent>
               </Card>
-              <Card className="overflow-hidden">
-                <CardContent className="space-y-3 p-4 sm:p-6">
-                  <Wrench className="h-5 w-5 text-primary" />
-                  <h2 className="font-semibold text-foreground">Tools beyond pastes</h2>
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    Client-side converters and utilities—PDF extract/split/merge, image convert, data &amp; ZIP helpers, and
-                    more from the{" "}
-                    <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/tools">
-                      /tools
-                    </Link>{" "}
-                    hub (documented at{" "}
-                    <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/doc/tools">
-                      /doc/tools
-                    </Link>
-                    ).
-                  </p>
-                </CardContent>
-              </Card>
+              {TOOLS_ENABLED ? (
+                <Card className="overflow-hidden">
+                  <CardContent className="space-y-3 p-4 sm:p-6">
+                    <Wrench className="h-5 w-5 text-primary" />
+                    <h2 className="font-semibold text-foreground">Tools beyond pastes</h2>
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      Client-side converters and utilities—PDF extract/split/merge, image convert, data &amp; ZIP helpers, and
+                      more from the{" "}
+                      <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/tools">
+                        /tools
+                      </Link>{" "}
+                      hub (documented at{" "}
+                      <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/doc/tools">
+                        /doc/tools
+                      </Link>
+                      ).
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : null}
               <Card className="overflow-hidden">
                 <CardContent className="space-y-3 p-4 sm:p-6">
                   <KeyRound className="h-5 w-5 text-primary" />
@@ -231,11 +258,13 @@ export function LandingPage() {
                       API &amp; documentation
                     </Link>
                   </li>
-                  <li>
-                    <Link className="text-primary underline-offset-4 hover:underline" href="/tools">
-                      Browser tools
-                    </Link>
-                  </li>
+                  {TOOLS_ENABLED ? (
+                    <li>
+                      <Link className="text-primary underline-offset-4 hover:underline" href="/tools">
+                        Browser tools
+                      </Link>
+                    </li>
+                  ) : null}
                   <li>
                     <Link className="text-primary underline-offset-4 hover:underline" href="/archive">
                       Public archive
@@ -285,12 +314,16 @@ export function LandingPage() {
           <span aria-hidden className="text-border">
             ·
           </span>
-          <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/tools">
-            Tools
-          </Link>
-          <span aria-hidden className="text-border">
-            ·
-          </span>
+          {TOOLS_ENABLED ? (
+            <>
+              <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/tools">
+                Tools
+              </Link>
+              <span aria-hidden className="text-border">
+                ·
+              </span>
+            </>
+          ) : null}
           <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/archive">
             Archive
           </Link>

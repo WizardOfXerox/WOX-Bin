@@ -30,8 +30,9 @@ export function PrivacyPolicyContent() {
           security (e.g. idle timeout / revoke), audit log entries for security-sensitive actions, and standard server logs.
         </li>
         <li>
-          <strong className="text-foreground">Payments:</strong> if you use paid tiers, our payment processor (e.g. Stripe)
-          processes card data; we typically store customer/subscription identifiers, not full card numbers.
+          <strong className="text-foreground">Payments:</strong> if you use paid tiers, our payment processor (e.g. PayMongo,
+          Xendit, Stripe, or another provider chosen by the operator) processes card or wallet data; we typically store
+          customer/subscription identifiers, not full card numbers.
         </li>
       </ul>
 
@@ -53,7 +54,8 @@ export function PrivacyPolicyContent() {
       <p>
         We do not sell your personal data. We use subprocessors chosen by this deployment’s operator — commonly including
         hosting (e.g. Vercel), database (e.g. Neon), Redis (e.g. Upstash), email (your SMTP provider), captcha (Cloudflare
-        Turnstile), and payments (e.g. Stripe). Their processing is governed by their terms and DPAs where applicable.
+        Turnstile), and payments (e.g. PayMongo, Xendit, or Stripe). Their processing is governed by their terms and DPAs
+        where applicable.
       </p>
 
       <h2 className="scroll-mt-24 text-lg font-semibold text-foreground" id="retention">

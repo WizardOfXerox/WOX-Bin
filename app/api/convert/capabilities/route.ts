@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 
 import { isImplementedInBrowser, isImplementedInWoxBin, resolveConversionPair } from "@/lib/convert/resolver";
+import { toolsDisabledResponse } from "@/lib/tools/disabled-response";
+import { TOOLS_ENABLED } from "@/lib/tools/availability";
 
 /**
  * GET /api/convert/capabilities?pair=jpeg-png
  * Returns how WOX-Bin handles a Convertio-style pair slug (routing + tier).
  */
 export function GET(req: Request) {
+  if (!TOOLS_ENABLED) {
+    return toolsDisabledResponse();
+  }
+
   const url = new URL(req.url);
   const pair = url.searchParams.get("pair")?.trim() ?? "";
   if (!pair) {

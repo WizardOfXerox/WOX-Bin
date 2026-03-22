@@ -4,6 +4,8 @@ import { z } from "zod";
 import { getFfmpegJobForClient } from "@/lib/convert/conversion-job-service";
 import { isConvertStorageConfigured } from "@/lib/convert/convert-s3-env";
 import { ensureDatabaseUrl } from "@/lib/db";
+import { toolsDisabledResponse } from "@/lib/tools/disabled-response";
+import { TOOLS_ENABLED } from "@/lib/tools/availability";
 
 export const runtime = "nodejs";
 
@@ -14,6 +16,10 @@ export const dynamic = "force-dynamic";
 type RouteCtx = { params: Promise<{ jobId: string }> };
 
 export async function GET(req: Request, ctx: RouteCtx) {
+  if (!TOOLS_ENABLED) {
+    return toolsDisabledResponse();
+  }
+
   if (!isConvertStorageConfigured()) {
     return NextResponse.json(
       { error: "Object storage is not configured", code: "STORAGE_NOT_CONFIGURED" },

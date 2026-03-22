@@ -5,14 +5,15 @@ import { and, eq, gt } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { emailVerificationTokens, users } from "@/lib/db/schema";
 import { hashToken } from "@/lib/crypto";
+import { buildSignupVerificationEmail } from "@/lib/email-templates";
 import { getAppOrigin } from "@/lib/request";
 import { sendMail, isSmtpConfigured } from "@/lib/mail";
 
-function escapeHtmlAttr(value: string) {
-  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+function resolveVerificationOrigin(originOrRequest: Request | string): string {
+  return typeof originOrRequest === "string" ? originOrRequest : getAppOrigin(originOrRequest);
 }
 
-export async function sendSignupVerificationEmail(request: Request, userId: string, email: string): Promise<void> {
+export async function sendSignupVerificationEmail(originOrRequest: Request | string, userId: string, email: string): Promise<void> {
   if (!isSmtpConfigured()) {
     return;
   }
@@ -30,17 +31,16 @@ export async function sendSignupVerificationEmail(request: Request, userId: stri
     createdAt: new Date()
   });
 
-  const origin = getAppOrigin(request);
+  const origin = resolveVerificationOrigin(originOrRequest);
   const verifyUrl = new URL("/api/auth/verify-email", origin);
   verifyUrl.searchParams.set("token", rawToken);
-  const href = verifyUrl.toString();
-  const safeHref = escapeHtmlAttr(href);
+  const message = buildSignupVerificationEmail(verifyUrl.toString());
 
   await sendMail({
     to: email,
-    subject: "Verify your WOX-Bin email",
-    text: ["Verify your email for WOX-Bin:", "", href, "", "Link expires in 48 hours."].join("\n"),
-    html: `<p>Verify your email for WOX-Bin:</p><p><a href="${safeHref}">Confirm email</a> (expires in 48 hours)</p>`
+    subject: message.subject,
+    text: message.text,
+    html: message.html
   });
 }
 

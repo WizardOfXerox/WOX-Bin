@@ -1,6 +1,6 @@
 # Billing & upgrade URLs (Pro / Team)
 
-WOX-Bin does **not** embed a payment processor SDK. Instead, **public checkout links** open in a new tab (Stripe Payment Links, Lemon Squeezy, Paddle, your own page, etc.). The app reads them from environment variables at build/runtime.
+WOX-Bin does **not** embed a payment processor SDK. Instead, **public checkout links** open in a new tab (PayMongo, Xendit, Paddle, your own page, etc.). The app reads them from environment variables at build/runtime.
 
 ## Environment variables
 
@@ -17,7 +17,56 @@ Requirements:
 
 Empty lines in `.env` like `NEXT_PUBLIC_PRO_UPGRADE_URL=` are treated as **unset** (no crash).
 
-## Stripe (typical setup)
+## PayMongo (recommended for Philippines)
+
+### 1. Create hosted checkout links
+
+In PayMongo, create:
+
+- one checkout link or page for **WOX-Bin Pro**
+- one checkout link or page for **WOX-Bin Team**
+
+For a Philippines-first deployment, this is the cleanest first setup because WOX-Bin already supports public provider checkout URLs without adding a billing SDK.
+
+### 2. Add the links to env
+
+Set:
+
+```env
+NEXT_PUBLIC_PRO_UPGRADE_URL=https://pay.paymongo.com/...
+NEXT_PUBLIC_TEAM_UPGRADE_URL=https://pay.paymongo.com/...
+```
+
+Redeploy or restart dev so Next.js picks up the vars.
+
+### 3. Billing portal / self-service page (optional)
+
+If you have:
+
+- a support page
+- a subscription management page
+- or another hosted customer page
+
+set:
+
+```env
+NEXT_PUBLIC_BILLING_PORTAL_URL=https://yourdomain.com/billing
+```
+
+If not, leave it empty.
+
+### 4. Plan updates after payment
+
+**Feature tier** (`free` / `pro` / `team`) lives in your **database** (user / team rows). Checkout links alone do not upgrade accounts.
+
+With PayMongo today in this repo:
+
+- **Manual:** use **Admin** tools / DB to set the user’s plan after purchase — see **`docs/ADMIN.md`**
+- **Future automation:** add a PayMongo webhook integration later
+
+See also **[PAYMONGO.md](./PAYMONGO.md)**.
+
+## Stripe (alternate setup)
 
 ### 1. Products & prices
 
@@ -44,15 +93,6 @@ Redeploy or restart dev so Next.js picks up the vars.
 - A **small page on your site** that creates a portal session and redirects (not included in this repo by default).
 
 If you only use Payment Links and handle support manually, you can leave `NEXT_PUBLIC_BILLING_PORTAL_URL` empty.
-
-## Plan entitlements after payment
-
-**Feature tier** (`free` / `pro` / `team`) lives in your **database** (user / team rows). Checkout links alone do not upgrade accounts.
-
-- **Optional automation:** configure **`POST /api/webhooks/stripe`** with **`STRIPE_WEBHOOK_SECRET`** and price id env vars — see **[BILLING-WEBHOOKS.md](./BILLING-WEBHOOKS.md)**.
-- **Manual:** use **Admin** tools / DB to set the user’s plan after purchase — **`docs/ADMIN.md`**.
-
-See **`TIER-PLAN.md`** for limits per tier.
 
 ## Other providers
 

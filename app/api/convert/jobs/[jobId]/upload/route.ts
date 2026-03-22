@@ -7,6 +7,8 @@ import { db, ensureDatabaseUrl } from "@/lib/db";
 import { conversionJobs } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { getConvertS3Client, inputObjectKey } from "@/lib/storage/convert-s3";
+import { toolsDisabledResponse } from "@/lib/tools/disabled-response";
+import { TOOLS_ENABLED } from "@/lib/tools/availability";
 
 export const runtime = "nodejs";
 
@@ -20,6 +22,10 @@ type RouteCtx = { params: Promise<{ jobId: string }> };
  * Uploads input to object storage and marks the job ready for the worker (no browser→MinIO CORS).
  */
 export async function POST(req: Request, ctx: RouteCtx) {
+  if (!TOOLS_ENABLED) {
+    return toolsDisabledResponse();
+  }
+
   if (!isConvertStorageConfigured()) {
     return NextResponse.json(
       { error: "Object storage is not configured", code: "STORAGE_NOT_CONFIGURED" },

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { desc, ilike, or, sql } from "drizzle-orm";
+import { count, desc, ilike, inArray, or, sql } from "drizzle-orm";
 
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { pastes, users } from "@/lib/db/schema";
 import { isAdminSession } from "@/lib/admin-auth";
 import { jsonError } from "@/lib/http";
 
@@ -27,7 +27,12 @@ export async function GET(request: Request) {
   const searchPattern = q ? `%${q.replace(/%/g, "\\%").replace(/_/g, "\\_")}%` : null;
 
   const whereClause = searchPattern
-    ? or(ilike(users.username, searchPattern), ilike(users.email, searchPattern))
+    ? or(
+        ilike(users.username, searchPattern),
+        ilike(users.email, searchPattern),
+        ilike(users.displayName, searchPattern),
+        ilike(users.id, searchPattern)
+      )
     : undefined;
 
   const [rows, countResult] = await Promise.all([
@@ -37,6 +42,10 @@ export async function GET(request: Request) {
         username: users.username,
         email: users.email,
         displayName: users.displayName,
+        emailVerified: users.emailVerified,
+        accountStatus: users.accountStatus,
+        suspendedUntil: users.suspendedUntil,
+        moderationReason: users.moderationReason,
         role: users.role,
         plan: users.plan,
         planStatus: users.planStatus,
@@ -56,10 +65,32 @@ export async function GET(request: Request) {
   ]);
 
   const total = countResult[0]?.count ?? 0;
+  const userIds = rows.map((row) => row.id);
+  const pasteCountRows = userIds.length
+    ? await db
+        .select({
+          userId: pastes.userId,
+          count: count()
+        })
+        .from(pastes)
+        .where(inArray(pastes.userId, userIds))
+        .groupBy(pastes.userId)
+    : [];
+
+  const pasteCountMap = new Map(
+    pasteCountRows
+      .filter((row): row is { userId: string; count: number } => typeof row.userId === "string")
+      .map((row) => [row.userId, Number(row.count)])
+  );
 
   return NextResponse.json({
     users: rows.map((u) => ({
       ...u,
+      emailVerified: u.emailVerified?.toISOString() ?? null,
+      pasteCount: pasteCountMap.get(u.id) ?? 0,
+      accountStatus: u.accountStatus,
+      suspendedUntil: u.suspendedUntil?.toISOString() ?? null,
+      moderationReason: u.moderationReason ?? null,
       createdAt: u.createdAt?.toISOString() ?? null,
       updatedAt: u.updatedAt?.toISOString() ?? null,
       planExpiresAt: u.planExpiresAt?.toISOString() ?? null

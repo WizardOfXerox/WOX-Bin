@@ -16,6 +16,7 @@ import {
 export const userRoleEnum = pgEnum("user_role", ["user", "moderator", "admin"]);
 export const planEnum = pgEnum("plan", ["free", "pro", "team", "admin"]);
 export const planStatusEnum = pgEnum("plan_status", ["active", "trialing", "past_due", "canceled"]);
+export const accountStatusEnum = pgEnum("account_status", ["active", "suspended", "banned"]);
 export const teamRoleEnum = pgEnum("team_role", ["owner", "admin", "editor", "viewer"]);
 export const visibilityEnum = pgEnum("paste_visibility", ["public", "unlisted", "private"]);
 export const moderationStatusEnum = pgEnum("moderation_status", ["active", "hidden", "deleted"]);
@@ -46,6 +47,11 @@ export const users = pgTable(
     role: userRoleEnum("role").notNull().default("user"),
     plan: planEnum("plan").notNull().default("free"),
     planStatus: planStatusEnum("plan_status").notNull().default("active"),
+    accountStatus: accountStatusEnum("account_status").notNull().default("active"),
+    suspendedUntil: timestamp("suspended_until", { mode: "date" }),
+    moderationReason: text("moderation_reason"),
+    moderatedAt: timestamp("moderated_at", { mode: "date" }),
+    moderatedByUserId: text("moderated_by_user_id"),
     planExpiresAt: timestamp("plan_expires_at", { mode: "date" }),
     billingCustomerId: text("billing_customer_id"),
     billingSubscriptionId: text("billing_subscription_id"),

@@ -1,5 +1,9 @@
 # Stripe billing webhooks
 
+This document is **Stripe-specific**.
+
+If you are using **PayMongo** as your checkout provider, read **[PAYMONGO.md](./PAYMONGO.md)** first. PayMongo checkout links already work with WOX-Bin’s billing UI, but automatic PayMongo entitlement sync is **not** implemented yet in this repo.
+
 WOX-Bin can update **`users.plan`**, **`plan_status`**, and Stripe IDs from **Stripe webhooks** when you run checkout with the right metadata.
 
 ## Endpoint

@@ -26,7 +26,7 @@ export const registerSchema = z.object({
     .min(2)
     .max(32)
     .regex(/^[a-z0-9_]+$/i, "Username may only contain letters, numbers, and underscores."),
-  email: z.string().trim().email().max(255).optional().or(z.literal("")),
+  email: z.string().trim().toLowerCase().email("Enter a valid email address.").max(255),
   password: z.string().min(8).max(128),
   turnstileToken: z.string().optional().default(""),
   /** Must be true — enforced server-side; UI should require checkbox before submit. */

@@ -1421,6 +1421,7 @@ export async function moderatePaste(options: {
   slug: string;
   status: "active" | "hidden" | "deleted";
   actorUserId: string;
+  reason?: string | null;
 }) {
   const [row] = await db.select().from(pastes).where(eq(pastes.slug, options.slug)).limit(1);
   if (!row) {
@@ -1440,8 +1441,13 @@ export async function moderatePaste(options: {
     actorUserId: options.actorUserId,
     action: `moderation.${options.status}`,
     targetType: "paste",
-    targetId: row.id
+    targetId: row.id,
+    metadata: options.reason?.trim()
+      ? {
+          reason: options.reason.trim()
+        }
+      : undefined
   });
 
-  return row.id;
+  return row;
 }

@@ -3,22 +3,29 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { PlanId, PlanStatus } from "@/lib/plans";
 import { formatDate } from "@/lib/utils";
 
 type UserRole = "user" | "moderator" | "admin";
+type AccountStatus = "active" | "suspended" | "banned";
 
 type AdminUserRow = {
   id: string;
   username: string | null;
   email: string | null;
   displayName: string | null;
+  emailVerified: string | null;
+  accountStatus: AccountStatus;
+  suspendedUntil: string | null;
+  moderationReason: string | null;
   role: UserRole;
   plan: PlanId;
   planStatus: PlanStatus;
   planExpiresAt: string | null;
+  pasteCount: number;
   createdAt: string | null;
   updatedAt: string | null;
 };
@@ -29,6 +36,16 @@ const PLAN_STATUSES: PlanStatus[] = ["active", "trialing", "past_due", "canceled
 
 const selectClass =
   "rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-white/20";
+
+function accountStatusBadgeClass(status: AccountStatus) {
+  if (status === "active") {
+    return "text-emerald-300";
+  }
+  if (status === "suspended") {
+    return "text-amber-200/90";
+  }
+  return "text-destructive-foreground";
+}
 
 export function AdminUsersPanel() {
   const [q, setQ] = useState("");
@@ -107,7 +124,7 @@ export function AdminUsersPanel() {
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-[200px] flex-1">
           <label className="text-xs text-muted-foreground" htmlFor="admin-user-search">
-            Search username or email
+            Search username, email, display name, or user ID
           </label>
           <Input
             className="mt-1"
@@ -133,13 +150,17 @@ export function AdminUsersPanel() {
       ) : null}
 
       <div className="overflow-x-auto rounded-xl border border-white/10">
-        <table className="w-full min-w-[920px] border-collapse text-left text-sm">
+        <table className="w-full min-w-[1180px] border-collapse text-left text-sm">
           <thead>
             <tr className="border-b border-white/10 bg-white/[0.03] text-xs uppercase tracking-wide text-muted-foreground">
               <th className="px-3 py-3 font-medium">User</th>
+              <th className="px-3 py-3 font-medium">Email</th>
+              <th className="px-3 py-3 font-medium">Account</th>
+              <th className="px-3 py-3 font-medium">Pastes</th>
               <th className="px-3 py-3 font-medium">Role</th>
               <th className="px-3 py-3 font-medium">Plan</th>
               <th className="px-3 py-3 font-medium">Plan status</th>
+              <th className="px-3 py-3 font-medium">Inspect</th>
               <th className="px-3 py-3 font-medium">Updated</th>
             </tr>
           </thead>
@@ -148,11 +169,24 @@ export function AdminUsersPanel() {
               <tr className="border-b border-white/5 hover:bg-white/[0.02]" key={u.id}>
                 <td className="px-3 py-3 align-top">
                   <div className="font-medium">{u.displayName || u.username || u.email || u.id.slice(0, 8)}</div>
-                  <div className="text-xs text-muted-foreground">{u.email ?? "—"}</div>
+                  <div className="text-xs text-muted-foreground">{u.id}</div>
                   {u.username ? (
                     <div className="text-xs text-muted-foreground">@{u.username}</div>
                   ) : null}
                 </td>
+                <td className="px-3 py-3 align-top">
+                  <div>{u.email ?? "—"}</div>
+                  <div className={`text-xs ${u.emailVerified ? "text-emerald-300" : "text-amber-200/90"}`}>
+                    {u.emailVerified ? "Verified" : "Unverified"}
+                  </div>
+                </td>
+                <td className="px-3 py-3 align-top">
+                  <Badge className={accountStatusBadgeClass(u.accountStatus)}>{u.accountStatus}</Badge>
+                  {u.suspendedUntil ? (
+                    <div className="mt-1 text-xs text-muted-foreground">until {formatDate(u.suspendedUntil)}</div>
+                  ) : null}
+                </td>
+                <td className="px-3 py-3 align-top text-muted-foreground">{u.pasteCount}</td>
                 <td className="px-3 py-3 align-top">
                   <select
                     aria-label={`Role for ${u.username ?? u.email ?? u.id}`}
@@ -207,6 +241,11 @@ export function AdminUsersPanel() {
                     ))}
                   </select>
                 </td>
+                <td className="px-3 py-3 align-top">
+                  <Button asChild size="sm" variant="outline">
+                    <Link href={`/admin/users/${u.id}`}>Open</Link>
+                  </Button>
+                </td>
                 <td className="px-3 py-3 align-top text-muted-foreground">
                   {u.updatedAt ? formatDate(u.updatedAt) : "—"}
                 </td>
@@ -214,7 +253,7 @@ export function AdminUsersPanel() {
             ))}
             {!loading && rows.length === 0 ? (
               <tr>
-                <td className="px-3 py-8 text-center text-muted-foreground" colSpan={5}>
+                <td className="px-3 py-8 text-center text-muted-foreground" colSpan={9}>
                   No users match this search.
                 </td>
               </tr>
@@ -241,8 +280,8 @@ export function AdminUsersPanel() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Plan changes here override the user&apos;s stored plan fields for quotas and UI. For Stripe-linked billing, also update the
-        customer in your payment dashboard if needed.{" "}
+        Plan changes here override the user&apos;s stored plan fields for quotas and UI. If your billing provider does not sync
+        automatically yet, update the customer manually in your payment dashboard as needed.{" "}
         <Link className="underline hover:text-foreground" href="/admin/pastes">
           Moderate pastes →
         </Link>

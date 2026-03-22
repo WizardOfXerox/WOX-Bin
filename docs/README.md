@@ -13,12 +13,15 @@ These Markdown files live **in the repository**. They are **not** automatically 
 | **[CONVERSION-WORKER.md](./CONVERSION-WORKER.md)** | Local/worker: MinIO, Docker, `npm run worker:convert` |
 | **[CONVERSION-PLATFORM.md](./CONVERSION-PLATFORM.md)** | Hybrid converter architecture (browser vs worker) |
 | **[TOOLS.md](./TOOLS.md)** | `/tools` routes, APIs, registry layout |
+| **[TOOLS-HANDOFF.md](./TOOLS-HANDOFF.md)** | Current tools status, disable switch, resume instructions for another AI |
 | **[MARKDOWN-RENTY-SUBSET.md](./MARKDOWN-RENTY-SUBSET.md)** | Rentry-inspired extras on top of `marked` (preview + Markdown→HTML) |
 | **[LOCAL-DATABASE.md](./LOCAL-DATABASE.md)** | Postgres locally |
 | **[ADMIN.md](./ADMIN.md)** | Admin bootstrap |
-| **[BILLING.md](./BILLING.md)** | Pro/Team upgrade URLs (`NEXT_PUBLIC_*`), Stripe Payment Links, portal |
+| **[BILLING.md](./BILLING.md)** | Pro/Team upgrade URLs (`NEXT_PUBLIC_*`), PayMongo-first billing setup, alternate providers |
+| **[PAYMONGO.md](./PAYMONGO.md)** | PayMongo-specific setup for WOX-Bin |
 | **[TURNSTILE.md](./TURNSTILE.md)** | Cloudflare Turnstile (`NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`) |
 | **[SMTP.md](./SMTP.md)** | Outbound email — required for **forgot password** (`/forgot-password` → `/reset-password`) |
+| **[UPSTASH-REDIS.md](./UPSTASH-REDIS.md)** | Dedicated Upstash Redis setup for distributed rate limiting |
 | **[SECURITY.md](./SECURITY.md)** | HTTP headers, rate limits, auth hardening, production checklist |
 | **[VERCEL-SETUP.md](./VERCEL-SETUP.md)** | **Full Vercel deploy checklist** — env vars, DB, Redis, Turnstile, SMTP, OAuth, post-deploy |
 | **[LEGAL.md](./LEGAL.md)** | Terms of Service (live at `/terms`) — operator checklist |

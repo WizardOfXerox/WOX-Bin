@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { formatDate } from "@/lib/utils";
 
 type ModStatus = "active" | "hidden" | "deleted";
@@ -41,7 +42,10 @@ export function AdminPastesPanel({ initialQ, initialStatus }: Props) {
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [actingSlug, setActingSlug] = useState<string | null>(null);
+  const [moderationReason, setModerationReason] = useState("");
+  const [notifyOwner, setNotifyOwner] = useState(false);
   const limit = 30;
 
   useEffect(() => {
@@ -79,17 +83,25 @@ export function AdminPastesPanel({ initialQ, initialStatus }: Props) {
   async function setModeration(slug: string, next: ModStatus) {
     setActingSlug(slug);
     setError(null);
+    setNotice(null);
     try {
       const res = await fetch(`/api/admin/pastes/${encodeURIComponent(slug)}/moderate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: next })
+        body: JSON.stringify({
+          status: next,
+          reason: moderationReason.trim() || undefined,
+          notifyOwner
+        })
       });
-      const data = (await res.json()) as { error?: string };
+      const data = (await res.json()) as { error?: string; emailSent?: boolean };
       if (!res.ok) {
         throw new Error(data.error ?? "Moderation failed");
       }
       setRows((prev) => prev.map((p) => (p.slug === slug ? { ...p, status: next } : p)));
+      setNotice(
+        data.emailSent ? `Paste set to ${next} and owner notification sent.` : `Paste set to ${next}.`
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Moderation failed");
     } finally {
@@ -102,10 +114,36 @@ export function AdminPastesPanel({ initialQ, initialStatus }: Props) {
 
   return (
     <div className="glass-panel space-y-4 p-5">
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground" htmlFor="admin-paste-reason">
+            Moderator note
+          </label>
+          <Textarea
+            className="min-h-[88px]"
+            id="admin-paste-reason"
+            onChange={(e) => setModerationReason(e.target.value)}
+            placeholder="Optional note sent to the owner when notify is enabled…"
+            value={moderationReason}
+          />
+        </div>
+        <div className="flex items-end">
+          <label className="flex items-start gap-3 text-sm text-muted-foreground">
+            <input
+              checked={notifyOwner}
+              className="mt-1 h-4 w-4 rounded border border-input bg-background accent-primary"
+              onChange={(e) => setNotifyOwner(e.target.checked)}
+              type="checkbox"
+            />
+            <span>Notify the paste owner by email after moderation.</span>
+          </label>
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-[200px] flex-1">
           <label className="text-xs text-muted-foreground" htmlFor="admin-paste-search">
-            Search slug or title
+            Search slug, title, owner username, or owner email
           </label>
           <Input
             className="mt-1"
@@ -149,6 +187,11 @@ export function AdminPastesPanel({ initialQ, initialStatus }: Props) {
           {error}
         </div>
       ) : null}
+      {notice ? (
+        <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          {notice}
+        </div>
+      ) : null}
 
       <div className="overflow-x-auto rounded-xl border border-white/10">
         <table className="w-full min-w-[960px] border-collapse text-left text-sm">
@@ -172,7 +215,13 @@ export function AdminPastesPanel({ initialQ, initialStatus }: Props) {
                   </Link>
                 </td>
                 <td className="px-3 py-3 align-top text-muted-foreground">
-                  {p.ownerUsername ? `@${p.ownerUsername}` : p.ownerEmail ?? (p.userId ? p.userId.slice(0, 8) : "Anonymous")}
+                  {p.userId ? (
+                    <Link className="hover:text-foreground hover:underline" href={`/admin/users/${p.userId}`}>
+                      {p.ownerUsername ? `@${p.ownerUsername}` : p.ownerEmail ?? p.userId.slice(0, 8)}
+                    </Link>
+                  ) : (
+                    "Anonymous"
+                  )}
                 </td>
                 <td className="px-3 py-3 align-top capitalize">{p.visibility}</td>
                 <td className="px-3 py-3 align-top">

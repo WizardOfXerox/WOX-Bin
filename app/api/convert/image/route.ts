@@ -3,6 +3,8 @@ import { z } from "zod";
 
 import { CONVERT_IMAGE_MAX_BYTES, convertImageWithSharp } from "@/lib/convert/sharp-convert";
 import { normalizeSharpEncodeSlug } from "@/lib/convert/sharp-formats";
+import { toolsDisabledResponse } from "@/lib/tools/disabled-response";
+import { TOOLS_ENABLED } from "@/lib/tools/availability";
 
 export const runtime = "nodejs";
 
@@ -15,6 +17,10 @@ const bodySchema = z.object({
  * Returns converted image bytes. Files stay in memory only for this request.
  */
 export async function POST(req: Request) {
+  if (!TOOLS_ENABLED) {
+    return toolsDisabledResponse();
+  }
+
   let form: FormData;
   try {
     form = await req.formData();

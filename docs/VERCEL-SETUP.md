@@ -97,11 +97,11 @@ See **[SMTP.md](./SMTP.md)**.
 |----------|------|-------------|
 | **`NEXT_PUBLIC_PRO_UPGRADE_URL`** | Exposed | HTTPS checkout URL for Pro |
 | **`NEXT_PUBLIC_TEAM_UPGRADE_URL`** | Exposed | HTTPS checkout URL for Team |
-| **`NEXT_PUBLIC_BILLING_PORTAL_URL`** | Exposed | Customer portal URL (if you have one) |
+| **`NEXT_PUBLIC_BILLING_PORTAL_URL`** | Exposed | Customer portal / billing help URL (if you have one) |
 
-See **[BILLING.md](./BILLING.md)**.
+See **[BILLING.md](./BILLING.md)** and **[PAYMONGO.md](./PAYMONGO.md)**.
 
-### 3.5b Optional — Stripe webhooks (server-side entitlements)
+### 3.5b Optional — Stripe-only webhooks (server-side entitlements)
 
 | Variable | Type | Description |
 |----------|------|-------------|
@@ -111,6 +111,8 @@ See **[BILLING.md](./BILLING.md)**.
 | **`STRIPE_PRICE_TEAM_ID`** / **`STRIPE_PRICE_TEAM_IDS`** | Plain | Price id(s) mapping to **Team** |
 
 Webhook URL: **`https://<your-domain>/api/webhooks/stripe`**. Checkout must pass **`client_reference_id`** or **`metadata.userId`** (WOX-Bin user id). See **[BILLING-WEBHOOKS.md](./BILLING-WEBHOOKS.md)**.
+
+If you use **PayMongo**, you can skip this section and use manual plan updates for now.
 
 ### 3.6 Optional — session / staff quotas
 
@@ -219,6 +221,7 @@ Or use **`drizzle-kit migrate`** if you maintain SQL migrations. New tables (e.g
 - Set **`NEXTAUTH_URL`** and **`NEXT_PUBLIC_APP_URL`** to the **preview URL** Vercel assigns (or use Vercel env var interpolation if you automate it).
 - Add preview URL to **Google OAuth** redirect URIs and **Turnstile** hostnames if you test those features on previews.
 - **Stripe:** use a **test mode** webhook or separate endpoint; preview URLs change per deployment — either register a new webhook per preview (rare) or test billing only on **production** / a **stable staging** host.
+- **PayMongo:** test hosted checkout links normally; webhook automation is not part of this repo yet.
 - **SMTP links** in email (password reset, verification, magic link) use the request host or **`NEXT_PUBLIC_APP_URL`** — ensure preview env points at the preview origin so links don’t bounce users to production.
 - Smoke-check **`GET /api/health`** on the preview domain after deploy if you rely on it for monitoring.
 
@@ -244,7 +247,7 @@ Or use **`drizzle-kit migrate`** if you maintain SQL migrations. New tables (e.g
 - [ ] `db:push` (or migrate) against production
 - [ ] `make:admin` for your operator user
 - [ ] Billing `NEXT_PUBLIC_*` URLs (if selling Pro/Team)
-- [ ] Stripe **`STRIPE_WEBHOOK_SECRET`** + price id env (if using server-side billing sync)
+- [ ] Stripe **`STRIPE_WEBHOOK_SECRET`** + price id env (only if using Stripe server-side billing sync)
 - [ ] `GET /api/health` in uptime monitoring (optional)
 - [ ] `CONVERT_*` + worker (only if you need FFmpeg conversion pipeline)
 
@@ -260,6 +263,7 @@ Or use **`drizzle-kit migrate`** if you maintain SQL migrations. New tables (e.g
 | [SMTP.md](./SMTP.md) | Email |
 | [TURNSTILE.md](./TURNSTILE.md) | Turnstile |
 | [BILLING.md](./BILLING.md) | Checkout URLs |
+| [PAYMONGO.md](./PAYMONGO.md) | PayMongo setup |
 | [BILLING-WEBHOOKS.md](./BILLING-WEBHOOKS.md) | Stripe webhooks |
 | [MONITORING.md](./MONITORING.md) | Health checks & logs |
 | [PRODUCTION-CHECKLIST.md](./PRODUCTION-CHECKLIST.md) | Go-live checklist |

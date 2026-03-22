@@ -6,6 +6,7 @@ import { and, eq, isNotNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { passwordResetTokens, users } from "@/lib/db/schema";
 import { hashToken } from "@/lib/crypto";
+import { buildPasswordResetEmail } from "@/lib/email-templates";
 import { jsonError } from "@/lib/http";
 import { sendMail, isSmtpConfigured } from "@/lib/mail";
 import { getAppOrigin, getRequestIp } from "@/lib/request";
@@ -15,10 +16,6 @@ import { forgotPasswordSchema } from "@/lib/validators";
 
 const GENERIC_OK_MESSAGE =
   "If an account with that email exists and password sign-in is enabled, check your inbox for reset instructions.";
-
-function escapeHtmlAttr(value: string) {
-  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
 
 export async function POST(request: Request) {
   return withMinimumDuration(420, async () => {
@@ -68,23 +65,13 @@ export async function POST(request: Request) {
     const origin = getAppOrigin(request);
     const resetPath = new URL("/reset-password", origin);
     resetPath.searchParams.set("token", rawToken);
-    const resetUrl = resetPath.toString();
-    const safeHref = escapeHtmlAttr(resetUrl);
+    const message = buildPasswordResetEmail(resetPath.toString());
 
     const sent = await sendMail({
       to: user.email,
-      subject: "Reset your WOX-Bin password",
-      text: [
-        "We received a request to reset the password for your WOX-Bin account.",
-        "",
-        "Open this link (valid for 1 hour):",
-        resetUrl,
-        "",
-        "If you did not request this, you can ignore this email."
-      ].join("\n"),
-      html: `<p>We received a request to reset the password for your WOX-Bin account.</p>
-<p><a href="${safeHref}">Reset your password</a> (link valid for 1 hour)</p>
-<p>If you did not request this, you can ignore this email.</p>`
+      subject: message.subject,
+      text: message.text,
+      html: message.html
     });
 
     if (!sent.ok) {

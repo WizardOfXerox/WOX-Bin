@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { DocShell } from "@/components/doc/doc-shell";
+import { TOOLS_ENABLED } from "@/lib/tools/availability";
 
 export const metadata: Metadata = {
   title: "Documentation — WOX-Bin",
@@ -28,9 +29,10 @@ export default function DocIndexPage() {
       </p>
 
       <p>
-        The project has two main surfaces: the paste workspace at <code>/app</code> and the utilities surface at{" "}
-        <code>/tools</code>. They share the same repo and deployment, but they are intentionally documented as separate
-        areas so operators can keep Vercel requirements and product boundaries clear.
+        The project centers on the paste workspace at <code>/app</code>. The utilities surface under <code>/tools</code>{" "}
+        {TOOLS_ENABLED
+          ? "is also enabled on this deployment, and the two areas are documented separately so operators can keep product boundaries and hosting requirements clear."
+          : "is currently disabled on this deployment while that product surface is being finished."}
       </p>
 
       <ul className="!mt-4 space-y-2">
@@ -50,7 +52,7 @@ export default function DocIndexPage() {
           <Link href="/doc/tools">
             <strong className="text-foreground">Tools</strong>
           </Link>{" "}
-          — browser tools hub and conversion platform pointers.
+          — {TOOLS_ENABLED ? "browser tools hub and conversion platform pointers." : "status page and planned conversion surface."}
         </li>
         <li>
           <Link href="/doc/faq">

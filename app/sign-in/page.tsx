@@ -12,19 +12,29 @@ import { normalizeAuthRedirectUrl } from "@/lib/auth-client-redirect";
 
 const SESSION_ERROR_MESSAGES: Record<string, string> = {
   SessionRevoked: "This session was signed out or revoked elsewhere. Sign in again.",
-  SessionIdleTimeout: "You were signed out after a period of inactivity. Sign in again."
+  SessionIdleTimeout: "You were signed out after a period of inactivity. Sign in again.",
+  AccountSuspended: "Your account is currently suspended. If you believe this is incorrect, contact the site operator.",
+  AccountBanned: "Your account has been banned. If you believe this is incorrect, contact the site operator."
 };
 
 const EMAIL_VERIFY_MESSAGES: Record<string, { tone: "ok" | "warn"; text: string }> = {
+  pending: { tone: "ok", text: "Account created. Check your email to verify your address before signing in." },
   ok: { tone: "ok", text: "Email verified. You can sign in below." },
   invalid: { tone: "warn", text: "That verification link is invalid or expired. Request a new one from account settings after signing in." },
   missing: { tone: "warn", text: "Verification link was missing a token." }
+};
+
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  emailNotVerified: "Your email is not verified yet. Check your inbox for the verification link before signing in.",
+  accountSuspended: "Your account is currently suspended. Check your email for details or contact the site operator.",
+  accountBanned: "Your account has been banned. Contact the site operator if you need clarification."
 };
 
 function SignInPageContent() {
   const searchParams = useSearchParams();
   const sessionError = searchParams.get("sessionError");
   const emailVerify = searchParams.get("emailVerify");
+  const authError = searchParams.get("authError");
   const sessionNotice = useMemo(() => {
     if (!sessionError) {
       return null;
@@ -39,21 +49,35 @@ function SignInPageContent() {
     return EMAIL_VERIFY_MESSAGES[emailVerify] ?? null;
   }, [emailVerify]);
 
+  const authErrorNotice = useMemo(() => {
+    if (!authError) {
+      return null;
+    }
+    return AUTH_ERROR_MESSAGES[authError] ?? "Sign in failed.";
+  }, [authError]);
+
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const [magicLinkAvailable, setMagicLinkAvailable] = useState(false);
+  const [googleOAuthAvailable, setGoogleOAuthAvailable] = useState(false);
   const [magicEmail, setMagicEmail] = useState("");
   const [magicStatus, setMagicStatus] = useState<string | null>(null);
   const [magicLoading, setMagicLoading] = useState(false);
 
   useEffect(() => {
     void fetch("/api/config/client")
-      .then((r) => r.json() as Promise<{ emailMagicLink?: boolean }>)
-      .then((data) => setMagicLinkAvailable(Boolean(data.emailMagicLink)))
-      .catch(() => setMagicLinkAvailable(false));
+      .then((r) => r.json() as Promise<{ emailMagicLink?: boolean; googleOAuth?: boolean }>)
+      .then((data) => {
+        setMagicLinkAvailable(Boolean(data.emailMagicLink));
+        setGoogleOAuthAvailable(Boolean(data.googleOAuth));
+      })
+      .catch(() => {
+        setMagicLinkAvailable(false);
+        setGoogleOAuthAvailable(false);
+      });
   }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -138,15 +162,18 @@ function SignInPageContent() {
                 {emailVerifyNotice.text}
               </p>
             ) : null}
+            {authErrorNotice ? <p className="text-sm text-amber-200/90">{authErrorNotice}</p> : null}
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
             <Button className="w-full" disabled={loading} type="submit">
               {loading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
           <div className="space-y-3">
-            <Button className="w-full" type="button" variant="outline" onClick={() => signIn("google", { callbackUrl: "/app" })}>
-              Continue with Google
-            </Button>
+            {googleOAuthAvailable ? (
+              <Button className="w-full" type="button" variant="outline" onClick={() => signIn("google", { callbackUrl: "/app" })}>
+                Continue with Google
+              </Button>
+            ) : null}
             {magicLinkAvailable ? (
               <form className="space-y-2 rounded-xl border border-border bg-muted/20 p-4" onSubmit={(e) => void handleMagicLink(e)}>
                 <p className="text-xs font-medium text-muted-foreground">Sign in with email link</p>

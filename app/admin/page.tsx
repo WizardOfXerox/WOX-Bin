@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { eq, sql } from "drizzle-orm";
 
 import { auth } from "@/auth";
+import { AdminSearchPanel } from "@/components/admin/admin-search-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { isAdminSession } from "@/lib/admin-auth";
@@ -21,12 +22,16 @@ export default async function AdminOverviewPage() {
 
   const [
     [{ totalUsers }],
+    [{ suspendedUsers }],
+    [{ bannedUsers }],
     [{ activePastes }],
     [{ hiddenPastes }],
     [{ deletedPastes }],
     readiness
   ] = await Promise.all([
     db.select({ totalUsers: sql<number>`count(*)::int` }).from(users),
+    db.select({ suspendedUsers: sql<number>`count(*)::int` }).from(users).where(eq(users.accountStatus, "suspended")),
+    db.select({ bannedUsers: sql<number>`count(*)::int` }).from(users).where(eq(users.accountStatus, "banned")),
     db.select({ activePastes: sql<number>`count(*)::int` }).from(pastes).where(eq(pastes.status, "active")),
     db.select({ hiddenPastes: sql<number>`count(*)::int` }).from(pastes).where(eq(pastes.status, "hidden")),
     db.select({ deletedPastes: sql<number>`count(*)::int` }).from(pastes).where(eq(pastes.status, "deleted")),
@@ -35,6 +40,8 @@ export default async function AdminOverviewPage() {
 
   const statCards = [
     { label: "Users", value: totalUsers, href: "/admin/users" },
+    { label: "Suspended users", value: suspendedUsers, href: "/admin/users" },
+    { label: "Banned users", value: bannedUsers, href: "/admin/users" },
     { label: "Active pastes", value: activePastes, href: "/admin/pastes?status=active" },
     { label: "Hidden pastes", value: hiddenPastes, href: "/admin/pastes?status=hidden" },
     { label: "Deleted pastes", value: deletedPastes, href: "/admin/pastes?status=deleted" },
@@ -46,7 +53,7 @@ export default async function AdminOverviewPage() {
       <div className="glass-panel px-6 py-6">
         <h1 className="text-2xl font-semibold">Admin dashboard</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Manage accounts, plans, and paste moderation. All actions are audited.
+          Manage accounts, plans, suspensions, bans, and paste moderation. All actions are audited.
         </p>
       </div>
 
@@ -62,6 +69,8 @@ export default async function AdminOverviewPage() {
           </Link>
         ))}
       </div>
+
+      <AdminSearchPanel />
 
       <Card className="border-white/10 bg-white/[0.03]">
         <CardContent className="space-y-3 pt-6">

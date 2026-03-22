@@ -207,7 +207,7 @@ export function PricingPage({ cards, links, signedIn }: Props) {
 
         <p className="mt-10 text-center text-xs text-muted-foreground">
           {hasAnyCheckout
-            ? "Checkout opens in a secure window from your billing provider (e.g. Stripe)."
+            ? "Checkout opens in a secure window from your billing provider (for example PayMongo)."
             : "Payment links are configured by the operator; until then, plans default to Free limits."}
         </p>
 

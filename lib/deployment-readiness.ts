@@ -354,9 +354,9 @@ export async function getDeploymentReadinessSnapshot(): Promise<DeploymentReadin
         ? "Stripe webhook sync looks configured."
         : "Stripe billing sync is only partially configured.",
     detail: !stripeStatus.any
-      ? "If you sell plans with manual admin updates, that is acceptable."
+      ? "If you use PayMongo or another provider with manual admin updates, that is acceptable."
       : "To auto-upgrade accounts, provide the webhook secret and price-id mappings together.",
-    docs: ["docs/BILLING-WEBHOOKS.md", "docs/BILLING.md"]
+    docs: ["docs/BILLING-WEBHOOKS.md", "docs/BILLING.md", "docs/PAYMONGO.md"]
   });
 
   checks.push({

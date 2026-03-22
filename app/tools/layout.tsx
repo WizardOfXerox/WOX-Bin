@@ -2,9 +2,42 @@ import Link from "next/link";
 import { Wrench } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { TOOLS_DISABLED_COPY, TOOLS_ENABLED } from "@/lib/tools/availability";
 import { cn } from "@/lib/utils";
 
 export default function ToolsLayout({ children }: { children: ReactNode }) {
+  if (!TOOLS_ENABLED) {
+    return (
+      <main className="flex min-h-screen items-center justify-center px-6 py-16">
+        <Card className="w-full max-w-xl">
+          <CardContent className="space-y-6 text-center">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-muted text-primary">
+              <Wrench aria-hidden className="size-5" />
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">{TOOLS_DISABLED_COPY.eyebrow}</p>
+              <h1 className="mt-2 text-3xl font-semibold">{TOOLS_DISABLED_COPY.title}</h1>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground">{TOOLS_DISABLED_COPY.description}</p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Button asChild variant="outline">
+                <Link href="/">Back home</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/app">Open workspace</Link>
+              </Button>
+              <Button asChild variant="secondary">
+                <Link href="/doc/tools">Read tools status</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background">
       <header

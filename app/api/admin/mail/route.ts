@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import { isAdminSession } from "@/lib/admin-auth";
+import { buildSmtpTestEmail } from "@/lib/email-templates";
 import { jsonError } from "@/lib/http";
 import { isSmtpConfigured, sendMail } from "@/lib/mail";
 
@@ -37,11 +38,12 @@ export async function POST(request: Request) {
     return jsonError("SMTP is not configured. Set SMTP_HOST and SMTP_FROM (see docs/SMTP.md).", 503);
   }
 
+  const email = buildSmtpTestEmail();
   const result = await sendMail({
     to: parsed.data.to,
-    subject: "Wox-Bin SMTP test",
-    text: "If you received this, outbound SMTP is working.",
-    html: "<p>If you received this, outbound <strong>SMTP</strong> is working.</p>"
+    subject: email.subject,
+    text: email.text,
+    html: email.html
   });
 
   if (!result.ok) {
