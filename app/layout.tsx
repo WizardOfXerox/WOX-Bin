@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import { auth } from "@/auth";
 import { AuthSessionProvider } from "@/components/providers/session-provider";
 import { ThemeRootProvider } from "@/components/providers/theme-root-provider";
 import { INLINE_UI_THEME_SCRIPT } from "@/lib/ui-theme";
@@ -24,8 +23,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth();
-
   return (
     <html
       data-scroll-behavior="smooth"
@@ -38,7 +35,7 @@ export default async function RootLayout({
         {/* Before paint: match localStorage + system theme so Tailwind `dark:` and `theme-light` agree */}
         <script dangerouslySetInnerHTML={{ __html: INLINE_UI_THEME_SCRIPT }} />
         <ThemeRootProvider>
-          <AuthSessionProvider session={session}>{children}</AuthSessionProvider>
+          <AuthSessionProvider session={null}>{children}</AuthSessionProvider>
         </ThemeRootProvider>
       </body>
     </html>
