@@ -20,10 +20,14 @@ Implemented:
 - `src/ui/extension-tabs.js`
 - `src/vault/bridge.js`
 - `src/vault/backup.js`
+- `src/vault/file-ops.js`
+- `src/vault/import-export.js`
 - `src/vault/metadata-cache.js`
+- `src/vault/recovery.js`
+- `src/vault/ui.js`
 
-Still large:
-- `src/index.js` remains the biggest file in the extension and is the next candidate for deeper slicing if work continues
+Note:
+- `src/index.js` is still the main shell, but vault paging, import planning, cache handling, and recovery logic are now split into dedicated modules.
 
 ## Phase 3: stronger cloud mode
 
@@ -40,11 +44,9 @@ Implemented:
 Implemented:
 - Metadata index cache
 - Verify / rebuild index actions
+- Recovery action for broken chunk trees and missing metadata when the serialized payload is still salvageable
+- Virtual-window paging so metadata hydration is focused on the current visible range instead of eagerly reading every file
 - More explicit trust/disclaimer copy
-
-Not implemented:
-- Full chunk repair for corrupted payloads
-- Deep lazy-loading / virtualization for very large libraries
 
 ## Phase 5: bridge local and cloud
 
@@ -64,9 +66,13 @@ Implemented:
 - Explicit trust-model docs
 - Automated tests around bridge, metadata cache, backup parsing, and offline cache asset shaping
 
-## Recommended next slices
+## Additional shipped follow-up work
 
-1. Split `src/index.js` further into `vault/ui`, `vault/file-ops`, and `vault/import-export`.
-2. Add real recovery tooling for broken bookmark chunk trees.
-3. Add deep lazy loading / virtualization for very large local vault libraries.
-4. Add a first-class restore/import preview UI before applying a backup file.
+- First-class restore/import preview UI before applying a backup file
+- Tests for vault view state, import planning, chunk recovery helpers, and indexed file hydration
+
+## Remaining limits
+
+1. Recovery cannot decrypt encrypted files if their encryption metadata is missing or corrupted.
+2. The extension still uses bookmark-folder storage, so sync durability and bookmark platform limits remain inherent constraints.
+3. `src/index.js` still owns the top-level shell wiring and can be sliced further if the extension grows again.

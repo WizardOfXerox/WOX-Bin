@@ -80,12 +80,14 @@ This extension now has a clear split:
 - The extension keeps a local metadata index cache in `chrome.storage.local`
 - Vault verification can rebuild that cache from live bookmark metadata
 - The popup no longer needs to reread full metadata for every file on every refresh once the cache is warm
+- Visible-page hydration means the extension now focuses metadata reads on the current page window instead of eagerly touching the whole library
 
-### Verify / rebuild
-- `Verify` scans files, checks metadata presence, and refreshes the local index cache
+### Verify / rebuild / recover
+- `Verify` scans files, checks metadata presence, chunk tree shape, and refreshes the local index cache
 - `Rebuild index` clears and recreates the cache from live bookmark metadata
+- `Recover` attempts to normalize or salvage files whose chunk manifests or metadata no longer match the stored serialized payload
 
-These tools repair the extension’s local index cache. They do not recover corrupted bookmark payloads that no longer contain readable metadata or chunks.
+Recovery can fix chunk-count drift, stale chunk manifests, and some missing-metadata cases when the serialized payload is still readable. It cannot recover encrypted files if the encryption metadata is gone.
 
 ## Bridge flows
 
@@ -98,7 +100,12 @@ These tools repair the extension’s local index cache. They do not recover corr
 ### WOX-Bin -> local vault
 - `To vault` imports a paste into `woxbin-imports/<slug>/...`
 - `Mirror to local vault after publish` imports the newly published paste into `woxbin-mirror/<slug>/...`
-- `Offline cache` stores a lightweight cloud copy in extension local storage for quick reload back into the composer
+- `Offline cache` stores a lightweight cloud copy in extension local storage for quick reload back into the composer, asset preview/download, and JSON export
+
+## Backup restore flow
+
+- Vault backup import now opens a preview before any restore is applied
+- The preview shows rename conflicts ahead of time and the final filenames that will be written
 
 ## Security model
 
@@ -135,11 +142,16 @@ Then reload the unpacked extension from `chrome://extensions`.
 - `src/index.js`: local vault UI and bookmark-backed file logic
 - `src/woxbin-compact.js`: WOX-Bin cloud UI
 - `src/cloud/woxbin-profiles.js`: profile storage and passphrase encryption
+- `src/cloud/offline-cache.js`: offline cache shaping and storage helpers
 - `src/vault/bridge.js`: pending compose bridge between extension surfaces
+- `src/vault/file-ops.js`: indexed vault hydration helpers
+- `src/vault/import-export.js`: backup restore planning
 - `src/vault/metadata-cache.js`: local vault metadata index cache
+- `src/vault/recovery.js`: chunk-tree inspection and recovery helpers
+- `src/vault/ui.js`: vault view paging/window helpers
 - `src/background/compose.js`: context-menu compose handoff
 - `manifest.json`: extension permissions and packaging metadata
-- `webpack.config.js`: bundle configuration
+- `webpack.config.cjs`: bundle configuration
 
 ## API contract used by cloud mode
 

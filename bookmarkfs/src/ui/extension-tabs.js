@@ -1,4 +1,4 @@
-export function setupExtensionTabs({ mountCloud }) {
+export function setupExtensionTabs({ mountCloud, onShowLocal }) {
   if (document.getElementById("extension-tab-bar")) {
     return window.__bookmarkfsTabs;
   }
@@ -49,13 +49,25 @@ export function setupExtensionTabs({ mountCloud }) {
   parent.appendChild(woxRoot);
 
   let cloudMounted = false;
+  let localInitialized = false;
 
   function styleActive(showCloud) {
     btnCloud.setAttribute("aria-selected", showCloud ? "true" : "false");
     btnFs.setAttribute("aria-selected", showCloud ? "false" : "true");
   }
 
+  function ensureLocalInitialized() {
+    if (localInitialized) {
+      return;
+    }
+    localInitialized = true;
+    if (typeof onShowLocal === "function") {
+      void onShowLocal();
+    }
+  }
+
   function showLocal() {
+    ensureLocalInitialized();
     fsPanel.style.display = "";
     woxRoot.style.display = "none";
     styleActive(false);
@@ -76,6 +88,7 @@ export function setupExtensionTabs({ mountCloud }) {
   styleActive(true);
 
   window.__bookmarkfsTabs = {
+    ensureLocalInitialized,
     showLocal,
     showCloud,
     showFs: showLocal,

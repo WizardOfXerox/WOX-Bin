@@ -50,7 +50,7 @@ export function LandingMobileNav() {
       >
         <DialogHeader className="text-left">
           <DialogTitle className="text-base font-semibold">Menu</DialogTitle>
-          <DialogDescription>Archive, help, support, account, and workspace</DialogDescription>
+          <DialogDescription>Archive, BookmarkFS, help, support, account, and workspace</DialogDescription>
         </DialogHeader>
         <nav aria-label="Primary" className="flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-3">
@@ -67,6 +67,11 @@ export function LandingMobileNav() {
             <DialogClose asChild>
               <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
                 <Link href="/help">Help</Link>
+              </Button>
+            </DialogClose>
+            <DialogClose asChild>
+              <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
+                <Link href="/bookmarkfs">BookmarkFS</Link>
               </Button>
             </DialogClose>
             <DialogClose asChild>

@@ -46,7 +46,8 @@ export function LandingPage() {
           </h1>
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
             Write in the browser, stay offline-friendly, then sync to your account when you want hosted pastes, API
-            access, and team options. The paste workspace lives at <span className="font-mono text-xs">/app</span>.{" "}
+            access, and team options. The paste workspace lives at <span className="font-mono text-xs">/app</span>,
+            and the browser companion lives at <span className="font-mono text-xs">/bookmarkfs</span>.{" "}
             {TOOLS_ENABLED ? (
               <>
                 {heroTail}
@@ -75,6 +76,7 @@ export function LandingPage() {
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Markdown preview</Badge>
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Multi-file pastes</Badge>
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Local + cloud sync</Badge>
+              <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">BookmarkFS companion</Badge>
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Free · Pro · Team</Badge>
               {TOOLS_ENABLED ? <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Browser tools hub</Badge> : null}
             </div>
@@ -120,6 +122,12 @@ export function LandingPage() {
               ) : null}
               <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/archive">
                 Archive
+              </Link>
+              <span aria-hidden className="hidden text-border sm:inline">
+                ·
+              </span>
+              <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/bookmarkfs">
+                BookmarkFS
               </Link>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:gap-5 xl:grid-cols-3">
@@ -259,6 +267,11 @@ export function LandingPage() {
                     </Link>
                   </li>
                   <li>
+                    <Link className="text-primary underline-offset-4 hover:underline" href="/bookmarkfs">
+                      BookmarkFS companion
+                    </Link>
+                  </li>
+                  <li>
                     <Link className="text-primary underline-offset-4 hover:underline" href="/help">
                       Help &amp; answers
                     </Link>
@@ -336,6 +349,12 @@ export function LandingPage() {
           ) : null}
           <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/archive">
             Archive
+          </Link>
+          <span aria-hidden className="hidden text-border sm:inline">
+            ·
+          </span>
+          <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/bookmarkfs">
+            BookmarkFS
           </Link>
           <span aria-hidden className="hidden text-border sm:inline">
             ·

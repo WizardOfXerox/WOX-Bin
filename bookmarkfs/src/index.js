@@ -4,6 +4,7 @@ import { mountWoxBinCompact } from "./woxbin-compact.js";
 import { setupExtensionTabs } from "./ui/extension-tabs.js";
 import { setPendingCompose } from "./vault/bridge.js";
 import { buildBackupDocument, parseBackupDocument } from "./vault/backup.js";
+import { ensureIndexedEntries, findCachedFileByHash } from "./vault/file-ops.js";
 import {
     clearVaultIndex,
     loadVaultIndex,
@@ -13,6 +14,9 @@ import {
     summarizeMetaForIndex,
     upsertVaultIndexEntry
 } from "./vault/metadata-cache.js";
+import { buildImportPlan } from "./vault/import-export.js";
+import { buildRecoveredMeta, collectChunkTreeStats, describeChunkTreeIssues } from "./vault/recovery.js";
+import { buildVirtualWindow, getVisibleEntries, summarizeVaultAnalytics } from "./vault/ui.js";
 
 async function handleRar(bytes) {
     const extractor = await createExtractorFromData({
@@ -507,6 +511,11 @@ export function handleZip(bytes) {
             rebuildBtn.className = "button";
             rebuildBtn.textContent = "Rebuild index";
 
+            const recoverBtn = document.createElement("button");
+            recoverBtn.id = "vault-recover-btn";
+            recoverBtn.className = "button";
+            recoverBtn.textContent = "Recover";
+
             const importLabel = document.createElement("label");
             importLabel.className = "button";
             importLabel.textContent = "Import";
@@ -571,6 +580,7 @@ export function handleZip(bytes) {
             rowActions.appendChild(exportBtn);
             rowActions.appendChild(verifyBtn);
             rowActions.appendChild(rebuildBtn);
+            rowActions.appendChild(recoverBtn);
             rowActions.appendChild(importLabel);
             rowActions.appendChild(importInput);
             rowActions.appendChild(settingsBtn);
@@ -643,39 +653,10 @@ export function handleZip(bytes) {
         if (folder && folder.value !== currentPath) folder.value = currentPath;
     }
 
-    function getVisibleEntries(files, searchTerm) {
-        const q = (searchTerm || "").toLowerCase();
-        const prefix = currentPath ? `${currentPath}/` : "";
-        const folders = new Map();
-        const fileEntries = [];
-        for (const file of files) {
-            const full = file.handle.title;
-            if (!full.startsWith(prefix)) continue;
-            const rest = full.slice(prefix.length);
-            if (!rest) continue;
-            const slash = rest.indexOf("/");
-            if (slash >= 0) {
-                const folder = rest.slice(0, slash);
-                if (!q || folder.toLowerCase().includes(q)) folders.set(folder, folder);
-            } else {
-                if (!q || rest.toLowerCase().includes(q) || full.toLowerCase().includes(q)) {
-                    fileEntries.push({ file, displayName: rest, fullName: full });
-                }
-            }
-        }
-        const folderEntries = [...folders.values()].sort().map((f) => ({ folder: true, name: f }));
-        fileEntries.sort((a, b) => a.displayName.localeCompare(b.displayName));
-        return folderEntries.concat(fileEntries);
-    }
-
-    function updateAnalytics(files) {
+    function updateAnalytics(summary) {
         const node = qs("#analytics-bar");
         if (!node) return;
-        let stored = 0;
-        for (const f of files) {
-            if (f.meta && Number.isFinite(f.meta.sizeStored)) stored += f.meta.sizeStored;
-        }
-        node.textContent = `Items: ${files.length} | Stored: ${niceBytes(stored)}`;
+        node.textContent = `Items: ${summary.itemCount} | Indexed: ${summary.indexedCount} | Stored: ${niceBytes(summary.storedBytes)}`;
     }
 
     function applyDarkFromStorage() {
@@ -689,31 +670,16 @@ export function handleZip(bytes) {
         localStorage.setItem("bookmarkfs_dark", now ? "1" : "0");
     }
 
-    async function ensureVaultIndexEntries(files) {
-        const current = await loadVaultIndex();
-        const byName = new Map(current.map((entry) => [entry.fullName, entry]));
-        const liveNames = new Set(files.map((file) => file.handle.title));
-        let mutated = false;
-
-        for (const file of files) {
-            const fullName = file.handle.title;
-            if (byName.has(fullName)) continue;
-            const meta = await file.readMeta();
-            const summary = summarizeMetaForIndex(fullName, meta);
-            if (summary) {
-                byName.set(fullName, summary);
-                mutated = true;
-            }
-        }
-
-        for (const fullName of [...byName.keys()]) {
-            if (!liveNames.has(fullName)) {
-                byName.delete(fullName);
-                mutated = true;
-            }
-        }
-
-        const entries = [...byName.values()];
+    async function ensureVaultIndexEntries(files, focusNames = null) {
+        const { entries, mutated } = await ensureIndexedEntries({
+            currentIndex: await loadVaultIndex(),
+            files,
+            focusNames,
+            readMeta(file) {
+                return file.readMeta();
+            },
+            summarizeMeta: summarizeMetaForIndex
+        });
         if (mutated) {
             await saveVaultIndex(entries);
         }
@@ -724,18 +690,17 @@ export function handleZip(bytes) {
         const files = await listFiles();
         const nextIndex = [];
         const issues = [];
+        let repairable = 0;
 
         for (const file of files) {
             const meta = await file.readMeta();
-            if (!meta) {
-                issues.push(`${file.handle.title}: missing or unreadable metadata`);
-                continue;
+            const stats = collectChunkTreeStats(await file.getChildrenFresh(), META_PREFIX);
+            const fileIssues = describeChunkTreeIssues(meta, stats.dataNodeCount, stats.metaNodeCount);
+            if (fileIssues.length) {
+                repairable += 1;
             }
-            if (!meta.contentHash) {
-                issues.push(`${file.handle.title}: missing content hash`);
-            }
-            if (!Array.isArray(meta.chunkHashes)) {
-                issues.push(`${file.handle.title}: missing chunk hash list`);
+            for (const issue of fileIssues) {
+                issues.push(`${file.handle.title}: ${issue}`);
             }
             const summary = summarizeMetaForIndex(file.handle.title, meta);
             if (summary) {
@@ -747,8 +712,77 @@ export function handleZip(bytes) {
         return {
             files: files.length,
             indexed: nextIndex.length,
+            repairable,
             issues
         };
+    }
+
+    async function recoverVaultFiles() {
+        const files = await listFiles();
+        const results = {
+            scanned: files.length,
+            clean: 0,
+            normalized: 0,
+            recovered: 0,
+            failed: 0,
+            skipped: 0,
+            issues: []
+        };
+
+        for (const file of files) {
+            const children = await file.getChildrenFresh();
+            const stats = collectChunkTreeStats(children, META_PREFIX);
+            const meta = await file.readMeta();
+            const fileIssues = describeChunkTreeIssues(meta, stats.dataNodeCount, stats.metaNodeCount);
+
+            if (!fileIssues.length) {
+                results.clean += 1;
+                continue;
+            }
+
+            const raw = stats.dataNodes.map((node) => node.title || "").join("");
+            if (!raw) {
+                results.failed += 1;
+                results.issues.push(`${file.handle.title}: no stored chunk nodes to recover`);
+                continue;
+            }
+
+            try {
+                let reconstructed;
+                let recovered = false;
+
+                try {
+                    reconstructed = await reconstructBytesFromSerialized(raw, meta);
+                } catch {
+                    reconstructed = await reconstructBytesLooselyFromSerialized(raw, meta);
+                    recovered = true;
+                }
+
+                const repairedMeta = buildRecoveredMeta(meta, {
+                    chunkHashes: await computeChunkHashes(raw, maxBookmarkSize),
+                    chunkSize: maxBookmarkSize,
+                    sizeOriginal: reconstructed.bytes.length,
+                    sizeStored: te.encode(raw).length,
+                    contentHash: await sha256HexBytes(reconstructed.bytes),
+                    mimeType: reconstructed.mime
+                });
+
+                await file.write(raw, null, { chunkSize: maxBookmarkSize, startChunk: 0 });
+                await file.writeMeta(repairedMeta);
+
+                if (recovered) {
+                    results.recovered += 1;
+                } else {
+                    results.normalized += 1;
+                }
+            } catch (error) {
+                results.failed += 1;
+                results.issues.push(`${file.handle.title}: ${error && error.message ? error.message : String(error)}`);
+            }
+        }
+
+        await verifyVaultIndex();
+        return results;
     }
 
     async function promptForVaultPassphrase(actionLabel) {
@@ -927,8 +961,7 @@ export function handleZip(bytes) {
 
     async function findFileByHash(contentHash) {
         if (!contentHash) return null;
-        const cached = await loadVaultIndex();
-        const cachedHit = cached.find((entry) => entry.contentHash === contentHash);
+        const cachedHit = findCachedFileByHash(await loadVaultIndex(), contentHash);
         if (cachedHit) {
             const existing = await getFileByName(cachedHit.fullName);
             if (existing) {
@@ -1025,6 +1058,15 @@ export function handleZip(bytes) {
         }
     }
 
+    async function computeChunkHashes(serialized, chunkSize) {
+        const pieces = splitBySize(serialized, chunkSize);
+        const hashes = [];
+        for (const part of pieces) {
+            hashes.push(await sha256HexString(part));
+        }
+        return hashes;
+    }
+
     function sniffMimeFromBytes(bytes) {
         if (!bytes || !bytes.length) return "";
         const b = bytes;
@@ -1073,6 +1115,33 @@ export function handleZip(bytes) {
             const hash = await sha256HexBytes(bytes);
             if (hash !== meta.contentHash) throw new Error("Integrity check failed: content hash mismatch");
         }
+
+        const mime = meta.type && meta.type !== "application/octet-stream" ? meta.type : (sniffMimeFromBytes(bytes) || meta.type || "application/octet-stream");
+        return { bytes, mime, meta };
+    }
+
+    async function reconstructBytesLooselyFromSerialized(serialized, metaObj) {
+        const meta = migrateMeta(metaObj) || {};
+        if (!serialized || serialized.length < 2) throw new Error("Invalid serialized data");
+
+        const tag = serialized[0];
+        const payloadB64 = serialized.slice(1);
+        let bytes = b64decodeToBytes(payloadB64);
+
+        if (meta.encrypted) {
+            let pass = cachedSessionPassphrase || "";
+            if (!pass) {
+                pass = prompt("Enter passphrase to decrypt:");
+                if (!pass) throw new Error("Passphrase required");
+                if (confirm("Cache this passphrase for this session?")) cachedSessionPassphrase = pass;
+            }
+            const saltB64 = meta.enc && (meta.enc.saltB64 || meta.enc.salt || meta.enc.salt64);
+            const ivB64 = meta.enc && (meta.enc.ivB64 || meta.enc.iv || meta.enc.iv64);
+            if (!saltB64 || !ivB64) throw new Error("Missing encryption metadata");
+            bytes = await decryptBytes(bytes, pass, b64decodeToBytes(saltB64), b64decodeToBytes(ivB64));
+        }
+
+        if (tag === "c") bytes = gunzipSync(bytes);
 
         const mime = meta.type && meta.type !== "application/octet-stream" ? meta.type : (sniffMimeFromBytes(bytes) || meta.type || "application/octet-stream");
         return { bytes, mime, meta };
@@ -1188,18 +1257,19 @@ export function handleZip(bytes) {
         updatePathBar();
         const q = (qs("#search-bar") && qs("#search-bar").value) ? qs("#search-bar").value : "";
         const files = await listFiles();
-        const cachedEntries = await ensureVaultIndexEntries(files);
-        const metaByName = new Map(cachedEntries.map((entry) => [entry.fullName, entry]));
-        updateAnalytics(files.map((file) => ({ meta: metaByName.get(file.handle.title) || null })));
-
-        const entries = getVisibleEntries(files, q);
-        const totalPages = Math.max(1, Math.ceil(entries.length / Math.max(1, pageSize)));
-        if (currentPage > totalPages) currentPage = totalPages;
+        const existingIndex = await loadVaultIndex();
+        const entries = getVisibleEntries(files, currentPath, q);
+        const view = buildVirtualWindow(entries, currentPage, pageSize, 1);
+        currentPage = view.currentPage;
         const pageInfo = qs("#page-info");
-        if (pageInfo) pageInfo.textContent = `Page ${currentPage}/${totalPages}`;
+        if (pageInfo) pageInfo.textContent = `Page ${view.currentPage}/${view.totalPages}`;
 
-        const start = (currentPage - 1) * pageSize;
-        const pageEntries = entries.slice(start, start + pageSize);
+        const focusedNames = view.renderEntries.filter((entry) => !entry.folder).map((entry) => entry.fullName);
+        const cachedEntries = await ensureVaultIndexEntries(files, focusedNames);
+        const metaByName = new Map(cachedEntries.map((entry) => [entry.fullName, entry]));
+        updateAnalytics(summarizeVaultAnalytics(files.length, cachedEntries.length ? cachedEntries : existingIndex));
+
+        const pageEntries = view.pageEntries;
         for (const entry of pageEntries) {
             const tr = document.createElement("tr");
             tr.classList.add("bfs-row");
@@ -1760,6 +1830,71 @@ export function handleZip(bytes) {
         }
     }
     // ---------- Export / Import ----------
+
+    function showImportPreviewModal(plan) {
+        return new Promise((resolve) => {
+            const overlay = document.createElement("div");
+            overlay.className = "bfs-preview-overlay";
+            overlay.style.display = "flex";
+
+            const close = (confirmed) => {
+                overlay.remove();
+                resolve(Boolean(confirmed));
+            };
+
+            overlay.onclick = () => close(false);
+
+            const inner = document.createElement("div");
+            inner.className = "bfs-preview-inner bfs-import-preview";
+            inner.onclick = (ev) => ev.stopPropagation();
+
+            const heading = document.createElement("h2");
+            heading.textContent = "Import backup preview";
+
+            const summary = document.createElement("p");
+            summary.className = "bfs-import-preview__summary";
+            summary.textContent = `${plan.total} item(s) ready to import. ${plan.renamed} will be renamed to avoid conflicts.`;
+
+            const list = document.createElement("div");
+            list.className = "bfs-import-preview__list";
+            for (const item of plan.items.slice(0, 50)) {
+                const row = document.createElement("div");
+                row.className = "bfs-import-preview__row";
+                row.innerHTML = `
+                    <strong>${item.finalName}</strong>
+                    <span>${item.renamed ? `from ${item.originalName}` : "new file"}</span>
+                `;
+                list.appendChild(row);
+            }
+            if (plan.items.length > 50) {
+                const more = document.createElement("p");
+                more.className = "bfs-import-preview__summary";
+                more.textContent = `${plan.items.length - 50} more item(s) not shown.`;
+                list.appendChild(more);
+            }
+
+            const actions = document.createElement("div");
+            actions.className = "bfs-import-preview__actions";
+
+            const cancelBtn = document.createElement("button");
+            cancelBtn.type = "button";
+            cancelBtn.className = "button";
+            cancelBtn.textContent = "Cancel";
+            cancelBtn.onclick = () => close(false);
+
+            const importBtn = document.createElement("button");
+            importBtn.type = "button";
+            importBtn.className = "button";
+            importBtn.textContent = "Import backup";
+            importBtn.onclick = () => close(true);
+
+            actions.append(cancelBtn, importBtn);
+            inner.append(heading, summary, list, actions);
+            overlay.appendChild(inner);
+            document.body.appendChild(overlay);
+        });
+    }
+
     async function exportAll() {
         const files = await listFiles();
         const out = [];
@@ -1783,10 +1918,13 @@ export function handleZip(bytes) {
         try {
             const text = await file.text();
             const backup = parseBackupDocument(text);
-            for (const item of backup.items) {
-                let target = item.name;
-                while (await getFileByName(target)) target = incrementVersionedName(target);
-                const fobj = await createNewFile(target);
+            const existingNames = new Set((await listFiles()).map((entry) => entry.handle.title));
+            const plan = buildImportPlan(backup.items, existingNames);
+            if (!plan.items.length) throw new Error("Backup does not contain importable files");
+            const confirmed = await showImportPreviewModal(plan);
+            if (!confirmed) return;
+            for (const item of plan.items) {
+                const fobj = await createNewFile(item.finalName);
                 if (item.meta) await fobj.writeMeta(migrateMeta(item.meta));
                 await fobj.write(item.serialized, (p) => setProgress(p), { chunkSize: (item.meta && item.meta.chunkSize) ? item.meta.chunkSize : maxBookmarkSize });
             }
@@ -1826,7 +1964,129 @@ export function handleZip(bytes) {
     // ---------- Wire up events on load ----------
     window.addEventListener("load", async() => {
         document.body.classList.add("ext-app");
-        setupExtensionTabs({ mountCloud: mountWoxBinCompact });
+        let localUiInitialized = false;
+
+        async function initializeLocalVaultSurface() {
+            if (localUiInitialized) return;
+            localUiInitialized = true;
+
+            ensureUI();
+
+            const input = qs("#file-input");
+            if (input) {
+                input.addEventListener("change", async function() {
+                    const files = Array.from(this.files || []);
+                    if (!files.length) return;
+                    await handleFileList(files);
+                    this.value = "";
+                });
+            }
+
+            const search = qs("#search-bar");
+            if (search) search.addEventListener("input", async() => {
+                currentPage = 1;
+                await loadFilesToTable();
+            });
+
+            const prevBtn = qs("#prev-page-btn");
+            if (prevBtn) prevBtn.addEventListener("click", async() => {
+                currentPage = Math.max(1, currentPage - 1);
+                await loadFilesToTable();
+            });
+            const nextBtn = qs("#next-page-btn");
+            if (nextBtn) nextBtn.addEventListener("click", async() => {
+                currentPage += 1;
+                await loadFilesToTable();
+            });
+
+            const upBtn = qs("#up-path-btn");
+            if (upBtn) upBtn.addEventListener("click", async() => {
+                if (!currentPath) return;
+                const parts = currentPath.split("/").filter(Boolean);
+                parts.pop();
+                currentPath = parts.join("/");
+                currentPage = 1;
+                await loadFilesToTable();
+            });
+
+            const folderInput = qs("#folder-input");
+            if (folderInput) folderInput.addEventListener("change", () => {
+                currentPath = normalizeVirtualPath(folderInput.value || "");
+                currentPage = 1;
+                updatePathBar();
+            });
+
+            const exportBtn = qs("#export-btn");
+            if (exportBtn) exportBtn.addEventListener("click", exportAll);
+            const importInput = qs("#import-input");
+            if (importInput) importInput.addEventListener("change", async function() {
+                const f = this.files && this.files[0];
+                if (f) await importAllFromFile(f);
+                this.value = "";
+            });
+
+            const verifyBtn = qs("#vault-verify-btn");
+            if (verifyBtn) verifyBtn.addEventListener("click", async() => {
+                verifyBtn.disabled = true;
+                try {
+                    const result = await verifyVaultIndex();
+                    const sample = result.issues.slice(0, 6);
+                    alert(
+                        result.issues.length
+                            ? `Verified ${result.files} entries.\nIndexed: ${result.indexed}\nRepairable: ${result.repairable}\nIssues: ${result.issues.length}\n\n${sample.join("\n")}`
+                            : `Verified ${result.files} entries.\nIndexed: ${result.indexed}\nNo metadata issues were found.`
+                    );
+                    await loadFilesToTable();
+                } catch (err) {
+                    alert(`Verify failed: ${err && err.message ? err.message : String(err)}`);
+                } finally {
+                    verifyBtn.disabled = false;
+                }
+            });
+
+            const rebuildBtn = qs("#vault-rebuild-btn");
+            if (rebuildBtn) rebuildBtn.addEventListener("click", async() => {
+                if (!confirm("Rebuild the local vault index cache from bookmarks metadata?")) return;
+                rebuildBtn.disabled = true;
+                try {
+                    await clearVaultIndex();
+                    const result = await verifyVaultIndex();
+                    alert(`Rebuilt index.\nFiles scanned: ${result.files}\nIndexed: ${result.indexed}`);
+                    await loadFilesToTable();
+                } catch (err) {
+                    alert(`Rebuild failed: ${err && err.message ? err.message : String(err)}`);
+                } finally {
+                    rebuildBtn.disabled = false;
+                }
+            });
+
+            const recoverBtn = qs("#vault-recover-btn");
+            if (recoverBtn) recoverBtn.addEventListener("click", async() => {
+                if (!confirm("Attempt recovery on files with broken chunk trees or missing metadata?")) return;
+                recoverBtn.disabled = true;
+                try {
+                    const result = await recoverVaultFiles();
+                    const notes = result.issues.slice(0, 8);
+                    alert(
+                        `Recovery finished.\nScanned: ${result.scanned}\nClean: ${result.clean}\nNormalized: ${result.normalized}\nRecovered: ${result.recovered}\nFailed: ${result.failed}${
+                            notes.length ? `\n\n${notes.join("\n")}` : ""
+                        }`
+                    );
+                    await loadFilesToTable();
+                } catch (err) {
+                    alert(`Recovery failed: ${err && err.message ? err.message : String(err)}`);
+                } finally {
+                    recoverBtn.disabled = false;
+                    setProgress(0);
+                }
+            });
+
+            setupDragDrop();
+            await loadFilesToTable();
+            applySettings();
+        }
+
+        setupExtensionTabs({ mountCloud: mountWoxBinCompact, onShowLocal: initializeLocalVaultSurface });
         window.__bookmarkfsVaultBridge = {
             async queueCompose(payload) {
                 await setPendingCompose(payload);
@@ -1841,111 +2101,20 @@ export function handleZip(bytes) {
 
         try {
             const params = new URLSearchParams(window.location.search || "");
-            if (params.get("tab") === "cloud" && window.__bookmarkfsTabs && typeof window.__bookmarkfsTabs.showCloud === "function") {
+            const requestedTab = String(params.get("tab") || "").toLowerCase();
+            if (requestedTab === "local" || requestedTab === "vault" || requestedTab === "bookmarkfs") {
+                await initializeLocalVaultSurface();
+                if (window.__bookmarkfsTabs && typeof window.__bookmarkfsTabs.showLocal === "function") {
+                    window.__bookmarkfsTabs.showLocal();
+                }
+            } else if (window.__bookmarkfsTabs && typeof window.__bookmarkfsTabs.showCloud === "function") {
                 window.__bookmarkfsTabs.showCloud();
             }
         } catch {
-            /* ignore */
-        }
-
-        ensureUI();
-
-        // wire main file input
-        const input = qs("#file-input");
-        if (input) {
-            input.addEventListener("change", async function() {
-                const files = Array.from(this.files || []);
-                if (!files.length) return;
-                await handleFileList(files);
-                this.value = "";
-            });
-        }
-
-        // wire search
-        const search = qs("#search-bar");
-        if (search) search.addEventListener("input", async() => {
-            currentPage = 1;
-            await loadFilesToTable();
-        });
-
-        const prevBtn = qs("#prev-page-btn");
-        if (prevBtn) prevBtn.addEventListener("click", async() => {
-            currentPage = Math.max(1, currentPage - 1);
-            await loadFilesToTable();
-        });
-        const nextBtn = qs("#next-page-btn");
-        if (nextBtn) nextBtn.addEventListener("click", async() => {
-            currentPage += 1;
-            await loadFilesToTable();
-        });
-
-        const upBtn = qs("#up-path-btn");
-        if (upBtn) upBtn.addEventListener("click", async() => {
-            if (!currentPath) return;
-            const parts = currentPath.split("/").filter(Boolean);
-            parts.pop();
-            currentPath = parts.join("/");
-            currentPage = 1;
-            await loadFilesToTable();
-        });
-
-        const folderInput = qs("#folder-input");
-        if (folderInput) folderInput.addEventListener("change", () => {
-            currentPath = normalizeVirtualPath(folderInput.value || "");
-            currentPage = 1;
-            updatePathBar();
-        });
-
-        // export/import
-        const exportBtn = qs("#export-btn");
-        if (exportBtn) exportBtn.addEventListener("click", exportAll);
-        const importInput = qs("#import-input");
-        if (importInput) importInput.addEventListener("change", async function() {
-            const f = this.files && this.files[0];
-            if (f) await importAllFromFile(f);
-            this.value = "";
-        });
-
-        const verifyBtn = qs("#vault-verify-btn");
-        if (verifyBtn) verifyBtn.addEventListener("click", async() => {
-            verifyBtn.disabled = true;
-            try {
-                const result = await verifyVaultIndex();
-                const sample = result.issues.slice(0, 6);
-                alert(
-                    result.issues.length
-                        ? `Verified ${result.files} entries.\nIndexed: ${result.indexed}\nIssues: ${result.issues.length}\n\n${sample.join("\n")}`
-                        : `Verified ${result.files} entries.\nIndexed: ${result.indexed}\nNo metadata issues were found.`
-                );
-                await loadFilesToTable();
-            } catch (err) {
-                alert(`Verify failed: ${err && err.message ? err.message : String(err)}`);
-            } finally {
-                verifyBtn.disabled = false;
+            if (window.__bookmarkfsTabs && typeof window.__bookmarkfsTabs.showCloud === "function") {
+                window.__bookmarkfsTabs.showCloud();
             }
-        });
-
-        const rebuildBtn = qs("#vault-rebuild-btn");
-        if (rebuildBtn) rebuildBtn.addEventListener("click", async() => {
-            if (!confirm("Rebuild the local vault index cache from bookmarks metadata?")) return;
-            rebuildBtn.disabled = true;
-            try {
-                await clearVaultIndex();
-                const result = await verifyVaultIndex();
-                alert(`Rebuilt index.\nFiles scanned: ${result.files}\nIndexed: ${result.indexed}`);
-                await loadFilesToTable();
-            } catch (err) {
-                alert(`Rebuild failed: ${err && err.message ? err.message : String(err)}`);
-            } finally {
-                rebuildBtn.disabled = false;
-            }
-        });
-
-        setupDragDrop();
-
-        // initial render
-        await loadFilesToTable();
-        applySettings(); // apply saved settings immediately
+        }
     });
 
 })();

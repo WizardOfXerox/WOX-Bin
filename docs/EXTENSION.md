@@ -4,6 +4,7 @@
 
 - **Local vault:** Stores files in a synced `bookmarkfs` bookmark folder (BookmarkFS).
 - **Cloud pastes:** Uses your Wox-Bin **API key** and site URL (saved in `chrome.storage.local`) to list, create, **edit**, **delete**, and copy hosted pastes.
+- **Vercel-compatible hosted mode:** Works against the deployed WOX-Bin app on Vercel over the same `/api/v1/*` routes used by the web app.
 
 OAuth / browser session login is **not** required for the cloud panel; you only need an API key from the web app.
 
@@ -17,7 +18,7 @@ OAuth / browser session login is **not** required for the cloud panel; you only 
    - **API key** — paste the secret.
 5. Click **Save**.
 
-Optional: set a default URL at **build** time via `__WOXBIN_DEFAULT_SITE_URL__` (see `bookmarkfs/webpack.config.js`).
+Optional: set a default URL at **build** time via `__WOXBIN_DEFAULT_SITE_URL__` (see `bookmarkfs/webpack.config.cjs`). If you already set `NEXT_PUBLIC_APP_URL` in the root project, the extension build can inherit that automatically.
 
 ## API used (`/api/v1`)
 
@@ -38,7 +39,29 @@ All of the above (except preflight) use `Authorization: Bearer <api_key>`.
 - **storage** — Saved URL, key, drafts, presets.
 - **contextMenus** — “Create paste from selection / link / …”.
 - **tabs** — Open the extension page in a tab from the context menu.
-- **host_permissions `<all_urls>`** — Fetch your chosen site and optional URL drops in BookmarkFS.
+- **host_permissions `https://*/*` + localhost** — Fetch hosted WOX-Bin deployments over HTTPS, plus `http://localhost/*` and `http://127.0.0.1/*` for local development.
+
+## Compatibility with the Vercel app
+
+BookmarkFS is compatible with the current Vercel-hosted WOX-Bin app. The cloud companion uses:
+
+- `GET /api/v1/me`
+- `GET/POST /api/v1/me/folders`
+- `GET/POST /api/v1/me/keys`
+- `DELETE /api/v1/me/keys/[keyId]`
+- `GET/POST /api/v1/pastes`
+- `GET/PATCH/DELETE /api/v1/pastes/[slug]`
+
+That means the following extension features work against the Vercel deployment:
+
+- multi-profile site switching
+- API key management
+- hosted paste list/search
+- create, edit, duplicate, pin, favorite, cache, and delete
+- open page/raw URLs on the deployed site
+- optional local-vault mirroring and offline cache
+
+The local BookmarkFS vault remains browser-local and does not depend on Vercel.
 
 ## Build
 

@@ -7,6 +7,8 @@ Browser extension with two surfaces:
 
 The extension is now intentionally `WOX-Bin-first`. The bookmark-backed vault remains available for offline or experimental use, but it is not positioned as a durable cloud file system.
 
+Hosted mode is compatible with the current Next.js/Vercel WOX-Bin app. It talks to the deployed `/api/v1/*` routes over HTTPS and supports multi-profile switching between production, preview, staging, or local development sites.
+
 ## Current feature set
 
 ### Cloud mode
@@ -24,11 +26,12 @@ The extension is now intentionally `WOX-Bin-first`. The bookmark-backed vault re
 ### Local vault mode
 - Upload files into bookmark-backed storage
 - Export and import the full vault as JSON
+- Import preview before restore is applied
 - Drag and drop local files or remote asset URLs
 - Duplicate detection by content hash
 - Resume checkpoints for non-encrypted uploads
 - Lightweight metadata index cache for faster reloads
-- Verify and rebuild the local index cache
+- Verify, rebuild, and recover the local index/chunk tree state
 - Bridge local files into the WOX-Bin composer as text or attachments
 
 ## Trust model
@@ -43,6 +46,7 @@ The extension is now intentionally `WOX-Bin-first`. The bookmark-backed vault re
 - Depends on browser bookmark sync behavior and bookmark limits
 - Best treated as experimental storage, backup, or offline scratch space
 - Large libraries can still stress the browser even though the extension now avoids some repeated metadata reads
+- The vault view now hydrates metadata around the visible page instead of eagerly reading every file on every refresh
 
 ## Build
 

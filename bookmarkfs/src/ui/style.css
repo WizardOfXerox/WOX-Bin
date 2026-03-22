@@ -677,6 +677,54 @@ body:not(.ext-app) .rwd-table td {
   font-weight: 600;
 }
 
+.bfs-import-preview {
+  width: min(760px, 100%);
+}
+
+.bfs-import-preview h2 {
+  margin: 0 0 10px;
+  font-size: 20px;
+}
+
+.bfs-import-preview__summary {
+  margin: 0 0 12px;
+  color: hsl(var(--x-muted));
+  line-height: 1.5;
+}
+
+.bfs-import-preview__list {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.bfs-import-preview__row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: hsl(var(--x-surface2) / 0.42);
+  border: 1px solid hsl(var(--x-border));
+}
+
+.bfs-import-preview__row strong {
+  color: hsl(var(--x-fg));
+  word-break: break-word;
+}
+
+.bfs-import-preview__row span {
+  font-size: 12px;
+  color: hsl(var(--x-muted));
+}
+
+.bfs-import-preview__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
 #image-input {
   display: none;
 }

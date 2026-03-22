@@ -55,6 +55,12 @@ export default function DocIndexPage() {
           — {TOOLS_ENABLED ? "browser tools hub and conversion platform pointers." : "status page and planned conversion surface."}
         </li>
         <li>
+          <Link href="/bookmarkfs">
+            <strong className="text-foreground">BookmarkFS companion</strong>
+          </Link>{" "}
+          — browser extension positioning, local vault model, and how it fits with hosted WOX-Bin.
+        </li>
+        <li>
           <Link href="/doc/faq">
             <strong className="text-foreground">FAQ</strong>
           </Link>{" "}
