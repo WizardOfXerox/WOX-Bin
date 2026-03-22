@@ -1,0 +1,25 @@
+.next
+node_modules
+bookmarkfs/dist
+bookmarkfs/Backup Previous Version DIST
+
+# TypeScript incremental (regenerated)
+tsconfig.tsbuildinfo
+
+# Local disk-usage script output (optional)
+scripts/disk-*-out.txt
+.vercel
+coverage
+playwright-report
+test-results
+drizzle/*.sql
+drizzle/meta
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+legacy/server/woxbin.db
+
+# Local Firecrawl scrape (regenerate before `scripts/extract-convertio-formats.mjs`)
+.firecrawl-convertio-formats.md

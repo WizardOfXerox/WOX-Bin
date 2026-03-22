@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WOX-Bin – Personal Paste & Notes</title>
+  <link rel="stylesheet" href="styles.css?v=20260319e" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" id="prism-theme" />
+</head>
+<body>
+  <div class="landing" id="landing-page">
+    <header class="landing-header">
+      <span class="landing-logo-sm">WOX-Bin</span>
+    </header>
+    <section class="landing-hero">
+      <h1 class="landing-title">Your snippets, organized.</h1>
+      <p class="landing-lead">WOX-Bin is a simple paste and notes app: save code, configs, and text in one place. Use it on this device only, or sign in to sync across devices. No ads, no clutter—just paste and go.</p>
+      <button type="button" class="btn btn-primary landing-cta" id="landing-get-started">Get started — it's free</button>
+      <p class="landing-no-account">No account? No problem. You can start pasting right away and everything stays on your device.</p>
+    </section>
+    <section class="landing-features">
+      <h2 class="landing-h2">Why WOX-Bin?</h2>
+      <div class="landing-grid">
+        <div class="landing-card">
+          <span class="landing-icon">📁</span>
+          <h3>Folders & tags</h3>
+          <p>Organize pastes into folders and add tags. Find anything quickly with search and filters (All, Favorites, Recent, Archive).</p>
+        </div>
+        <div class="landing-card">
+          <span class="landing-icon">🎨</span>
+          <h3>Syntax highlighting</h3>
+          <p>Code in JavaScript, Python, HTML, and 20+ languages with readable colors. Toggle line numbers, word wrap, and themes.</p>
+        </div>
+        <div class="landing-card">
+          <span class="landing-icon">🔒</span>
+          <h3>Private or shareable</h3>
+          <p>Keep pastes private, unlisted (link-only), or public. Add passwords or burn-after-read. Share via link, QR code, or embed.</p>
+        </div>
+        <div class="landing-card">
+          <span class="landing-icon">☁️</span>
+          <h3>Optional account</h3>
+          <p>Sign in to save pastes on the server and access them from any device. Your data, your choice.</p>
+        </div>
+        <div class="landing-card">
+          <span class="landing-icon">📤</span>
+          <h3>Export & backup</h3>
+          <p>Download as .txt, .md, or .html. Export everything as JSON. Import from file or from any URL.</p>
+        </div>
+        <div class="landing-card">
+          <span class="landing-icon">⌨️</span>
+          <h3>Keyboard friendly</h3>
+          <p>New paste (Ctrl+N), Save (Ctrl+S), Find (Ctrl+F). Press <kbd>?</kbd> in the app for all shortcuts.</p>
+        </div>
+      </div>
+    </section>
+    <section class="landing-how">
+      <h2 class="landing-h2">How it works</h2>
+      <ol class="landing-steps">
+        <li><strong>Click “Get started”</strong> — You’re in the app. No signup required.</li>
+        <li><strong>Create a paste</strong> — Type or paste text, add a title, choose a folder and language. You can also drop a file to create a new paste.</li>
+        <li><strong>Organize</strong> — Use folders, tags, favorites, and archive. Sort by newest, oldest, title, or views.</li>
+        <li><strong>Share or keep private</strong> — Copy link, share with optional read-only link, QR code, or embed. Or keep everything local.</li>
+      </ol>
+    </section>
+    <section class="landing-tips">
+      <h2 class="landing-h2">Quick tips</h2>
+      <ul class="landing-tips-list">
+        <li>Use <strong>Save as template</strong> to reuse a paste as a starting point; open it from <strong>Templates</strong>.</li>
+        <li>Use <strong>History</strong> to restore a previous version of the current paste.</li>
+        <li>Use <strong>Import URL</strong> to fetch content from a URL and create a new paste in one click.</li>
+        <li>Turn on <strong>Line numbers</strong> and <strong>Word wrap</strong> in the editor options for a better reading experience.</li>
+      </ul>
+    </section>
+    <section class="landing-privacy">
+      <h2 class="landing-h2">Privacy & data</h2>
+      <p class="landing-privacy-p">When you use WOX-Bin without an account, all pastes are stored only in your browser (localStorage). When you sign in, pastes are stored on the server you connect to. We don’t track you; your data stays in your browser or on your server.</p>
+    </section>
+    <section class="landing-cta-section">
+      <button type="button" class="btn btn-primary landing-cta landing-cta-bottom" id="landing-get-started-2">Get started</button>
+    </section>
+    <footer class="landing-footer">
+      <p>WOX-Bin — Pastebin-like, for you. Data stays in your browser or on your server.</p>
+    </footer>
+  </div>
+  <!-- App shell: full UI built by js/00-build-ui.js into #app-mount -->
+  <div class="app hidden" id="app-container">
+    <div id="toast-container" aria-live="polite"></div>
+    <div id="app-mount"></div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup-templating.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-powershell.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markdown.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-clike.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-c.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-php.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-ruby.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-swift.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-kotlin.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/diff_match_patch/20121119/diff_match_patch.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/00-build-ui.js"></script>
+  <script src="js/01-core.js"></script>
+  <script src="js/02-dom-ui.js"></script>
+  <script src="js/03-editor.js"></script>
+  <script src="js/04-paste-ops.js"></script>
+  <script src="js/05-folders-theme.js"></script>
+  <script src="js/06-account-bulk.js"></script>
+  <script src="js/07-features.js"></script>
+  <script src="js/08-init.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" fill="none" aria-hidden="true">
+  <title>WOX-Bin</title>
+  <rect x="28" y="36" width="124" height="18" rx="9" fill="#8b5cf6" />
+  <rect x="28" y="66" width="78" height="18" rx="9" fill="#8b5cf6" opacity="0.88" />
+  <rect x="28" y="96" width="102" height="18" rx="9" fill="#8b5cf6" opacity="0.76" />
+  <path
+    fill="#a78bfa"
+    d="M24 132c0-5 4-9 9-9h114c5 0 9 4 9 9v18c0 5-4 9-9 9H33c-5 0-9-4-9-9v-18z"
+  />
+</svg>

@@ -1,0 +1,17 @@
+{
+  "name": "woxbin-server",
+  "version": "1.0.0",
+  "description": "WOX-Bin backend: accounts + pastes, online",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "es-object-atoms": "^1.0.0",
+    "express": "^4.21.0",
+    "express-session": "^1.18.0",
+    "sql.js": "^1.11.0"
+  }
+}

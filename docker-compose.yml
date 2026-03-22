@@ -1,0 +1,62 @@
+# Local PostgreSQL + optional MinIO + FFmpeg conversion worker.
+# Requires Docker Desktop. Do not run this at the same time as a native Postgres on port 5432.
+#
+#   docker compose up -d
+#   npm run db:push
+#
+# MinIO console: http://127.0.0.1:9001  (user minio / pass minio12345)
+# App on host: set CONVERT_S3_ENDPOINT=http://127.0.0.1:9000
+# Worker in Compose: uses service hostname `minio`.
+#
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: woxbin-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: woxbin
+    volumes:
+      - woxbin_pgdata:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio:latest
+    container_name: woxbin-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio12345
+    volumes:
+      - woxbin_minio:/data
+
+  convert-worker:
+    profiles:
+      - worker
+    build:
+      context: .
+      dockerfile: workers/convert/Dockerfile
+    container_name: woxbin-convert-worker
+    restart: unless-stopped
+    depends_on:
+      - db
+      - minio
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/woxbin
+      CONVERT_S3_BUCKET: woxbin-convert
+      CONVERT_S3_REGION: us-east-1
+      CONVERT_S3_ACCESS_KEY: minio
+      CONVERT_S3_SECRET_KEY: minio12345
+      CONVERT_S3_ENDPOINT: http://minio:9000
+      CONVERT_S3_FORCE_PATH_STYLE: "true"
+      CONVERT_WORKER_POLL_MS: "3000"
+
+volumes:
+  woxbin_pgdata:
+  woxbin_minio:

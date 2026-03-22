@@ -1,0 +1,43 @@
+{
+    "name": "BookmarkFS + Wox-Bin",
+    "description": "Bookmark backup in synced bookmarks, plus compact Wox-Bin (API key) for cloud pastes.",
+    "version": "0.1",
+    "manifest_version": 3,
+    "background": {
+        "service_worker": "background.js",
+        "type": "module"
+    },
+    "icons": {
+        "16": "icons/16x16.png",
+        "32": "icons/32x32.png",
+        "64": "icons/64x64.png",
+        "128": "icons/128x128.png",
+        "256": "icons/256x256.png",
+        "512": "icons/512x512.png",
+        "1024": "icons/1024x1024.png"
+    },
+    "options_ui": {
+        "open_in_tab": true,
+        "page": "./dist/index.html"
+    },
+    "action": {
+        "title": "Wox-Bin & BookmarkFS",
+        "default_popup": "./dist/index.html"
+    },
+    "web_accessible_resources": [{
+        "resources": ["dist/unrar.wasm"],
+        "matches": ["<all_urls>"]
+    }],
+    "content_security_policy": {
+        "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com"
+    },
+    "permissions": [
+        "bookmarks",
+        "storage",
+        "contextMenus",
+        "tabs"
+    ],
+    "host_permissions": [
+        "<all_urls>"
+    ]
+}

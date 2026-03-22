@@ -1,0 +1,936 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: "Space Grotesk";
+  --font-mono: "IBM Plex Mono";
+  /* Dark shell: keep body text high-contrast; muted labels readable on cards (≈ WCAG AA vs card). */
+  --background: 221 38% 9%;
+  --foreground: 210 40% 98%;
+  --muted: 220 21% 14%;
+  --muted-foreground: 218 16% 78%;
+  --card: 222 31% 13%;
+  --card-foreground: 210 40% 98%;
+  --border: 220 19% 22%;
+  --input: 220 22% 16%;
+  --primary: 203 100% 56%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 176 73% 36%;
+  --secondary-foreground: 210 40% 98%;
+  --accent: 45 98% 56%;
+  --accent-foreground: 222 47% 11%;
+  --destructive: 354 76% 58%;
+  --destructive-foreground: 210 40% 98%;
+  --ring: 203 100% 56%;
+  --radius: 1rem;
+}
+
+/* Stronger chrome for accessibility (high-contrast toggle) */
+body.wox-high-contrast {
+  --border: 210 40% 55%;
+  --ring: 203 100% 70%;
+  --foreground: 210 40% 100%;
+  --muted-foreground: 218 14% 88%;
+  --card-foreground: 210 40% 100%;
+}
+
+html.theme-light body.wox-high-contrast {
+  --foreground: 224 32% 8%;
+  --muted-foreground: 220 18% 22%;
+  --card-foreground: 224 32% 8%;
+  --border: 220 16% 45%;
+}
+
+body.wox-high-contrast .border-border,
+body.wox-high-contrast .rounded-2xl.border {
+  border-color: hsl(var(--border) / 0.85);
+}
+
+.theme-light {
+  --background: 40 28% 97%;
+  --foreground: 224 32% 11%;
+  --muted: 36 18% 92%;
+  /* Darker than before so secondary text stays readable on muted strips / sidebars */
+  --muted-foreground: 220 16% 26%;
+  --card: 0 0% 100%;
+  --card-foreground: 224 32% 11%;
+  --border: 220 14% 82%;
+  --input: 220 14% 94%;
+  --primary: 215 90% 42%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 164 63% 34%;
+  --secondary-foreground: 0 0% 100%;
+  --accent: 36 95% 48%;
+  --accent-foreground: 224 32% 12%;
+  --destructive: 356 72% 48%;
+  --destructive-foreground: 0 0% 100%;
+  --ring: 215 90% 42%;
+}
+
+/* Light shell: page chrome (default body gradient is tuned for dark UI) */
+html.theme-light body {
+  background-color: hsl(var(--background));
+  background-image:
+    radial-gradient(circle at 0% 0%, rgb(59 130 246 / 0.08), transparent 44%),
+    radial-gradient(circle at 100% 0%, rgb(20 184 166 / 0.06), transparent 42%),
+    linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted) / 0.85));
+}
+
+html.theme-light .glass-panel {
+  border-color: hsl(var(--border));
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+}
+
+/* “Deep space” workspace tone + light shell: avoid near-black page behind light cards */
+html.theme-light .workspace-tone-deep {
+  background-color: hsl(220 16% 94%) !important;
+  background-image:
+    radial-gradient(circle at 18% 0%, rgba(59, 130, 246, 0.11), transparent 46%),
+    radial-gradient(circle at 82% 16%, rgba(6, 182, 212, 0.08), transparent 42%) !important;
+}
+
+html.theme-light .workspace-tone-warm {
+  background-color: hsl(35 40% 95%) !important;
+  background-image:
+    radial-gradient(circle at 12% 0%, rgba(251, 146, 60, 0.12), transparent 44%),
+    radial-gradient(circle at 88% 12%, rgba(244, 63, 94, 0.06), transparent 40%) !important;
+}
+
+html.theme-light .workspace-tone-forest {
+  background-color: hsl(145 18% 94%) !important;
+  background-image:
+    radial-gradient(circle at 20% 0%, rgba(34, 197, 94, 0.1), transparent 42%),
+    radial-gradient(circle at 80% 18%, rgba(16, 185, 129, 0.07), transparent 40%) !important;
+}
+
+* {
+  @apply border-border;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+  min-height: 100vh;
+  background-image:
+    radial-gradient(circle at top left, rgba(0, 168, 255, 0.18), transparent 30%),
+    radial-gradient(circle at top right, rgba(0, 214, 201, 0.14), transparent 28%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.03), transparent);
+}
+
+/* Placeholders stay distinguishable but not as strong as body text */
+::placeholder {
+  color: hsl(var(--muted-foreground) / 0.92);
+}
+
+html.theme-light ::placeholder {
+  color: hsl(var(--muted-foreground) / 0.88);
+}
+
+a {
+  @apply text-inherit no-underline;
+}
+
+code,
+pre,
+textarea {
+  font-family: var(--font-mono), ui-monospace, monospace;
+}
+
+/* Opaque enough that text stays readable over gradient/page backdrops (avoids “washed” labels). */
+.glass-panel {
+  @apply rounded-[1.5rem] border border-border backdrop-blur-md;
+  background-color: hsl(var(--card) / 0.94);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.22);
+  transition:
+    box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.35s ease,
+    background-color 0.35s ease;
+}
+
+html.theme-light .glass-panel {
+  background-color: hsl(var(--card) / 0.98);
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .glass-panel:hover {
+    box-shadow: 0 28px 72px rgba(0, 0, 0, 0.3);
+    border-color: hsl(var(--primary) / 0.22);
+  }
+
+  html.theme-light .glass-panel:hover {
+    box-shadow: 0 20px 56px rgba(15, 23, 42, 0.14);
+    border-color: hsl(var(--border));
+  }
+}
+
+.workspace-grid {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr) 360px;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.workspace-grid > * {
+  min-height: 0;
+}
+
+/* Scrollable regions: keep scroll, hide visible scrollbar (mouse wheel / touch still work) */
+.workspace-scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.workspace-scrollbar-hide::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.workspace-tone-deep {
+  background-color: #07080c;
+  background-image:
+    radial-gradient(circle at 20% 0%, rgba(30, 64, 175, 0.12), transparent 42%),
+    radial-gradient(circle at 80% 20%, rgba(14, 165, 233, 0.08), transparent 38%);
+}
+
+.workspace-tone-warm {
+  background-color: #0c0908;
+  background-image:
+    radial-gradient(circle at 15% 0%, rgba(180, 83, 9, 0.14), transparent 40%),
+    radial-gradient(circle at 85% 25%, rgba(190, 24, 93, 0.09), transparent 36%);
+}
+
+.workspace-tone-forest {
+  background-color: #060a08;
+  background-image:
+    radial-gradient(circle at 18% 0%, rgba(22, 101, 52, 0.16), transparent 42%),
+    radial-gradient(circle at 78% 22%, rgba(5, 150, 105, 0.1), transparent 38%);
+}
+
+/* --- Prism overlay editor: pixel-locked textarea ↔ highlight layer --- */
+.wox-prism-editor {
+  --wox-editor-fs: 15px;
+  --wox-editor-lh: 28px;
+  --wox-editor-pad-x: 1.5rem;
+  --wox-editor-pad-y: 1.25rem;
+}
+
+/* Tighter content padding when a line gutter is shown */
+.wox-prism-editor--line-gutter {
+  --wox-editor-pad-x: 1.125rem;
+}
+
+/*
+ * IMPORTANT: `.highlight-wrap` is ON the <pre> itself (not a wrapper around pre).
+ * The old selector `.highlight-wrap pre` never matched — the highlight layer had no
+ * padding / metrics, so Prism tokens drifted vs the textarea (different font + tab-size too).
+ */
+.wox-prism-editor pre.highlight-wrap {
+  margin: 0;
+  padding: var(--wox-editor-pad-y) var(--wox-editor-pad-x);
+  box-sizing: border-box;
+  scrollbar-gutter: stable;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  font-family: var(--font-mono), ui-monospace, monospace !important;
+  font-size: var(--wox-editor-fs);
+  line-height: var(--wox-editor-lh);
+  letter-spacing: 0;
+  word-spacing: normal;
+  tab-size: 2;
+  -moz-tab-size: 2;
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+  background-color: transparent !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.wox-prism-editor pre.highlight-wrap::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+/* Let wrapped lines reflow the same in <pre> and <textarea> */
+.wox-prism-editor pre.highlight-wrap:has(code.whitespace-pre-wrap) {
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.wox-prism-editor textarea.wox-prism-ta {
+  margin: 0;
+  padding: var(--wox-editor-pad-y) var(--wox-editor-pad-x);
+  box-sizing: border-box;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  /* Only visible scrollbar in the workspace chrome: keep other panels on workspace-scrollbar-hide */
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.45) hsl(var(--muted) / 0.3);
+  border: 0;
+  font-family: var(--font-mono), ui-monospace, monospace !important;
+  font-size: var(--wox-editor-fs);
+  line-height: var(--wox-editor-lh);
+  letter-spacing: 0;
+  word-spacing: normal;
+  tab-size: 2;
+  -moz-tab-size: 2;
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+  background-color: transparent !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.dark .wox-prism-editor textarea.wox-prism-ta {
+  scrollbar-color: hsl(var(--muted-foreground) / 0.5) hsl(var(--muted) / 0.22);
+}
+
+.wox-prism-editor textarea.wox-prism-ta::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.wox-prism-editor textarea.wox-prism-ta::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: hsl(var(--muted) / 0.28);
+}
+
+.wox-prism-editor textarea.wox-prism-ta::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  background-color: hsl(var(--muted-foreground) / 0.38);
+}
+
+.wox-prism-editor textarea.wox-prism-ta::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.55);
+}
+
+/* Beat prism theme `code[class*="language-"]` (Consolas, tab-size 4, line-height 1.5) */
+.wox-prism-editor pre.highlight-wrap code[class*="language-"] {
+  display: block;
+  box-sizing: border-box;
+  font-family: var(--font-mono), ui-monospace, monospace !important;
+  font-size: var(--wox-editor-fs) !important;
+  line-height: var(--wox-editor-lh) !important;
+  letter-spacing: 0 !important;
+  word-spacing: normal !important;
+  tab-size: 2 !important;
+  -moz-tab-size: 2 !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Non-wrapping: match textarea scroll width; wrapping: fill pre width */
+.wox-prism-editor pre.highlight-wrap code[class*="language-"]:not(.whitespace-pre-wrap) {
+  width: max-content;
+  min-width: 100%;
+}
+
+.wox-prism-editor pre.highlight-wrap code[class*="language-"].whitespace-pre-wrap {
+  width: 100%;
+  max-width: 100%;
+  white-space: pre-wrap !important;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.wox-prism-editor textarea.wox-prism-ta.whitespace-pre-wrap {
+  white-space: pre-wrap !important;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.wox-prism-editor .highlight-wrap code .token {
+  font-size: inherit !important;
+  line-height: inherit !important;
+  font-family: inherit !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  vertical-align: baseline;
+}
+
+/* Live bracket pair outline (legacy .bracket-match) */
+.wox-prism-editor .highlight-wrap code .bracket-match {
+  outline: 1px solid hsl(var(--primary));
+  border-radius: 2px;
+  background: hsl(var(--primary) / 0.12);
+}
+
+.wox-prism-editor.syntax-light .highlight-wrap code .bracket-match {
+  outline: 1px solid rgb(37 99 235);
+  background: rgb(37 99 235 / 0.12);
+}
+
+@media (max-width: 1200px) {
+  .workspace-grid {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+
+  .workspace-details {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Public paste line map: line numbers come from PrismLineMap’s <span>, not ::before (duplicate gutter). */
+
+/* --- Prism (workspace overlay editor): never flatten .token colors --- */
+.wox-prism-editor pre[class*="language-"] {
+  margin: 0;
+  padding: 0;
+  background: transparent !important;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.wox-prism-editor code[class*="language-"] {
+  background: transparent !important;
+  /* Do not set color here — Prism theme .token.* supplies colors */
+}
+
+.wox-prism-editor .highlight-wrap [class*="line-highlight"],
+.wox-prism-editor .highlight-wrap .line-numbers-rows {
+  background: transparent !important;
+}
+
+/* Read-only code blocks (public paste, code image export) */
+.wox-prism-readonly pre[class*="language-"] {
+  margin: 0;
+  background: transparent !important;
+}
+
+.wox-prism-readonly code[class*="language-"] {
+  background: transparent !important;
+}
+
+.code-image-export-prism pre[class*="language-"],
+.code-image-export-prism code[class*="language-"] {
+  background: transparent !important;
+  /* Prism defaults use pre nowrap; force wrap so preview/export have no inner scrollbar */
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  max-width: 100% !important;
+}
+
+.code-image-export-prism pre[class*="language-"] {
+  overflow-x: hidden !important;
+  overflow-y: visible;
+  box-sizing: border-box;
+}
+
+.code-image-export-prism code[class*="language-"] {
+  display: block !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.code-image-export-prism span[class*="token"] {
+  white-space: inherit !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* Markdown preview (workspace) */
+.wox-markdown-preview {
+  color: hsl(var(--foreground));
+}
+.wox-markdown-preview h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+}
+.wox-markdown-preview h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 1rem 0 0.35rem;
+}
+.wox-markdown-preview h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0.75rem 0 0.25rem;
+}
+.wox-markdown-preview p {
+  margin: 0 0 0.75rem;
+}
+.wox-markdown-preview ul,
+.wox-markdown-preview ol {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+}
+.wox-markdown-preview code {
+  border-radius: 0.25rem;
+  background: hsl(var(--muted) / 0.5);
+  padding: 0.1em 0.35em;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.9em;
+}
+/* Plain fenced blocks (no Prism grammar) */
+.wox-markdown-preview pre.wox-md-fence:not([class*="language-"]) {
+  margin: 0.75rem 0;
+  overflow: auto;
+  border-radius: 0.5rem;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--muted) / 0.35);
+  padding: 0.75rem 1rem;
+}
+
+/* Prism-highlighted fences: let prism-tomorrow / linked theme control background + token colors */
+.wox-markdown-preview pre[class*="language-"] {
+  margin: 0.75rem 0;
+  overflow: auto;
+  border-radius: 0.5rem;
+  border: 1px solid hsl(var(--border));
+  padding: 0.75rem 1rem;
+}
+
+.wox-markdown-preview pre code {
+  padding: 0;
+  background: none;
+}
+
+.wox-markdown-preview pre[class*="language-"] code .token {
+  font-style: normal;
+}
+.wox-markdown-preview a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+}
+.wox-markdown-preview blockquote {
+  margin: 0.75rem 0;
+  border-left: 3px solid hsl(var(--primary));
+  padding-left: 0.75rem;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Rentry-style ==highlight== — avoid harsh browser default yellow */
+.wox-user-markdown mark,
+.wox-markdown-preview mark {
+  background: hsl(var(--primary) / 0.14);
+  color: inherit;
+  padding: 0.06em 0.22em;
+  border-radius: 0.2rem;
+}
+
+/* diff_match_patch pretty HTML */
+.diff-pretty-html ins {
+  text-decoration: none;
+  background: rgba(34, 197, 94, 0.2);
+}
+.diff-pretty-html del {
+  text-decoration: line-through;
+  background: rgba(239, 68, 68, 0.22);
+}
+
+/* --- Motion: respect user preference; keep instant for reduced-motion --- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Workspace code editor: subtle focus / hover chrome */
+@media (prefers-reduced-motion: no-preference) {
+  .wox-prism-editor {
+    transition:
+      border-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .wox-prism-editor:focus-within {
+    border-color: hsl(var(--primary) / 0.45);
+    box-shadow:
+      0 0 0 1px hsl(var(--primary) / 0.2),
+      0 16px 48px rgba(0, 0, 0, 0.18);
+  }
+
+  html.theme-light .wox-prism-editor:focus-within {
+    box-shadow:
+      0 0 0 1px hsl(var(--primary) / 0.25),
+      0 12px 40px rgba(15, 23, 42, 0.08);
+  }
+
+  .wox-prism-editor.syntax-light:focus-within {
+    border-color: rgb(37 99 235 / 0.45);
+    box-shadow: 0 0 0 1px rgb(37 99 235 / 0.2);
+  }
+}
+
+/* --- Print: workspace ribbon / browser print (paste body, minimal chrome) --- */
+@media print {
+  @page {
+    margin: 0.65in;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .wox-workspace-root.workspace-full {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    overflow: visible !important;
+  }
+
+  .wox-workspace-root .workspace-tone-deep,
+  .wox-workspace-root .workspace-tone-warm,
+  .wox-workspace-root .workspace-tone-forest {
+    background: #fff !important;
+    background-image: none !important;
+  }
+
+  .wox-workspace-root .glass-panel {
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+
+  /*
+   * Prism overlay editor: printing uses the highlighted <pre>; hide the transparent <textarea>
+   * and drop absolute positioning so the full document flows on paper.
+   */
+  .wox-prism-editor textarea.wox-prism-ta {
+    display: none !important;
+  }
+
+  .wox-prism-editor .relative.min-h-0.min-w-0.flex-1 {
+    min-height: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .wox-prism-editor pre.highlight-wrap {
+    position: relative !important;
+    inset: auto !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    border-radius: 0.75rem !important;
+  }
+
+  /*
+   * Screen editor may use whitespace-pre; paper must wrap or long prose overflows the page.
+   * `html[data-wox-print-wrap="0"]` opts out (e.g. wide code dumps).
+   */
+  .wox-prism-editor pre.highlight-wrap,
+  .wox-prism-editor pre.highlight-wrap code {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  html[data-wox-print-wrap="0"] .wox-prism-editor pre.highlight-wrap,
+  html[data-wox-print-wrap="0"] .wox-prism-editor pre.highlight-wrap code {
+    white-space: pre !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+  }
+
+  /* --- Print layout presets (View ribbon → customize via data-wox-print-layout) --- */
+  html[data-wox-print-layout="comfortable"] .wox-prism-editor pre.highlight-wrap {
+    border: 1px solid #cbd5e1 !important;
+    background: #f1f5f9 !important;
+    padding: 0.9rem 1.05rem !important;
+    border-radius: 0.6rem !important;
+    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06) !important;
+  }
+
+  html[data-wox-print-layout="minimal"] .wox-prism-editor pre.highlight-wrap {
+    border: none !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    background: transparent !important;
+    padding: 0.35rem 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  html[data-wox-print-layout="document"] .wox-prism-editor pre.highlight-wrap {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  html[data-wox-print-layout="document"] .wox-prism-editor pre.highlight-wrap code {
+    font-family: Georgia, "Times New Roman", Times, serif !important;
+    font-size: 11pt !important;
+    line-height: 1.5 !important;
+    color: #0f172a !important;
+  }
+
+  html[data-wox-print-layout="document"] .wox-prism-editor pre.highlight-wrap .token {
+    color: inherit !important;
+    background: transparent !important;
+    font-weight: inherit !important;
+    font-style: normal !important;
+    text-decoration: none !important;
+  }
+
+  .wox-prism-editor canvas {
+    display: none !important;
+  }
+
+  .wox-workspace-root .wox-prism-editor {
+    min-height: unset !important;
+    height: auto !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+    break-inside: avoid;
+    box-shadow: none !important;
+    border-color: #e2e8f0 !important;
+  }
+
+  .wox-prism-editor:focus-within {
+    border-color: #ccc !important;
+    box-shadow: none !important;
+  }
+
+  /* Line gutter uses scroll sync transforms; hide for a clean print margin */
+  .wox-prism-editor--line-gutter > div.relative.w-9 {
+    display: none !important;
+  }
+
+  /* Print title / meta: avoid single-line overflow from the title <input> */
+  .wox-print-title {
+    max-width: 100% !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+
+  /* Public paste page (/p/[slug]): hide chrome, light paper */
+  .wox-public-paste-print-root .no-print {
+    display: none !important;
+  }
+
+  .wox-public-paste-print-root .glass-panel {
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    border-color: #e2e8f0 !important;
+  }
+
+  .wox-public-paste-print-root .wox-user-markdown,
+  .wox-public-paste-print-root .wox-markdown-preview,
+  .wox-public-paste-print-root pre {
+    max-width: 100% !important;
+    overflow: visible !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+  }
+}
+
+/* Rentry-inspired Markdown extensions (see lib/markdown/rentry-preprocess.ts) */
+.wox-user-markdown .wox-md-toc {
+  margin: 0.75rem 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--muted) / 0.35);
+}
+.wox-user-markdown .wox-md-toc-root {
+  margin: 0;
+  padding-left: 1.25rem;
+  list-style: decimal;
+}
+.wox-user-markdown .wox-md-toc-level-3 {
+  margin-left: 0.5rem;
+}
+.wox-user-markdown .wox-md-toc-level-4 {
+  margin-left: 1rem;
+}
+.wox-user-markdown .wox-md-toc-level-5 {
+  margin-left: 1.5rem;
+}
+.wox-user-markdown .wox-md-toc-level-6 {
+  margin-left: 2rem;
+}
+.wox-user-markdown mark {
+  background: rgb(250 204 21 / 0.35);
+  padding: 0 0.15em;
+  border-radius: 0.2em;
+}
+.wox-user-markdown .wox-md-align-center {
+  text-align: center;
+}
+.wox-user-markdown .wox-md-align-right {
+  text-align: right;
+}
+.wox-user-markdown .wox-md-spoiler {
+  margin: 0.5rem 0;
+}
+.wox-user-markdown .wox-md-spoiler summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.wox-user-markdown .wox-md-spoiler-body {
+  margin-top: 0.35rem;
+  padding: 0.5rem;
+  border-radius: 0.35rem;
+  background: hsl(var(--muted) / 0.5);
+}
+.wox-user-markdown .wox-md-admon {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border-left: 4px solid hsl(var(--border));
+  background: hsl(var(--muted) / 0.4);
+}
+.wox-user-markdown .wox-md-admon-note {
+  border-left-color: rgb(34 197 94);
+}
+.wox-user-markdown .wox-md-admon-info {
+  border-left-color: rgb(59 130 246);
+}
+.wox-user-markdown .wox-md-admon-warning {
+  border-left-color: rgb(234 179 8);
+}
+.wox-user-markdown .wox-md-admon-danger {
+  border-left-color: rgb(239 68 68);
+}
+.wox-user-markdown .wox-md-admon-greentext {
+  border-left-color: rgb(74 222 128);
+  color: rgb(134 239 172);
+}
+.wox-user-markdown .wox-md-admon-title {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+.wox-user-markdown .wox-md-img-sized {
+  height: auto;
+  max-width: 100%;
+}
+.wox-user-markdown .wox-md-img-float {
+  max-width: min(100%, 320px);
+  height: auto;
+}
+.wox-user-markdown .wox-md-float-left {
+  float: left;
+  margin: 0 1rem 0.5rem 0;
+}
+.wox-user-markdown .wox-md-float-right {
+  float: right;
+  margin: 0 0 0.5rem 1rem;
+}
+.wox-user-markdown .wox-md-float-clear {
+  clear: both;
+  height: 0;
+  overflow: hidden;
+}
+.wox-user-markdown .wox-md-c-red {
+  color: #ef4444;
+}
+.wox-user-markdown .wox-md-c-blue {
+  color: #3b82f6;
+}
+.wox-user-markdown .wox-md-c-green {
+  color: #22c55e;
+}
+.wox-user-markdown .wox-md-c-orange {
+  color: #f97316;
+}
+.wox-user-markdown .wox-md-c-yellow {
+  color: #eab308;
+}
+.wox-user-markdown .wox-md-c-violet {
+  color: #8b5cf6;
+}
+.wox-user-markdown .wox-md-c-purple {
+  color: #a855f7;
+}
+.wox-user-markdown .wox-md-c-pink {
+  color: #ec4899;
+}
+.wox-user-markdown .wox-md-c-cyan {
+  color: #06b6d4;
+}
+.wox-user-markdown .wox-md-c-teal {
+  color: #14b8a6;
+}
+.wox-user-markdown .wox-md-c-navy {
+  color: #1e3a8a;
+}
+.wox-user-markdown .wox-md-c-lime {
+  color: #84cc16;
+}
+.wox-user-markdown .wox-md-c-magenta {
+  color: #d946ef;
+}
+.wox-user-markdown .wox-md-c-brown {
+  color: #92400e;
+}
+.wox-user-markdown .wox-md-c-grey,
+.wox-user-markdown .wox-md-c-gray {
+  color: #9ca3af;
+}
+.wox-user-markdown .wox-md-c-black {
+  color: #111827;
+}
+.wox-user-markdown .wox-md-c-white {
+  color: #f9fafb;
+}
+.wox-user-markdown .wox-md-c-gold {
+  color: #eab308;
+}
+.wox-user-markdown .wox-md-c-silver {
+  color: #cbd5e1;
+}
+.wox-user-markdown .wox-md-c-aqua {
+  color: #22d3ee;
+}
+.wox-user-markdown .wox-md-c-coral {
+  color: #fb7185;
+}
+.wox-user-markdown .wox-md-c-crimson {
+  color: #dc2626;
+}
+.wox-user-markdown .wox-md-c-indigo {
+  color: #6366f1;
+}
+.wox-user-markdown .wox-md-c-maroon {
+  color: #881337;
+}
+.wox-user-markdown .wox-md-c-olive {
+  color: #a3a32a;
+}
+.wox-user-markdown .wox-md-c-tan {
+  color: #d2b48c;
+}
+.wox-user-markdown .wox-md-c-turquoise {
+  color: #2dd4bf;
+}

@@ -1,0 +1,26 @@
+# WOX-Bin documentation index
+
+**Public site docs (on your deployed app):** **`/doc`** (overview), **`/doc/api`**, **`/doc/scraping`**, **`/doc/tools`**, **`/doc/faq`**. Pastebin-style shortcuts: **`/doc_api`** → **`/doc/api`**, **`/doc_scraping_api`** → **`/doc/scraping`**.
+
+These Markdown files live **in the repository**. They are **not** automatically exposed as routes on the Vercel-hosted app (unless you add pages that render them).
+
+| Doc | Purpose |
+|-----|---------|
+| **[NPM-SCRIPTS.md](./NPM-SCRIPTS.md)** | **All `npm run` commands** — dev/build, `db:*`, codegen (`gen:*`, `fetch:*`), tests, worker, admin |
+| **[PRODUCT-SURFACES.md](./PRODUCT-SURFACES.md)** | Bounded map of the paste product vs the tools platform |
+| **[VERCEL-CONVERSIONS.md](./VERCEL-CONVERSIONS.md)** | FFmpeg jobs + S3 on Vercel: env vars, presigned uploads, worker off-platform, CORS |
+| **[VERCEL-READINESS-AUDIT.md](./VERCEL-READINESS-AUDIT.md)** | Current code-level deployment audit for Vercel |
+| **[CONVERSION-WORKER.md](./CONVERSION-WORKER.md)** | Local/worker: MinIO, Docker, `npm run worker:convert` |
+| **[CONVERSION-PLATFORM.md](./CONVERSION-PLATFORM.md)** | Hybrid converter architecture (browser vs worker) |
+| **[TOOLS.md](./TOOLS.md)** | `/tools` routes, APIs, registry layout |
+| **[MARKDOWN-RENTY-SUBSET.md](./MARKDOWN-RENTY-SUBSET.md)** | Rentry-inspired extras on top of `marked` (preview + Markdown→HTML) |
+| **[LOCAL-DATABASE.md](./LOCAL-DATABASE.md)** | Postgres locally |
+| **[ADMIN.md](./ADMIN.md)** | Admin bootstrap |
+| **[BILLING.md](./BILLING.md)** | Pro/Team upgrade URLs (`NEXT_PUBLIC_*`), Stripe Payment Links, portal |
+| **[TURNSTILE.md](./TURNSTILE.md)** | Cloudflare Turnstile (`NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`) |
+| **[SMTP.md](./SMTP.md)** | Outbound email — required for **forgot password** (`/forgot-password` → `/reset-password`) |
+| **[SECURITY.md](./SECURITY.md)** | HTTP headers, rate limits, auth hardening, production checklist |
+| **[VERCEL-SETUP.md](./VERCEL-SETUP.md)** | **Full Vercel deploy checklist** — env vars, DB, Redis, Turnstile, SMTP, OAuth, post-deploy |
+| **[LEGAL.md](./LEGAL.md)** | Terms of Service (live at `/terms`) — operator checklist |
+
+To read them from the deployed site you’d need to either link to **GitHub** (raw or blob URL) or add a small Next.js page under e.g. `/docs/...` that imports or duplicates the content.
