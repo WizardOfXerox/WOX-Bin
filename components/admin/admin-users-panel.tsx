@@ -122,7 +122,7 @@ export function AdminUsersPanel() {
   return (
     <div className="glass-panel space-y-4 p-5">
       <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-[200px] flex-1">
+        <div className="min-w-0 flex-1 sm:min-w-[200px]">
           <label className="text-xs text-muted-foreground" htmlFor="admin-user-search">
             Search username, email, display name, or user ID
           </label>
@@ -149,7 +149,109 @@ export function AdminUsersPanel() {
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-xl border border-white/10">
+      <div className="space-y-3 md:hidden">
+        {rows.map((u) => (
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4" key={u.id}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-medium">{u.displayName || u.username || u.email || u.id.slice(0, 8)}</div>
+                <div className="mt-1 text-xs text-muted-foreground">{u.id}</div>
+                {u.username ? <div className="text-xs text-muted-foreground">@{u.username}</div> : null}
+                <div className="mt-2 text-sm text-muted-foreground">{u.email ?? "—"}</div>
+                <div className={`text-xs ${u.emailVerified ? "text-emerald-300" : "text-amber-200/90"}`}>
+                  {u.emailVerified ? "Verified" : "Unverified"}
+                </div>
+              </div>
+              <Badge className={accountStatusBadgeClass(u.accountStatus)}>{u.accountStatus}</Badge>
+            </div>
+            {u.suspendedUntil ? (
+              <p className="mt-2 text-xs text-muted-foreground">Suspended until {formatDate(u.suspendedUntil)}</p>
+            ) : null}
+            <dl className="mt-4 grid gap-3 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted-foreground">Pastes</dt>
+                <dd>{u.pasteCount}</dd>
+              </div>
+              <div className="space-y-1">
+                <dt className="text-muted-foreground">Role</dt>
+                <dd>
+                  <select
+                    aria-label={`Role for ${u.username ?? u.email ?? u.id}`}
+                    className={`${selectClass} w-full`}
+                    disabled={savingId === u.id}
+                    onChange={(e) => {
+                      const role = e.target.value as UserRole;
+                      void patchUser(u.id, { role });
+                    }}
+                    value={u.role}
+                  >
+                    {ROLES.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </dd>
+              </div>
+              <div className="space-y-1">
+                <dt className="text-muted-foreground">Plan</dt>
+                <dd>
+                  <select
+                    aria-label={`Plan for ${u.username ?? u.email ?? u.id}`}
+                    className={`${selectClass} w-full`}
+                    disabled={savingId === u.id}
+                    onChange={(e) => {
+                      const plan = e.target.value as PlanId;
+                      void patchUser(u.id, { plan });
+                    }}
+                    value={u.plan}
+                  >
+                    {PLANS.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                </dd>
+              </div>
+              <div className="space-y-1">
+                <dt className="text-muted-foreground">Plan status</dt>
+                <dd>
+                  <select
+                    aria-label={`Plan status for ${u.username ?? u.email ?? u.id}`}
+                    className={`${selectClass} w-full`}
+                    disabled={savingId === u.id}
+                    onChange={(e) => {
+                      const planStatus = e.target.value as PlanStatus;
+                      void patchUser(u.id, { planStatus });
+                    }}
+                    value={u.planStatus}
+                  >
+                    {PLAN_STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </dd>
+              </div>
+            </dl>
+            <div className="mt-4 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+              <span>{u.updatedAt ? formatDate(u.updatedAt) : "—"}</span>
+              <Button asChild size="sm" variant="outline">
+                <Link href={`/admin/users/${u.id}`}>Open</Link>
+              </Button>
+            </div>
+          </div>
+        ))}
+        {!loading && rows.length === 0 ? (
+          <div className="rounded-xl border border-white/10 px-3 py-8 text-center text-muted-foreground">
+            No users match this search.
+          </div>
+        ) : null}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-xl border border-white/10 md:block">
         <table className="w-full min-w-[1180px] border-collapse text-left text-sm">
           <thead>
             <tr className="border-b border-white/10 bg-white/[0.03] text-xs uppercase tracking-wide text-muted-foreground">

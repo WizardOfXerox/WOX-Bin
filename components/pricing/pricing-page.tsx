@@ -13,6 +13,15 @@ type Props = {
 
 export function PricingPage({ cards, links, signedIn }: Props) {
   const hasAnyCheckout = Boolean(links.proUpgradeUrl || links.teamUpgradeUrl);
+  const featureSnapshot = [
+    ["Webhooks", "—", "Yes", "Yes"],
+    ["API keys", "1", "10", "50 pooled"],
+    ["Hosted pastes", "250", "5,000", "Pooled"],
+    ["Storage", "250 MB", "10 GB", "100 GB pooled"],
+    ["Versions / paste", "10", "200", "500"],
+    ["Max paste size", "1 MB", "10 MB", "25 MB"],
+    ["Team workspaces", "—", "—", "Yes"]
+  ] as const;
 
   return (
     <main className="min-h-screen bg-background">
@@ -139,7 +148,34 @@ export function PricingPage({ cards, links, signedIn }: Props) {
             Full matrix lives in <Link className="text-primary underline-offset-4 hover:underline" href="/doc">docs</Link>{" "}
             and <span className="font-mono text-xs">TIER-PLAN.md</span> for operators.
           </p>
-          <div className="overflow-x-auto rounded-xl border border-border/80">
+          <div className="space-y-3 md:hidden">
+            {featureSnapshot.map(([feature, free, pro, team]) => (
+              <Card key={feature} className="border-border/80">
+                <CardContent className="space-y-4 p-4">
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground">{feature}</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">Plan limits at a glance for phone-sized screens.</p>
+                  </div>
+                  <dl className="space-y-2 text-sm">
+                    {[
+                      ["Free", free],
+                      ["Pro", pro],
+                      ["Team", team]
+                    ].map(([label, value]) => (
+                      <div
+                        key={label}
+                        className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-start gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-2.5"
+                      >
+                        <dt className="font-medium text-foreground">{label}</dt>
+                        <dd className="min-w-0 text-muted-foreground">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto rounded-xl border border-border/80 md:block">
             <table className="w-full min-w-[36rem] border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
@@ -150,20 +186,12 @@ export function PricingPage({ cards, links, signedIn }: Props) {
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
-                {[
-                  ["Webhooks", "—", "Yes", "Yes"],
-                  ["API keys", "1", "10", "50 pooled"],
-                  ["Hosted pastes", "250", "5,000", "Pooled"],
-                  ["Storage", "250 MB", "10 GB", "100 GB pooled"],
-                  ["Versions / paste", "10", "200", "500"],
-                  ["Max paste size", "1 MB", "10 MB", "25 MB"],
-                  ["Team workspaces", "—", "—", "Yes"]
-                ].map(([f, fr, pr, tm]) => (
-                  <tr key={f} className="border-b border-border/60 last:border-0">
-                    <td className="px-4 py-2.5 text-foreground">{f}</td>
-                    <td className="px-4 py-2.5">{fr}</td>
-                    <td className="px-4 py-2.5">{pr}</td>
-                    <td className="px-4 py-2.5">{tm}</td>
+                {featureSnapshot.map(([feature, free, pro, team]) => (
+                  <tr key={feature} className="border-b border-border/60 last:border-0">
+                    <td className="px-4 py-2.5 text-foreground">{feature}</td>
+                    <td className="px-4 py-2.5">{free}</td>
+                    <td className="px-4 py-2.5">{pro}</td>
+                    <td className="px-4 py-2.5">{team}</td>
                   </tr>
                 ))}
               </tbody>
@@ -215,25 +243,25 @@ export function PricingPage({ cards, links, signedIn }: Props) {
           <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/doc">
             API &amp; docs
           </Link>
-          <span aria-hidden className="text-border">
+          <span aria-hidden className="hidden text-border sm:inline">
             ·
           </span>
           <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/help">
             Help
           </Link>
-          <span aria-hidden className="text-border">
+          <span aria-hidden className="hidden text-border sm:inline">
             ·
           </span>
           <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/support">
             Support
           </Link>
-          <span aria-hidden className="text-border">
+          <span aria-hidden className="hidden text-border sm:inline">
             ·
           </span>
           <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/terms">
             Terms of Service
           </Link>
-          <span aria-hidden className="text-border">
+          <span aria-hidden className="hidden text-border sm:inline">
             ·
           </span>
           <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/privacy">

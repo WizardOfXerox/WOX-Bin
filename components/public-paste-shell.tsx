@@ -429,9 +429,9 @@ export function PublicPasteShell({
   const replyHref = `/app?reply=${encodeURIComponent(paste.slug)}`;
 
   return (
-    <main className="wox-public-paste-print-root mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 py-8 md:px-6 md:py-10">
+    <main className="wox-public-paste-print-root mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:py-8 md:px-6 md:py-10">
       <section className="glass-panel overflow-hidden">
-        <div className="border-b border-white/10 bg-white/[0.03] px-6 py-6">
+        <div className="border-b border-white/10 bg-white/[0.03] px-4 py-5 sm:px-6 sm:py-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-3xl">
               <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Public paste</p>
@@ -457,32 +457,33 @@ export function PublicPasteShell({
               </p>
             </div>
 
-            <div className="no-print flex flex-wrap gap-3">
-              <Button type="button" variant="outline" onClick={() => copyLink("share")}>
+            <div className="no-print grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:gap-3">
+              <Button className="w-full sm:w-auto" type="button" variant="outline" onClick={() => copyLink("share")}>
                 <Share2 className="h-4 w-4" />
                 Copy link
               </Button>
-              <Button type="button" variant="outline" onClick={() => copyLink("raw")}>
+              <Button className="w-full sm:w-auto" type="button" variant="outline" onClick={() => copyLink("raw")}>
                 <Copy className="h-4 w-4" />
                 Copy raw URL
               </Button>
-              <Button asChild type="button" variant="outline">
+              <Button asChild className="w-full sm:w-auto" type="button" variant="outline">
                 <Link href={forkHref} prefetch={false} title="Open workspace with a fork of this paste">
                   <GitFork className="h-4 w-4" />
                   Fork
                 </Link>
               </Button>
-              <Button asChild type="button" variant="outline">
+              <Button asChild className="w-full sm:w-auto" type="button" variant="outline">
                 <Link href={replyHref} prefetch={false} title="Open workspace with a reply draft">
                   <MessageSquareReply className="h-4 w-4" />
                   Reply
                 </Link>
               </Button>
-              <Button type="button" variant="outline" onClick={handlePrintPaste}>
+              <Button className="w-full sm:w-auto" type="button" variant="outline" onClick={handlePrintPaste}>
                 <Printer className="h-4 w-4" />
                 Print
               </Button>
               <Button
+                className="w-full sm:w-auto"
                 disabled={locked}
                 type="button"
                 variant="outline"
@@ -492,27 +493,33 @@ export function PublicPasteShell({
                 <ImageIcon className="h-4 w-4" />
                 Code image
               </Button>
-              <Button disabled={locked} onClick={downloadMainPaste} type="button" variant="outline">
+              <Button className="w-full sm:w-auto" disabled={locked} onClick={downloadMainPaste} type="button" variant="outline">
                 <Download className="h-4 w-4" />
                 Download
               </Button>
               {locked ? (
-                <Button disabled type="button" variant="outline">
+                <Button className="w-full sm:w-auto" disabled type="button" variant="outline">
                   <FileDown className="h-4 w-4" />
                   Download raw
                 </Button>
               ) : (
-                <Button asChild type="button" variant="outline">
+                <Button asChild className="w-full sm:w-auto" type="button" variant="outline">
                   <Link href={`/raw/${paste.slug}?download=1`} prefetch={false}>
                     <FileDown className="h-4 w-4" />
                     Download raw
                   </Link>
                 </Button>
               )}
-              <Button asChild type="button" variant="ghost">
+              <Button asChild className="w-full sm:w-auto" type="button" variant="ghost">
                 <Link href={`/raw/${paste.slug}`}>Raw</Link>
               </Button>
-              <Button disabled={!signedIn || pendingStar || locked} onClick={handleStar} type="button" variant="secondary">
+              <Button
+                className="col-span-2 w-full sm:col-auto sm:w-auto"
+                disabled={!signedIn || pendingStar || locked}
+                onClick={handleStar}
+                type="button"
+                variant="secondary"
+              >
                 <Star className="h-4 w-4" />
                 {paste.starredByViewer ? "Starred" : "Star"} ({paste.stars})
               </Button>
@@ -520,7 +527,7 @@ export function PublicPasteShell({
           </div>
         </div>
 
-        <div className="px-6 py-6">
+        <div className="px-4 py-5 sm:px-6 sm:py-6">
           {locked ? (
             <Card className="border-amber-400/20 bg-amber-400/5">
               <CardContent className="space-y-4">
@@ -561,10 +568,10 @@ export function PublicPasteShell({
               ) : null}
 
               <div className="flex flex-col gap-3">
-                <div className="no-print flex flex-wrap items-center justify-between gap-3 rounded-[1rem] border border-border/80 bg-muted/30 px-3 py-2 dark:bg-black/20">
+                <div className="no-print flex flex-col gap-3 rounded-[1rem] border border-border/80 bg-muted/30 px-3 py-2 dark:bg-black/20 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                   {paste.language === "markdown" ? (
                     <div
-                      className="flex items-center gap-0.5 rounded-lg border border-border bg-background/80 p-0.5"
+                      className="flex w-full items-center gap-0.5 rounded-lg border border-border bg-background/80 p-0.5 sm:w-auto"
                       role="group"
                       aria-label="Markdown view"
                     >
@@ -591,7 +598,7 @@ export function PublicPasteShell({
                     </div>
                   ) : paste.language === "markup" ? (
                     <div
-                      className="flex items-center gap-0.5 rounded-lg border border-border bg-background/80 p-0.5"
+                      className="flex w-full items-center gap-0.5 rounded-lg border border-border bg-background/80 p-0.5 sm:w-auto"
                       role="group"
                       aria-label="HTML view"
                     >
@@ -662,7 +669,7 @@ export function PublicPasteShell({
                 )}
               </div>
 
-              {paste.files.length > 0 ? (
+                {paste.files.length > 0 ? (
                 <div className="space-y-4">
                   <div>
                     <h2 className="text-lg font-semibold">Attached files</h2>
@@ -675,7 +682,7 @@ export function PublicPasteShell({
                     const mediaSrc = isMedia ? dataUrlFromPasteFile(file) : null;
                     return (
                       <div key={`${file.filename}-${file.language}-${file.mediaKind ?? "text"}`} className="space-y-3">
-                        <div className="no-print flex flex-wrap items-center justify-between gap-3">
+                        <div className="no-print flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                           <div>
                             <p className="font-medium text-foreground">{file.filename}</p>
                             <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
@@ -690,6 +697,7 @@ export function PublicPasteShell({
                             </p>
                           </div>
                           <Button
+                            className="w-full sm:w-auto"
                             onClick={() => downloadPasteFile(file)}
                             size="sm"
                             type="button"
@@ -742,7 +750,7 @@ export function PublicPasteShell({
       <section className="no-print grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
         <Card>
           <CardContent className="space-y-5">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Discussion</p>
                 <h2 className="mt-2 text-2xl font-semibold">Comments</h2>

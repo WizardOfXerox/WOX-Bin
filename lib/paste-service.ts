@@ -14,7 +14,7 @@ import {
 } from "@/lib/db/schema";
 import { createPasteAccessGrant, hashIp, hashPassword, hashToken, randomToken, verifyPassword, verifyPasteAccessGrant } from "@/lib/crypto";
 import { logAudit } from "@/lib/audit";
-import { PlanLimitError, formatPlanName } from "@/lib/plans";
+import { PlanLimitError, formatPlanName, type PlanId } from "@/lib/plans";
 import { getStoredBytesForPasteInput, getUserPlanSummary } from "@/lib/usage-service";
 import { normalizeTagList, slugify } from "@/lib/utils";
 import type { PasteFileDraft, PasteFileMediaKind, PublicPasteRecord } from "@/lib/types";
@@ -1099,7 +1099,7 @@ export async function revokeApiKeyForUser(userId: string, keyId: string) {
   });
 }
 
-export async function createPasteFromApiKey(token: string, input: SavePasteInput, ip: string | null) {
+async function resolveApiKeyOwner(token: string) {
   const [keyRow] = await db
     .select()
     .from(apiKeys)
@@ -1112,10 +1112,79 @@ export async function createPasteFromApiKey(token: string, input: SavePasteInput
 
   await db
     .update(apiKeys)
-    .set({
-      lastUsedAt: new Date()
-    })
+    .set({ lastUsedAt: new Date() })
     .where(eq(apiKeys.id, keyRow.id));
+
+  return keyRow;
+}
+
+export async function listFoldersForApiKeyOwner(token: string) {
+  const keyRow = await resolveApiKeyOwner(token);
+  if (!keyRow) {
+    return null;
+  }
+
+  const rows = await db
+    .select({ name: folders.name })
+    .from(folders)
+    .where(eq(folders.userId, keyRow.userId))
+    .orderBy(asc(folders.sortOrder), asc(folders.name));
+
+  return rows.map((row) => row.name);
+}
+
+export async function ensureFolderForApiKeyOwner(token: string, folderName: string) {
+  const keyRow = await resolveApiKeyOwner(token);
+  if (!keyRow) {
+    return null;
+  }
+
+  await ensureWorkspaceFolderExistsForUser(keyRow.userId, folderName);
+  return keyRow.userId;
+}
+
+export async function listApiKeysForApiKeyOwner(token: string) {
+  const keyRow = await resolveApiKeyOwner(token);
+  if (!keyRow) {
+    return null;
+  }
+
+  const keys = await listApiKeysForUser(keyRow.userId);
+  return {
+    currentKeyId: keyRow.id,
+    keys: keys.map((row) => ({
+      id: row.id,
+      label: row.label,
+      createdAt: row.createdAt.toISOString(),
+      lastUsedAt: row.lastUsedAt ? row.lastUsedAt.toISOString() : null
+    }))
+  };
+}
+
+export async function createApiKeyForApiKeyOwner(token: string, label: string) {
+  const keyRow = await resolveApiKeyOwner(token);
+  if (!keyRow) {
+    return null;
+  }
+
+  return createApiKeyForUser(keyRow.userId, label);
+}
+
+export async function revokeApiKeyForApiKeyOwner(token: string, keyId: string) {
+  const keyRow = await resolveApiKeyOwner(token);
+  if (!keyRow) {
+    return "invalid_key" as const;
+  }
+
+  await revokeApiKeyForUser(keyRow.userId, keyId);
+  return keyRow.id === keyId ? "revoked_current" as const : "revoked" as const;
+}
+
+export async function createPasteFromApiKey(token: string, input: SavePasteInput, ip: string | null) {
+  const keyRow = await resolveApiKeyOwner(token);
+  if (!keyRow) {
+    return null;
+  }
 
   const paste = await savePasteForUser(keyRow.userId, input);
 
@@ -1140,26 +1209,20 @@ export async function listPastesForApiKey(
     title: string;
     language: string;
     visibility: string;
+    folderName: string | null;
+    tags: string[];
+    pinned: boolean;
+    favorite: boolean;
     updatedAt: string;
   }>;
   total: number;
   limit: number;
   offset: number;
 } | null> {
-  const [keyRow] = await db
-    .select()
-    .from(apiKeys)
-    .where(eq(apiKeys.tokenHash, hashToken(token)))
-    .limit(1);
-
+  const keyRow = await resolveApiKeyOwner(token);
   if (!keyRow) {
     return null;
   }
-
-  await db
-    .update(apiKeys)
-    .set({ lastUsedAt: new Date() })
-    .where(eq(apiKeys.id, keyRow.id));
 
   const limit = Math.min(Math.max(Number(options?.limit) || 30, 1), 100);
   const offset = Math.max(Number(options?.offset) || 0, 0);
@@ -1187,6 +1250,10 @@ export async function listPastesForApiKey(
       title: pastes.title,
       language: pastes.language,
       visibility: pastes.visibility,
+      folderName: pastes.folderName,
+      tags: pastes.tags,
+      pinned: pastes.pinned,
+      favorite: pastes.favorite,
       updatedAt: pastes.updatedAt
     })
     .from(pastes)
@@ -1201,6 +1268,10 @@ export async function listPastesForApiKey(
       title: r.title,
       language: r.language,
       visibility: r.visibility,
+      folderName: r.folderName,
+      tags: r.tags ?? [],
+      pinned: r.pinned,
+      favorite: r.favorite,
       updatedAt: r.updatedAt.toISOString()
     })),
     total,
@@ -1212,27 +1283,18 @@ export async function listPastesForApiKey(
 /** Who owns this API key (for extension / CLI “connected as”). */
 export async function getUserForApiKey(
   token: string
-): Promise<{ id: string; username: string | null; displayName: string | null } | null> {
-  const [keyRow] = await db
-    .select()
-    .from(apiKeys)
-    .where(eq(apiKeys.tokenHash, hashToken(token)))
-    .limit(1);
-
+): Promise<{ id: string; username: string | null; displayName: string | null; plan: PlanId } | null> {
+  const keyRow = await resolveApiKeyOwner(token);
   if (!keyRow) {
     return null;
   }
-
-  await db
-    .update(apiKeys)
-    .set({ lastUsedAt: new Date() })
-    .where(eq(apiKeys.id, keyRow.id));
 
   const [u] = await db
     .select({
       id: users.id,
       username: users.username,
-      displayName: users.displayName
+      displayName: users.displayName,
+      plan: users.plan
     })
     .from(users)
     .where(eq(users.id, keyRow.userId))
@@ -1251,6 +1313,10 @@ export async function getPasteBodyForApiKeyOwner(
   content: string;
   language: string;
   visibility: string;
+  folderName: string | null;
+  tags: string[];
+  pinned: boolean;
+  favorite: boolean;
   files: Array<{
     filename: string;
     content: string;
@@ -1259,20 +1325,10 @@ export async function getPasteBodyForApiKeyOwner(
     mimeType: string | null;
   }>;
 } | null> {
-  const [keyRow] = await db
-    .select()
-    .from(apiKeys)
-    .where(eq(apiKeys.tokenHash, hashToken(token)))
-    .limit(1);
-
+  const keyRow = await resolveApiKeyOwner(token);
   if (!keyRow) {
     return null;
   }
-
-  await db
-    .update(apiKeys)
-    .set({ lastUsedAt: new Date() })
-    .where(eq(apiKeys.id, keyRow.id));
 
   const [row] = await db
     .select({
@@ -1282,6 +1338,10 @@ export async function getPasteBodyForApiKeyOwner(
       content: pastes.content,
       language: pastes.language,
       visibility: pastes.visibility,
+      folderName: pastes.folderName,
+      tags: pastes.tags,
+      pinned: pastes.pinned,
+      favorite: pastes.favorite,
       userId: pastes.userId
     })
     .from(pastes)
@@ -1300,6 +1360,10 @@ export async function getPasteBodyForApiKeyOwner(
     content: row.content,
     language: row.language,
     visibility: row.visibility,
+    folderName: row.folderName,
+    tags: row.tags ?? [],
+    pinned: row.pinned,
+    favorite: row.favorite,
     files: files.map((f) => ({
       filename: f.filename,
       content: f.content,
@@ -1316,20 +1380,10 @@ export async function updatePasteForApiKey(
   input: SavePasteInput,
   ip: string | null
 ) {
-  const [keyRow] = await db
-    .select()
-    .from(apiKeys)
-    .where(eq(apiKeys.tokenHash, hashToken(token)))
-    .limit(1);
-
+  const keyRow = await resolveApiKeyOwner(token);
   if (!keyRow) {
     return null;
   }
-
-  await db
-    .update(apiKeys)
-    .set({ lastUsedAt: new Date() })
-    .where(eq(apiKeys.id, keyRow.id));
 
   const [owned] = await db
     .select({ id: pastes.id })
@@ -1359,20 +1413,10 @@ export async function updatePasteForApiKey(
 export type ApiKeyPasteDeleteResult = "invalid_key" | "not_found" | "deleted";
 
 export async function deletePasteForApiKey(token: string, slug: string): Promise<ApiKeyPasteDeleteResult> {
-  const [keyRow] = await db
-    .select()
-    .from(apiKeys)
-    .where(eq(apiKeys.tokenHash, hashToken(token)))
-    .limit(1);
-
+  const keyRow = await resolveApiKeyOwner(token);
   if (!keyRow) {
     return "invalid_key";
   }
-
-  await db
-    .update(apiKeys)
-    .set({ lastUsedAt: new Date() })
-    .where(eq(apiKeys.id, keyRow.id));
 
   const ok = await deletePasteForUser(keyRow.userId, slug);
   return ok ? "deleted" : "not_found";

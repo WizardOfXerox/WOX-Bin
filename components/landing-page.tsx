@@ -95,17 +95,17 @@ export function LandingPage() {
                 <Link href="/pricing">Compare plans</Link>
               </Button>
             </div>
-            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+            <div className="grid gap-2 text-sm text-muted-foreground sm:flex sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1">
               <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/sign-in">
                 Sign in
               </Link>
-              <span aria-hidden className="text-border">
+              <span aria-hidden className="hidden text-border sm:inline">
                 ·
               </span>
               <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/forgot-password">
                 Forgot password
               </Link>
-              <span aria-hidden className="text-border">
+              <span aria-hidden className="hidden text-border sm:inline">
                 ·
               </span>
               {TOOLS_ENABLED ? (
@@ -113,7 +113,7 @@ export function LandingPage() {
                   <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/tools">
                     Tools
                   </Link>
-                  <span aria-hidden className="text-border">
+                  <span aria-hidden className="hidden text-border sm:inline">
                     ·
                   </span>
                 </>
@@ -121,7 +121,7 @@ export function LandingPage() {
               <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/archive">
                 Archive
               </Link>
-            </p>
+            </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:gap-5 xl:grid-cols-3">
               <Card className="overflow-hidden">
                 <CardContent className="space-y-3 p-4 sm:p-6">
@@ -315,13 +315,13 @@ export function LandingPage() {
           <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/sign-in">
             Sign in
           </Link>
-          <span aria-hidden className="text-border">
+          <span aria-hidden className="hidden text-border sm:inline">
             ·
           </span>
           <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/doc">
             API &amp; docs
           </Link>
-          <span aria-hidden className="text-border">
+          <span aria-hidden className="hidden text-border sm:inline">
             ·
           </span>
           {TOOLS_ENABLED ? (
@@ -329,7 +329,7 @@ export function LandingPage() {
               <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/tools">
                 Tools
               </Link>
-              <span aria-hidden className="text-border">
+              <span aria-hidden className="hidden text-border sm:inline">
                 ·
               </span>
             </>
@@ -337,31 +337,31 @@ export function LandingPage() {
           <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/archive">
             Archive
           </Link>
-          <span aria-hidden className="text-border">
+          <span aria-hidden className="hidden text-border sm:inline">
             ·
           </span>
           <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/pricing">
             Pricing
           </Link>
-          <span aria-hidden className="text-border">
+          <span aria-hidden className="hidden text-border sm:inline">
             ·
           </span>
           <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/help">
             Help
           </Link>
-          <span aria-hidden className="text-border">
+          <span aria-hidden className="hidden text-border sm:inline">
             ·
           </span>
           <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/support">
             Support
           </Link>
-          <span aria-hidden className="text-border">
+          <span aria-hidden className="hidden text-border sm:inline">
             ·
           </span>
           <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/terms">
             Terms
           </Link>
-          <span aria-hidden className="text-border">
+          <span aria-hidden className="hidden text-border sm:inline">
             ·
           </span>
           <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/privacy">

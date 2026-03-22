@@ -26,11 +26,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <aside className="glass-panel h-fit w-full shrink-0 p-5 md:sticky md:top-6 md:w-56">
           <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Admin</p>
           <p className="mt-2 font-semibold">{session.user.username ?? session.user.email ?? "Admin"}</p>
-          <nav className="mt-6 flex flex-col gap-1">
+          <nav className="mt-6 flex flex-wrap gap-2 md:flex-col md:gap-1">
             {links.map((l) => (
               <Link
                 key={l.href}
-                className="rounded-lg px-3 py-2 text-sm text-muted-foreground transition hover:bg-white/5 hover:text-foreground"
+                className="rounded-lg border border-white/10 px-3 py-2 text-sm text-muted-foreground transition hover:bg-white/5 hover:text-foreground md:border-transparent"
                 href={l.href}
               >
                 {l.label}

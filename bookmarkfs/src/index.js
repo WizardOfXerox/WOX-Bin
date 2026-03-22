@@ -1,6 +1,18 @@
 import { unzipSync } from "fflate";
 import { createExtractorFromData } from "node-unrar-js";
 import { mountWoxBinCompact } from "./woxbin-compact.js";
+import { setupExtensionTabs } from "./ui/extension-tabs.js";
+import { setPendingCompose } from "./vault/bridge.js";
+import { buildBackupDocument, parseBackupDocument } from "./vault/backup.js";
+import {
+    clearVaultIndex,
+    loadVaultIndex,
+    removeVaultIndexEntry,
+    renameVaultIndexEntry,
+    saveVaultIndex,
+    summarizeMetaForIndex,
+    upsertVaultIndexEntry
+} from "./vault/metadata-cache.js";
 
 async function handleRar(bytes) {
     const extractor = await createExtractorFromData({
@@ -140,6 +152,49 @@ export function handleZip(bytes) {
         const out = [];
         for (let i = 0; i < raw.length; i += size) out.push(raw.slice(i, i + size));
         return out;
+    }
+
+    function sanitizeFilenamePart(value, fallback = "file") {
+        const cleaned = String(value || "")
+            .trim()
+            .replace(/[<>:"/\\|?*\x00-\x1f]/g, "-")
+            .replace(/\s+/g, " ")
+            .replace(/\.+$/g, "")
+            .slice(0, 80);
+        return cleaned || fallback;
+    }
+
+    function extensionFromLanguage(language) {
+        switch ((language || "").toLowerCase()) {
+            case "markdown":
+                return "md";
+            case "javascript":
+                return "js";
+            case "typescript":
+                return "ts";
+            case "python":
+                return "py";
+            case "bash":
+                return "sh";
+            case "json":
+                return "json";
+            default:
+                return "txt";
+        }
+    }
+
+    function bytesToBase64(bytes) {
+        let s = "";
+        for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+        return btoa(s);
+    }
+
+    function textToDataUrl(text, mime = "text/plain;charset=utf-8") {
+        return `data:${mime};base64,${bytesToBase64(te.encode(String(text || "")))}`;
+    }
+
+    function base64ToDataUrl(base64, mime = "application/octet-stream") {
+        return `data:${mime};base64,${String(base64 || "")}`;
     }
 
     async function sha256HexBytes(bytes) {
@@ -320,6 +375,7 @@ export function handleZip(bytes) {
                     }
 
                     // 3) Refresh UI
+                    await clearVaultIndex();
                     await loadFilesToTable();
                     // reset settings to defaults
                     // const defaultSettings = { maxSize: 9092, columns: DEFAULT_COLUMNS.slice(), dark: false };
@@ -391,7 +447,7 @@ export function handleZip(bytes) {
             head.className = "bfs-top-head";
             head.innerHTML =
                 '<div class="bfs-top-head__title">Local vault <span class="bfs-top-head__badge">BookmarkFS</span></div>' +
-                "<p class=\"bfs-top-head__sub\">Stores files inside your synced <strong>bookmarkfs</strong> bookmark folder — not on Wox-Bin servers.</p>";
+                "<p class=\"bfs-top-head__sub\">Stores files inside your synced <strong>bookmarkfs</strong> bookmark folder. This stays local-to-browser sync behavior and is best treated as an experimental vault, not a durable cloud drive.</p>";
             center.insertBefore(head, qs("#table") || center.firstChild);
         }
 
@@ -440,6 +496,16 @@ export function handleZip(bytes) {
             exportBtn.id = "export-btn";
             exportBtn.className = "button";
             exportBtn.textContent = "Export";
+
+            const verifyBtn = document.createElement("button");
+            verifyBtn.id = "vault-verify-btn";
+            verifyBtn.className = "button";
+            verifyBtn.textContent = "Verify";
+
+            const rebuildBtn = document.createElement("button");
+            rebuildBtn.id = "vault-rebuild-btn";
+            rebuildBtn.className = "button";
+            rebuildBtn.textContent = "Rebuild index";
 
             const importLabel = document.createElement("label");
             importLabel.className = "button";
@@ -503,6 +569,8 @@ export function handleZip(bytes) {
             rowActions.appendChild(uploadLabel);
             rowActions.appendChild(uploadInput);
             rowActions.appendChild(exportBtn);
+            rowActions.appendChild(verifyBtn);
+            rowActions.appendChild(rebuildBtn);
             rowActions.appendChild(importLabel);
             rowActions.appendChild(importInput);
             rowActions.appendChild(settingsBtn);
@@ -621,6 +689,80 @@ export function handleZip(bytes) {
         localStorage.setItem("bookmarkfs_dark", now ? "1" : "0");
     }
 
+    async function ensureVaultIndexEntries(files) {
+        const current = await loadVaultIndex();
+        const byName = new Map(current.map((entry) => [entry.fullName, entry]));
+        const liveNames = new Set(files.map((file) => file.handle.title));
+        let mutated = false;
+
+        for (const file of files) {
+            const fullName = file.handle.title;
+            if (byName.has(fullName)) continue;
+            const meta = await file.readMeta();
+            const summary = summarizeMetaForIndex(fullName, meta);
+            if (summary) {
+                byName.set(fullName, summary);
+                mutated = true;
+            }
+        }
+
+        for (const fullName of [...byName.keys()]) {
+            if (!liveNames.has(fullName)) {
+                byName.delete(fullName);
+                mutated = true;
+            }
+        }
+
+        const entries = [...byName.values()];
+        if (mutated) {
+            await saveVaultIndex(entries);
+        }
+        return entries;
+    }
+
+    async function verifyVaultIndex() {
+        const files = await listFiles();
+        const nextIndex = [];
+        const issues = [];
+
+        for (const file of files) {
+            const meta = await file.readMeta();
+            if (!meta) {
+                issues.push(`${file.handle.title}: missing or unreadable metadata`);
+                continue;
+            }
+            if (!meta.contentHash) {
+                issues.push(`${file.handle.title}: missing content hash`);
+            }
+            if (!Array.isArray(meta.chunkHashes)) {
+                issues.push(`${file.handle.title}: missing chunk hash list`);
+            }
+            const summary = summarizeMetaForIndex(file.handle.title, meta);
+            if (summary) {
+                nextIndex.push(summary);
+            }
+        }
+
+        await saveVaultIndex(nextIndex);
+        return {
+            files: files.length,
+            indexed: nextIndex.length,
+            issues
+        };
+    }
+
+    async function promptForVaultPassphrase(actionLabel) {
+        let pass = cachedSessionPassphrase;
+        if (pass) {
+            return pass;
+        }
+        pass = prompt(`Optional passphrase (AES-GCM) for ${actionLabel}. Leave blank for none:`) || "";
+        if (pass && confirm("Cache this passphrase for this session?")) {
+            cachedSessionPassphrase = pass;
+        }
+        return pass;
+    }
+
     // ---------- Bookmark FS primitives (based on your original) ----------
     async function fsRoot() {
         const tree = await chrome.bookmarks.getTree();
@@ -712,6 +854,10 @@ export function handleZip(bytes) {
                 } else {
                     await chrome.bookmarks.update(metaNode.id, { title: payload });
                 }
+                const summary = summarizeMetaForIndex(this.handle.title, metaObj);
+                if (summary) {
+                    await upsertVaultIndexEntry(summary);
+                }
             },
             async readMeta() {
                 const children = await this.getChildrenFresh();
@@ -738,15 +884,20 @@ export function handleZip(bytes) {
             },
 
             async rename(newName) {
+                const previousName = this.handle.title;
                 await chrome.bookmarks.update(this.handle.id, { title: newName });
+                this.handle.title = newName;
+                await renameVaultIndexEntry(previousName, newName);
             },
             async delete() {
+                const previousName = this.handle.title;
                 // remove children then folder
                 const children = await this.getChildrenFresh();
                 for (const node of(children || [])) {
                     try { await chrome.bookmarks.remove(node.id); } catch (e) { /* ignore */ }
                 }
                 try { await chrome.bookmarks.remove(this.handle.id); } catch (e) { /* ignore */ }
+                await removeVaultIndexEntry(previousName);
             }
         };
     }
@@ -776,6 +927,14 @@ export function handleZip(bytes) {
 
     async function findFileByHash(contentHash) {
         if (!contentHash) return null;
+        const cached = await loadVaultIndex();
+        const cachedHit = cached.find((entry) => entry.contentHash === contentHash);
+        if (cachedHit) {
+            const existing = await getFileByName(cachedHit.fullName);
+            if (existing) {
+                return existing;
+            }
+        }
         const files = await listFiles();
         for (const f of files) {
             const meta = await f.readMeta();
@@ -1029,9 +1188,9 @@ export function handleZip(bytes) {
         updatePathBar();
         const q = (qs("#search-bar") && qs("#search-bar").value) ? qs("#search-bar").value : "";
         const files = await listFiles();
-        const metas = [];
-        for (const f of files) metas.push({ file: f, meta: await f.readMeta() });
-        updateAnalytics(metas);
+        const cachedEntries = await ensureVaultIndexEntries(files);
+        const metaByName = new Map(cachedEntries.map((entry) => [entry.fullName, entry]));
+        updateAnalytics(files.map((file) => ({ meta: metaByName.get(file.handle.title) || null })));
 
         const entries = getVisibleEntries(files, q);
         const totalPages = Math.max(1, Math.ceil(entries.length / Math.max(1, pageSize)));
@@ -1076,7 +1235,16 @@ export function handleZip(bytes) {
             }
 
             const file = entry.file;
-            const meta = await file.readMeta();
+            let meta = metaByName.get(entry.fullName) || null;
+            if (!meta) {
+                const liveMeta = await file.readMeta();
+                meta = liveMeta || null;
+                const summary = summarizeMetaForIndex(entry.fullName, liveMeta);
+                if (summary) {
+                    metaByName.set(entry.fullName, summary);
+                    await upsertVaultIndexEntry(summary);
+                }
+            }
             const name = entry.displayName;
 
             const tdPreview = document.createElement("td");
@@ -1239,7 +1407,7 @@ export function handleZip(bytes) {
                 }
             };
 
-            const btnCloud = makeRowActionButton("☁", "Send text to Wox-Bin (Cloud tab)");
+            const btnCloud = makeRowActionButton("☁", "Send file to WOX-Bin compose");
             btnCloud.onclick = async() => {
                 try {
                     const raw = await file.read();
@@ -1253,18 +1421,34 @@ export function handleZip(bytes) {
                         type === "application/json" ||
                         type === "application/xml" ||
                         type === "application/javascript";
-                    if (!textual) {
-                        alert("Only text-based files can open in the Wox-Bin composer.");
+                    const mediaKind = type.startsWith("image/") ? "image" : type.startsWith("video/") ? "video" : "";
+                    if (!textual && !mediaKind) {
+                        alert("Only text, image, and video files can move directly into the WOX-Bin composer.");
                         return;
                     }
-                    const text = td.decode(bytes);
-                    await chrome.storage.local.set({
-                        woxbin_pending_compose: {
+                    const payload = textual
+                        ? {
                             title: name.slice(0, 500),
-                            content: text,
+                            content: td.decode(bytes),
+                            sourceType: "vault-file",
+                            sourceTitle: entry.fullName,
                             ts: Date.now()
                         }
-                    });
+                        : {
+                            title: name.slice(0, 500),
+                            content: "",
+                            sourceType: "vault-file",
+                            sourceTitle: entry.fullName,
+                            attachments: [{
+                                filename: name,
+                                content: bytesToBase64(bytes),
+                                language: "none",
+                                mediaKind,
+                                mimeType: type
+                            }],
+                            ts: Date.now()
+                        };
+                    await setPendingCompose(payload);
                     if (window.__bookmarkfsTabs && typeof window.__bookmarkfsTabs.showCloud === "function") {
                         window.__bookmarkfsTabs.showCloud();
                     }
@@ -1302,11 +1486,7 @@ export function handleZip(bytes) {
 
     // ---------- Upload handling ----------
     async function handleFileList(fileList) {
-        let pass = cachedSessionPassphrase;
-        if (!pass) {
-            pass = prompt("Optional passphrase (AES-GCM). Leave blank for none:") || "";
-            if (pass && confirm("Cache this passphrase for this session?")) cachedSessionPassphrase = pass;
-        }
+        const pass = await promptForVaultPassphrase("uploaded files");
 
         for (const f of fileList) {
             await processAndStoreFile(f, pass || "");
@@ -1314,29 +1494,40 @@ export function handleZip(bytes) {
         await loadFilesToTable();
     }
 
-    async function processAndStoreFile(file, passphrase) {
-        const dataUrl = await new Promise((resolve, reject) => {
+    async function readFileAsDataUrl(file) {
+        return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(reader.result);
             reader.onerror = () => reject(reader.error);
             reader.readAsDataURL(file);
         });
+    }
+
+    async function processDataUrlToVirtualFile(dataUrl, virtualName, passphrase, options = {}) {
+        const normalizedName = normalizeVirtualPath(virtualName);
+        if (!normalizedName) {
+            throw new Error("Virtual filename is required.");
+        }
 
         const { serialized, metaObj, metaHeader } = await prepareSerializedFromDataURL(dataUrl, { passphrase });
-        metaObj.name = file.name;
+        metaObj.name = normalizedName.split("/").pop() || normalizedName;
         metaObj.metaHeader = metaHeader;
 
         const duplicate = await findFileByHash(metaObj.contentHash);
         if (duplicate) {
-            alert(`Duplicate skipped: same content already exists as ${duplicate.handle.title}`);
-            return;
+            if (options.onDuplicate) {
+                options.onDuplicate(duplicate.handle.title);
+            }
+            return { duplicateOf: duplicate.handle.title };
         }
 
-        const folderValue = normalizeVirtualPath((qs("#folder-input") && qs("#folder-input").value) || "");
-        let targetName = folderValue ? `${folderValue}/${file.name}` : file.name;
+        let targetName = normalizedName;
         let existing = await getFileByName(targetName);
         if (existing) {
-            const action = (prompt(`File ${targetName} exists. Type replace / keep / cancel`, "replace") || "cancel").toLowerCase();
+            const action =
+                typeof options.onConflict === "function"
+                    ? await options.onConflict(targetName)
+                    : (prompt(`File ${targetName} exists. Type replace / keep / cancel`, "replace") || "cancel").toLowerCase();
             if (action === "cancel") return;
             if (action === "replace") {
                 await existing.delete();
@@ -1349,7 +1540,7 @@ export function handleZip(bytes) {
         const fobj = await createNewFile(targetName);
         await fobj.writeMeta(metaObj);
 
-        const fingerprint = `${file.name}|${file.size}|${file.lastModified}|${targetName}`;
+        const fingerprint = `${targetName}|${metaObj.sizeOriginal}|${metaObj.contentHash}`;
         const checkpoint = await getUploadCheckpoint();
         let startChunk = 0;
         if (checkpoint && checkpoint.fingerprint === fingerprint && !passphrase && Number.isFinite(checkpoint.nextChunk)) {
@@ -1367,6 +1558,68 @@ export function handleZip(bytes) {
 
         await clearUploadCheckpoint();
         setProgress(1);
+        return { name: targetName };
+    }
+
+    async function processAndStoreFile(file, passphrase, folderOverride = "") {
+        const dataUrl = await readFileAsDataUrl(file);
+        const folderValue = normalizeVirtualPath(folderOverride || ((qs("#folder-input") && qs("#folder-input").value) || ""));
+        const targetName = folderValue ? `${folderValue}/${file.name}` : file.name;
+        const result = await processDataUrlToVirtualFile(dataUrl, targetName, passphrase, {
+            onDuplicate(existingName) {
+                alert(`Duplicate skipped: same content already exists as ${existingName}`);
+            }
+        });
+        return result;
+    }
+
+    async function importCloudPasteToVault(paste, options = {}) {
+        const slugBase = sanitizeFilenamePart(paste.slug || paste.title || "paste", "paste");
+        const titleBase = sanitizeFilenamePart(paste.title || paste.slug || "paste", slugBase);
+        const targetDir = normalizeVirtualPath(options.targetDir || `woxbin-imports/${slugBase}`);
+        const passphrase =
+            options.passphrase !== undefined ? options.passphrase : await promptForVaultPassphrase("WOX-Bin import");
+        const stored = [];
+
+        const primaryExt = extensionFromLanguage(paste.language || "none");
+        const primaryName = `${titleBase}.${primaryExt}`;
+        const primaryDataUrl = textToDataUrl(
+            paste.content || "",
+            paste.language === "markdown" ? "text/markdown;charset=utf-8" : "text/plain;charset=utf-8"
+        );
+        const primaryResult = await processDataUrlToVirtualFile(
+            primaryDataUrl,
+            joinVirtualName(targetDir, primaryName),
+            passphrase || "",
+            {
+                onConflict: () => "keep"
+            }
+        );
+        if (primaryResult?.name) {
+            stored.push(primaryResult.name);
+        }
+
+        for (const file of paste.files || []) {
+            const filename = sanitizeFilenamePart(file.filename || "attachment", "attachment");
+            const dataUrl =
+                file.mediaKind === "image" || file.mediaKind === "video"
+                    ? base64ToDataUrl(file.content || "", file.mimeType || "application/octet-stream")
+                    : textToDataUrl(file.content || "", "text/plain;charset=utf-8");
+            const result = await processDataUrlToVirtualFile(
+                dataUrl,
+                joinVirtualName(targetDir, filename),
+                passphrase || "",
+                {
+                    onConflict: () => "keep"
+                }
+            );
+            if (result?.name) {
+                stored.push(result.name);
+            }
+        }
+
+        await loadFilesToTable();
+        return stored;
     }
 
     function inferExtFromMime(mime) {
@@ -1485,11 +1738,7 @@ export function handleZip(bytes) {
 
     async function handleDroppedUrls(urls) {
         if (!urls.length) return;
-        let pass = cachedSessionPassphrase;
-        if (!pass) {
-            pass = prompt("Optional passphrase (AES-GCM). Leave blank for none:") || "";
-            if (pass && confirm("Cache this passphrase for this session?")) cachedSessionPassphrase = pass;
-        }
+        const pass = await promptForVaultPassphrase("drag-and-drop imports");
         let success = 0;
         const failed = [];
         try {
@@ -1519,7 +1768,7 @@ export function handleZip(bytes) {
             const serialized = await f.read();
             out.push({ name: f.handle.title, meta, serialized });
         }
-        const blob = new Blob([JSON.stringify({ version: APP_SCHEMA_VERSION, items: out }, null, 2)], { type: "application/json" });
+        const blob = new Blob([JSON.stringify(buildBackupDocument(out, APP_SCHEMA_VERSION), null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -1533,9 +1782,8 @@ export function handleZip(bytes) {
     async function importAllFromFile(file) {
         try {
             const text = await file.text();
-            const json = JSON.parse(text);
-            if (!json || !Array.isArray(json.items)) throw new Error("Invalid backup format");
-            for (const item of json.items) {
+            const backup = parseBackupDocument(text);
+            for (const item of backup.items) {
                 let target = item.name;
                 while (await getFileByName(target)) target = incrementVersionedName(target);
                 const fobj = await createNewFile(target);
@@ -1575,91 +1823,21 @@ export function handleZip(bytes) {
         }, false);
     }
 
-    // ---------- Wox-Bin tab + BookmarkFS tab ----------
-    let woxBinMounted = false;
-
-    function setupExtensionTabs() {
-        if (document.getElementById("extension-tab-bar")) return;
-        const existingCenter = document.querySelector("center");
-        if (!existingCenter || !existingCenter.parentNode) return;
-
-        const tabBar = document.createElement("div");
-        tabBar.id = "extension-tab-bar";
-        tabBar.className = "ext-tabs";
-        tabBar.setAttribute("role", "tablist");
-        tabBar.setAttribute("aria-label", "Extension mode");
-
-        const track = document.createElement("div");
-        track.className = "ext-tabs__track";
-
-        const btnFs = document.createElement("button");
-        btnFs.type = "button";
-        btnFs.className = "ext-tabs__tab";
-        btnFs.setAttribute("role", "tab");
-        btnFs.id = "ext-tab-bookmarks";
-        btnFs.textContent = "Local vault";
-
-        const btnWox = document.createElement("button");
-        btnWox.type = "button";
-        btnWox.className = "ext-tabs__tab";
-        btnWox.setAttribute("role", "tab");
-        btnWox.id = "ext-tab-cloud";
-        btnWox.textContent = "Cloud pastes";
-
-        track.appendChild(btnFs);
-        track.appendChild(btnWox);
-        tabBar.appendChild(track);
-
-        const fsPanel = document.createElement("div");
-        fsPanel.id = "bookmarkfs-panel";
-
-        const parent = existingCenter.parentNode;
-        parent.insertBefore(tabBar, existingCenter);
-        parent.insertBefore(fsPanel, existingCenter);
-        fsPanel.appendChild(existingCenter);
-
-        const woxRoot = document.createElement("div");
-        woxRoot.id = "woxbin-root";
-        woxRoot.style.display = "none";
-        parent.appendChild(woxRoot);
-
-        function styleActive(isFs) {
-            btnFs.setAttribute("aria-selected", isFs ? "true" : "false");
-            btnWox.setAttribute("aria-selected", isFs ? "false" : "true");
-        }
-
-        function showFs() {
-            fsPanel.style.display = "";
-            woxRoot.style.display = "none";
-            styleActive(true);
-        }
-
-        function showWox() {
-            fsPanel.style.display = "none";
-            woxRoot.style.display = "block";
-            styleActive(false);
-            if (!woxBinMounted) {
-                woxBinMounted = true;
-                void mountWoxBinCompact(woxRoot);
-            }
-        }
-
-        btnFs.addEventListener("click", showFs);
-        btnWox.addEventListener("click", showWox);
-        styleActive(true);
-
-        window.__bookmarkfsTabs = {
-            showLocal: showFs,
-            showCloud: showWox,
-            showFs,
-            showWox
-        };
-    }
-
     // ---------- Wire up events on load ----------
     window.addEventListener("load", async() => {
         document.body.classList.add("ext-app");
-        setupExtensionTabs();
+        setupExtensionTabs({ mountCloud: mountWoxBinCompact });
+        window.__bookmarkfsVaultBridge = {
+            async queueCompose(payload) {
+                await setPendingCompose(payload);
+                if (window.__bookmarkfsTabs && typeof window.__bookmarkfsTabs.showCloud === "function") {
+                    window.__bookmarkfsTabs.showCloud();
+                }
+            },
+            async importPaste(paste, options) {
+                return importCloudPasteToVault(paste, options);
+            }
+        };
 
         try {
             const params = new URLSearchParams(window.location.search || "");
@@ -1728,6 +1906,41 @@ export function handleZip(bytes) {
             this.value = "";
         });
 
+        const verifyBtn = qs("#vault-verify-btn");
+        if (verifyBtn) verifyBtn.addEventListener("click", async() => {
+            verifyBtn.disabled = true;
+            try {
+                const result = await verifyVaultIndex();
+                const sample = result.issues.slice(0, 6);
+                alert(
+                    result.issues.length
+                        ? `Verified ${result.files} entries.\nIndexed: ${result.indexed}\nIssues: ${result.issues.length}\n\n${sample.join("\n")}`
+                        : `Verified ${result.files} entries.\nIndexed: ${result.indexed}\nNo metadata issues were found.`
+                );
+                await loadFilesToTable();
+            } catch (err) {
+                alert(`Verify failed: ${err && err.message ? err.message : String(err)}`);
+            } finally {
+                verifyBtn.disabled = false;
+            }
+        });
+
+        const rebuildBtn = qs("#vault-rebuild-btn");
+        if (rebuildBtn) rebuildBtn.addEventListener("click", async() => {
+            if (!confirm("Rebuild the local vault index cache from bookmarks metadata?")) return;
+            rebuildBtn.disabled = true;
+            try {
+                await clearVaultIndex();
+                const result = await verifyVaultIndex();
+                alert(`Rebuilt index.\nFiles scanned: ${result.files}\nIndexed: ${result.indexed}`);
+                await loadFilesToTable();
+            } catch (err) {
+                alert(`Rebuild failed: ${err && err.message ? err.message : String(err)}`);
+            } finally {
+                rebuildBtn.disabled = false;
+            }
+        });
+
         setupDragDrop();
 
         // initial render
@@ -1736,7 +1949,3 @@ export function handleZip(bytes) {
     });
 
 })();
-
-
-
-

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getUserForApiKey } from "@/lib/paste-service";
+import { revokeApiKeyForApiKeyOwner } from "@/lib/paste-service";
 import { jsonError } from "@/lib/http";
 import { getRequestIp } from "@/lib/request";
 import { rateLimit } from "@/lib/rate-limit";
@@ -12,7 +12,13 @@ function bearerToken(request: Request): string | null {
   return token || null;
 }
 
-export async function GET(request: Request) {
+type Params = {
+  params: Promise<{
+    keyId: string;
+  }>;
+};
+
+export async function DELETE(request: Request, { params }: Params) {
   const token = bearerToken(request);
   if (!token) {
     return jsonError("Missing API key.", 401);
@@ -24,17 +30,14 @@ export async function GET(request: Request) {
     return jsonError("API key rate limit exceeded.", 429);
   }
 
-  const user = await getUserForApiKey(token);
-  if (!user) {
+  const { keyId } = await params;
+  const result = await revokeApiKeyForApiKeyOwner(token, keyId);
+  if (result === "invalid_key") {
     return jsonError("Invalid API key.", 401);
   }
 
   return NextResponse.json({
-    user: {
-      id: user.id,
-      username: user.username,
-      displayName: user.displayName,
-      plan: user.plan
-    }
+    ok: true,
+    revokedCurrent: result === "revoked_current"
   });
 }

@@ -1,117 +1,153 @@
-# BookmarkFS + Wox-Bin Documentation
+# WOX-Bin Companion + BookmarkFS Documentation
 
-## Overview
-This extension has **two modes** (tabs at the top):
+## Product shape
 
-1. **Bookmark backup** — original BookmarkFS: file data inside Chrome bookmarks (chunked/encoded).
-2. **Wox-Bin** — compact client for your Wox-Bin deployment: list and create pastes using an **API key** (`Authorization: Bearer …`). Credentials are stored in **`chrome.storage.local`** (not in bookmarks).
+This extension now has a clear split:
 
-The Wox-Bin server must expose `GET` and `POST` `/api/v1/pastes` (see the main Wox-Bin repo).
+1. `WOX-Bin cloud`
+   - Primary product surface
+   - Uses WOX-Bin HTTP APIs over `Authorization: Bearer <api-key>`
+   - Supports multiple profiles, API-key lifecycle management, cloud paste actions, offline cache, and vault bridging
 
-### Wox-Bin tab — connect (site URL + API key)
+2. `Local vault (experimental)`
+   - Bookmark-backed storage using the browser `bookmarkfs` folder
+   - Intended for experimental local/offline usage, not durable hosted storage
 
-1. Deploy or run Wox-Bin and note the **origin** you use in the browser — the same value as **`NEXT_PUBLIC_APP_URL`** (Vercel: **Project → Settings → Environment Variables**).  
-   - Example production: `https://your-app.vercel.app` (no trailing slash).  
-   - Local: `http://localhost:3000`.
-2. In the site, **sign in** → open **Workspace** → **API keys** → create a key → copy the token (shown once).
-3. Open the extension → **Wox-Bin** tab.
-4. Paste **Site URL** and **API key** → **Save connection**. The list should load; you can create pastes below.
+## Cloud mode setup
 
-**Sign out** clears URL + key from `chrome.storage.local` on this device only.
+1. Open a WOX-Bin deployment.
+2. Sign in.
+3. Create an API key in Workspace.
+4. Open the extension.
+5. In `WOX-Bin cloud`, enter:
+   - `Profile label`
+   - `Site URL`
+   - `API key`
+   - optional `Profile passphrase`
+6. Save the profile.
 
-### Same URL as Vercel (optional build-time default)
+### Notes
+- Hosted sites must use `https://`.
+- `http://` is restricted to `localhost` and `127.0.0.1` for development.
+- Saved API keys can be encrypted locally with the optional passphrase.
 
-When you build the extension, webpack can pre-fill **Site URL** for new installs (you still enter the API key in the extension):
+## Cloud mode capabilities
 
-1. In the **repo root** `.env.local`, you already have `NEXT_PUBLIC_APP_URL=…` (e.g. your Vercel URL).  
-   Running `npm run build` inside `bookmarkfs` reads that file and bakes the value into the bundle.
-2. Or create **`bookmarkfs/.env`** with:
-   ```bash
-   WOXBIN_DEFAULT_SITE_URL=https://your-app.vercel.app
-   ```
-3. From the **monorepo root**: `npm run extension:build` (runs the bookmarkfs build).
+### Profiles
+- Multiple saved WOX-Bin deployments
+- Switch between profiles without retyping keys
+- Delete profiles
+- Forget cached passphrases
+- Unlock encrypted profiles on demand
 
-After changing env, rebuild the extension and click **Reload** on `chrome://extensions`.
+### API keys
+- List account API keys
+- Create a new API key
+- Revoke API keys
+- Replace the active profile token with a newly created key
 
-## Prerequisites
-- Node.js 18+ (Node.js 20 recommended)
-- npm
-- Google Chrome (or Chromium-based browser with extension developer mode)
+### Paste library
+- Search pastes by title or slug
+- Open public page
+- Open raw view
+- Copy public link
+- Copy body
+- Edit
+- Duplicate into the composer
+- Pin / unpin
+- Favorite / unfavorite
+- Cache offline inside the extension
+- Import into the local vault
+- Delete
 
-## Install Dependencies
+### Composer
+- Title, visibility, language
+- Folder selection and folder creation
+- Tags
+- Pin / favorite flags
+- Attachments
+- Publish or update
+- Optional `Mirror to local vault after publish`
+
+## Local vault behavior
+
+### Storage model
+- Files are chunked into bookmark folder children
+- Metadata is stored as a `!meta:` bookmark title payload
+- Content chunks are stored as bookmark titles beneath the file folder
+
+### Scalability changes now in place
+- The extension keeps a local metadata index cache in `chrome.storage.local`
+- Vault verification can rebuild that cache from live bookmark metadata
+- The popup no longer needs to reread full metadata for every file on every refresh once the cache is warm
+
+### Verify / rebuild
+- `Verify` scans files, checks metadata presence, and refreshes the local index cache
+- `Rebuild index` clears and recreates the cache from live bookmark metadata
+
+These tools repair the extension’s local index cache. They do not recover corrupted bookmark payloads that no longer contain readable metadata or chunks.
+
+## Bridge flows
+
+### Local vault -> WOX-Bin
+- Table row `cloud` action sends:
+  - text files as composer body
+  - non-text files as attachments
+- Context-menu actions also open the cloud composer with pending content
+
+### WOX-Bin -> local vault
+- `To vault` imports a paste into `woxbin-imports/<slug>/...`
+- `Mirror to local vault after publish` imports the newly published paste into `woxbin-mirror/<slug>/...`
+- `Offline cache` stores a lightweight cloud copy in extension local storage for quick reload back into the composer
+
+## Security model
+
+### Permissions
+The extension now requests:
+- `bookmarks`
+- `storage`
+- `contextMenus`
+- `tabs`
+
+Host access is narrowed to:
+- `https://*/*`
+- `http://localhost/*`
+- `http://127.0.0.1/*`
+
+That is still broad enough for arbitrary WOX-Bin deployments and dropped HTTPS assets, but it avoids the previous `<all_urls>` blanket.
+
+### Credentials
+- Profiles live in `chrome.storage.local`
+- API keys can be encrypted with AES-GCM derived from a passphrase
+- Passphrases can be cached for the browser session only
+
+## Build and reload
+
 ```bash
 npm install
-```
-
-## Build
-```bash
 npm run build
 ```
 
-Build output is written to `dist/` (`dist/bundle.js`, `dist/unrar.wasm`).
+Then reload the unpacked extension from `chrome://extensions`.
 
-## Load Extension in Chrome
-1. Open `chrome://extensions`.
-2. Enable `Developer mode` (top-right).
-3. Click `Load unpacked`.
-4. Select the project root folder (`bookmarkfs`).
+## Important files
 
-The extension popup uses `dist/index.html`.
+- `src/index.js`: local vault UI and bookmark-backed file logic
+- `src/woxbin-compact.js`: WOX-Bin cloud UI
+- `src/cloud/woxbin-profiles.js`: profile storage and passphrase encryption
+- `src/vault/bridge.js`: pending compose bridge between extension surfaces
+- `src/vault/metadata-cache.js`: local vault metadata index cache
+- `src/background/compose.js`: context-menu compose handoff
+- `manifest.json`: extension permissions and packaging metadata
+- `webpack.config.js`: bundle configuration
 
-## Usage
-1. Click the extension icon.
-2. Upload files with `Upload`.
-3. You can also drag from websites directly into the extension:
-- Drag image/video/file links from a web page into the extension popup/options page.
-- BookmarkFS will fetch the dropped URL and upload it as a file.
-- If a site blocks hotlink/cross-origin downloads, that dropped item may fail.
-4. Optionally set `Folder path` before upload to store files in virtual folders.
-5. If the same name exists, choose `replace`, `keep`, or `cancel`.
-6. Duplicate content is detected by hash and skipped.
-7. Upload resume checkpoints are saved in `chrome.storage.local` for non-encrypted uploads.
-8. Integrity checks are performed with chunk hashes and full content hash.
-9. Use pagination controls (`Prev` / `Next`) for large libraries.
-10. View summary metrics in the analytics bar.
-11. Manage files using table actions:
-- `Download`
-- `Clipboard`
-- `Rename`
-- `Delete`
-12. Use `Export`/`Import` for backup and restore.
-13. Use `Settings` to adjust max bookmark chunk size, page size, and column visibility.
+## API contract used by cloud mode
 
-## Development Notes
-- Entry file: `src/index.js`
-- Bundler config: `webpack.config.js`
-- Extension manifest: `manifest.json`
+The extension currently uses:
 
-After changing source files, rebuild:
-```bash
-npm run build
-```
-
-Then reload the unpacked extension from `chrome://extensions` using the refresh icon.
-
-## Tests
-Run the test suite:
-```bash
-npm test
-```
-
-CI runs `npm ci`, `npm run build`, and `npm test` on push/PR via `.github/workflows/ci.yml`.
-
-## Troubleshooting
-- `file exists` during upload:
-  Rename the file before upload, or delete the existing one first.
-- Import does not add some files:
-  Existing names are skipped to avoid overwriting.
-- RAR preview issues:
-  Ensure `dist/unrar.wasm` exists (generated by build step).
-- UI still shows old path links or old preview behavior:
-  Run `npm run build`, then remove and re-load the unpacked extension from `chrome://extensions`.
-- Downloaded file is unreadable/corrupted:
-  Rebuild and reload the extension so the latest blob-based download path is used.
-- Dragged URL from website fails:
-  Some websites block cross-origin direct download; try opening the file URL directly and drag again.
-- Console shows `TypeError: Failed to fetch` for dropped internet assets:
-  This usually means the source blocked cross-origin access; BookmarkFS now catches these and reports them in the upload summary.
+- `GET /api/v1/me`
+- `GET/POST /api/v1/pastes`
+- `GET/PATCH/DELETE /api/v1/pastes/[slug]`
+- `GET/POST /api/v1/me/folders`
+- `GET/POST /api/v1/me/keys`
+- `DELETE /api/v1/me/keys/[keyId]`

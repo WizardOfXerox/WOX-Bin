@@ -5,19 +5,33 @@
 
 /* global __WOXBIN_DEFAULT_SITE_URL__ */
 
+import { storageLocalGet, storageLocalSet } from "./storage/chrome-local.js";
+import {
+  WOXBIN_STORAGE,
+  deleteProfile,
+  forgetProfilePassphrase,
+  getSelectedProfile,
+  loadProfiles,
+  normalizeBaseUrl,
+  resolveProfileCredentials,
+  saveProfile,
+  setSelectedProfileId,
+  unlockProfile
+} from "./cloud/woxbin-profiles.js";
+import {
+  buildOfflineCacheAssets,
+  loadOfflineCacheEntries,
+  offlineAssetToBlob,
+  pushOfflineCacheEntry,
+  removeOfflineCacheEntry,
+  sanitizeFilenamePart
+} from "./cloud/offline-cache.js";
+import { takePendingCompose } from "./vault/bridge.js";
+
 const DEFAULT_SITE_URL =
   typeof __WOXBIN_DEFAULT_SITE_URL__ !== "undefined" && __WOXBIN_DEFAULT_SITE_URL__
     ? String(__WOXBIN_DEFAULT_SITE_URL__).trim()
     : "";
-
-const WOXBIN_STORAGE = {
-  baseUrl: "woxbin_base_url",
-  apiKey: "woxbin_api_key",
-  urlPresets: "woxbin_url_presets",
-  draft: "woxbin_composer_draft",
-  onboardingDismissed: "woxbin_onboarding_dismissed",
-  recentSlugs: "woxbin_recent_slugs"
-};
 
 const PAGE_SIZE = 30;
 const RECENT_SLUGS_MAX = 20;
@@ -34,36 +48,12 @@ const WOXBIN_LANGUAGES = [
   ["json", "JSON"]
 ];
 
-function storageLocalGet(keys) {
-  return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
-}
-
-function storageLocalSet(obj) {
-  return new Promise((resolve) => chrome.storage.local.set(obj, resolve));
-}
-
-function storageLocalRemove(keys) {
-  return new Promise((resolve) => chrome.storage.local.remove(keys, resolve));
-}
-
 function debounce(fn, ms) {
   let t = null;
   return (...args) => {
     clearTimeout(t);
     t = setTimeout(() => fn(...args), ms);
   };
-}
-
-function normalizeBaseUrl(raw) {
-  const s = String(raw || "").trim().replace(/\/+$/, "");
-  if (!s) return "";
-  try {
-    const u = new URL(s);
-    if (u.protocol !== "http:" && u.protocol !== "https:") return "";
-    return `${u.origin}`;
-  } catch {
-    return "";
-  }
 }
 
 function joinUrl(base, path) {
@@ -178,15 +168,28 @@ export async function mountWoxBinCompact(rootEl) {
   main.innerHTML = `
     <div class="wb-onboard" id="wb-onboard" hidden>
       <div class="wb-onboard__inner">
-        <strong>Wox-Bin in the extension</strong>
-        <p class="wb-hint" style="margin:6px 0 0">Save your site URL and API key below. Use <span class="wb-font-mono">Ctrl+Enter</span> in the body to publish. Right-click a page or selection to open a new tab here.</p>
+        <strong>WOX-Bin companion</strong>
+        <p class="wb-hint" style="margin:6px 0 0">Save multiple site profiles, manage API keys, cache cloud pastes locally, and use <span class="wb-font-mono">Ctrl+Enter</span> to publish.</p>
         <button type="button" class="wb-btn wb-btn-ghost wb-btn-tiny" id="wb-onboard-dismiss">Dismiss</button>
       </div>
     </div>
 
     <section class="wb-panel">
-      <h2>Connect</h2>
-      <p class="wb-lead">Use the same site URL as in the browser (e.g. your Vercel app or localhost). Keys are created under <strong>Workspace → API keys</strong> after you sign in.</p>
+      <h2>Profiles</h2>
+      <p class="wb-lead">WOX-Bin cloud is the primary mode. Save one or more hosted profiles, optionally encrypt stored keys with a passphrase, and switch between deployments without retyping everything.</p>
+      <div class="wb-field">
+        <label for="wb-profile-select"><span>Saved profile</span></label>
+        <div class="wb-inline-row">
+          <select id="wb-profile-select" class="wb-select"></select>
+          <button type="button" class="wb-btn wb-btn-secondary wb-btn-tiny" id="wb-profile-new">New</button>
+          <button type="button" class="wb-btn wb-btn-ghost wb-btn-tiny" id="wb-profile-delete">Delete</button>
+          <button type="button" class="wb-btn wb-btn-ghost wb-btn-tiny" id="wb-profile-lock">Forget passphrase</button>
+        </div>
+      </div>
+      <div class="wb-field">
+        <label for="wb-profile-label"><span>Profile label</span></label>
+        <input type="text" id="wb-profile-label" class="wb-input" maxlength="64" placeholder="Production, staging, local…" autocomplete="off" spellcheck="false" />
+      </div>
       <div class="wb-field">
         <label for="wb-base-url"><span>Site URL</span></label>
         <input type="url" id="wb-base-url" class="wb-input wb-font-mono" placeholder="https://….vercel.app" list="wb-url-presets" autocomplete="off" spellcheck="false" />
@@ -201,7 +204,7 @@ export async function mountWoxBinCompact(rootEl) {
       </div>
       <ol class="wb-steps">
         <li>Copy your API key when it is shown (one time only).</li>
-        <li>Paste <strong>URL</strong> + <strong>key</strong> below, then <strong>Save</strong>.</li>
+        <li>Paste <strong>URL</strong> + <strong>key</strong> below, then <strong>Save profile</strong>.</li>
       </ol>
       <div class="wb-field">
         <label for="wb-api-key">
@@ -210,12 +213,29 @@ export async function mountWoxBinCompact(rootEl) {
         </label>
         <input type="password" id="wb-api-key" class="wb-input wb-font-mono" placeholder="Paste secret key" autocomplete="off" spellcheck="false" />
       </div>
-      <div class="wb-btns">
-        <button type="button" class="wb-btn wb-btn-primary" id="wb-save-creds">Save</button>
-        <button type="button" class="wb-btn wb-btn-secondary" id="wb-sign-out">Clear saved</button>
+      <div class="wb-field">
+        <label for="wb-profile-passphrase"><span>Profile passphrase (optional)</span></label>
+        <input type="password" id="wb-profile-passphrase" class="wb-input wb-font-mono" placeholder="Encrypt this stored API key on this device" autocomplete="new-password" spellcheck="false" />
       </div>
-      <p class="wb-hint">Saved in <span class="wb-font-mono">chrome.storage.local</span> on this device only — not in bookmarks.</p>
+      <div class="wb-btns">
+        <button type="button" class="wb-btn wb-btn-primary" id="wb-save-creds">Save profile</button>
+        <button type="button" class="wb-btn wb-btn-secondary" id="wb-unlock-profile">Unlock profile</button>
+      </div>
+      <p class="wb-hint">Profiles live in <span class="wb-font-mono">chrome.storage.local</span> on this device. Hosted sites must use <strong>https://</strong>; plain <strong>http://</strong> is limited to localhost for development.</p>
       <p class="wb-connected" id="wb-connected" aria-live="polite"></p>
+    </section>
+
+    <section class="wb-panel">
+      <h2>API keys</h2>
+      <p class="wb-lead">Create, inspect, and revoke API keys from the extension. This uses the current bearer key, so treat the active profile as a credential manager.</p>
+      <div class="wb-field">
+        <label for="wb-new-key-label"><span>New key label</span></label>
+        <div class="wb-inline-row">
+          <input type="text" id="wb-new-key-label" class="wb-input" maxlength="64" placeholder="Extension, CLI, staging bot…" autocomplete="off" spellcheck="false" />
+          <button type="button" class="wb-btn wb-btn-secondary" id="wb-create-key">Create key</button>
+        </div>
+      </div>
+      <div id="wb-key-list" class="wb-stack-list"></div>
     </section>
 
     <section class="wb-panel">
@@ -227,6 +247,7 @@ export async function mountWoxBinCompact(rootEl) {
       <div class="wb-list-head">
         <div class="wb-btns" style="margin:0">
           <button type="button" class="wb-btn wb-btn-secondary wb-btn-tiny" id="wb-refresh">Refresh</button>
+          <button type="button" class="wb-btn wb-btn-secondary wb-btn-tiny" id="wb-open-workspace">Workspace ↗</button>
           <button type="button" class="wb-btn wb-btn-ghost wb-btn-tiny" id="wb-open-app">Open site ↗</button>
         </div>
         <span class="wb-list-meta" id="wb-list-meta"></span>
@@ -234,6 +255,13 @@ export async function mountWoxBinCompact(rootEl) {
       <div id="wb-list-wrap"></div>
       <div class="wb-loadmore-wrap">
         <button type="button" class="wb-btn wb-btn-secondary wb-btn-tiny" id="wb-load-more" disabled>Load more</button>
+      </div>
+      <div class="wb-cache-wrap">
+        <div class="wb-list-head">
+          <strong class="wb-muted">Offline cache</strong>
+          <span class="wb-list-meta" id="wb-cache-meta"></span>
+        </div>
+        <div id="wb-cache-list" class="wb-stack-list"></div>
       </div>
     </section>
 
@@ -265,6 +293,26 @@ export async function mountWoxBinCompact(rootEl) {
           <select id="wb-lang" class="wb-select">${langOpts}</select>
         </div>
       </div>
+      <div class="wb-row2">
+        <div class="wb-field" style="margin:0">
+          <label for="wb-folder"><span>Folder</span></label>
+          <div class="wb-inline-row">
+            <select id="wb-folder" class="wb-select">
+              <option value="">No folder</option>
+            </select>
+            <button type="button" class="wb-btn wb-btn-secondary wb-btn-tiny" id="wb-folder-create">New folder</button>
+          </div>
+        </div>
+        <div class="wb-field" style="margin:0">
+          <label for="wb-tags">Tags</label>
+          <input type="text" id="wb-tags" class="wb-input" maxlength="240" placeholder="comma, separated, tags" />
+        </div>
+      </div>
+      <div class="wb-inline-checks">
+        <label><input type="checkbox" id="wb-pinned" /> Pin paste</label>
+        <label><input type="checkbox" id="wb-favorite" /> Favorite</label>
+        <label><input type="checkbox" id="wb-mirror-local" /> Mirror to local vault after publish</label>
+      </div>
       <div class="wb-field">
         <label for="wb-content">Body <span class="wb-muted">(Ctrl+Enter · Esc clears status)</span></label>
         <textarea id="wb-content" class="wb-textarea wb-font-mono" placeholder="Write or paste content…"></textarea>
@@ -279,6 +327,7 @@ export async function mountWoxBinCompact(rootEl) {
       </div>
       <div class="wb-btns">
         <button type="button" class="wb-btn wb-btn-primary" id="wb-create">Publish paste</button>
+        <button type="button" class="wb-btn wb-btn-secondary" id="wb-clear-composer">Clear</button>
       </div>
     </section>
 
@@ -296,6 +345,27 @@ export async function mountWoxBinCompact(rootEl) {
   const searchInput = $("wb-search");
   const connectedEl = $("wb-connected");
   const datalistEl = $("wb-url-presets");
+  const profileSelect = $("wb-profile-select");
+  const profileLabelInput = $("wb-profile-label");
+  const baseUrlInput = $("wb-base-url");
+  const apiKeyInput = $("wb-api-key");
+  const passphraseInput = $("wb-profile-passphrase");
+  const btnUnlockProfile = $("wb-unlock-profile");
+  const btnDeleteProfile = $("wb-profile-delete");
+  const btnForgetProfile = $("wb-profile-lock");
+  const btnNewProfile = $("wb-profile-new");
+  const keyList = $("wb-key-list");
+  const newKeyLabelInput = $("wb-new-key-label");
+  const cacheMeta = $("wb-cache-meta");
+  const cacheList = $("wb-cache-list");
+  const folderSelect = $("wb-folder");
+  const tagsInput = $("wb-tags");
+  const pinnedInput = $("wb-pinned");
+  const favoriteInput = $("wb-favorite");
+  const mirrorLocalInput = $("wb-mirror-local");
+  const clearComposerBtn = $("wb-clear-composer");
+  const openWorkspaceBtn = $("wb-open-workspace");
+  const createFolderBtn = $("wb-folder-create");
   const onboardEl = $("wb-onboard");
   const editBar = $("wb-edit-bar");
   const editBadge = $("wb-edit-badge");
@@ -309,6 +379,9 @@ export async function mountWoxBinCompact(rootEl) {
   let listTotal = 0;
   let listLoading = false;
   let editingSlug = null;
+  let currentKeyId = null;
+  let currentProfile = null;
+  let currentPlan = "free";
   /** @type {Array<{ filename: string; content: string; language: string; mediaKind?: string; mimeType?: string }>} */
   let composerAttachments = [];
 
@@ -439,20 +512,58 @@ export async function mountWoxBinCompact(rootEl) {
     setStatus("Presets cleared.", "ok");
   });
 
-  async function loadCreds() {
-    const data = await storageLocalGet([WOXBIN_STORAGE.baseUrl, WOXBIN_STORAGE.apiKey]);
-    let url = data[WOXBIN_STORAGE.baseUrl] || "";
-    if (!url) url = defaultUrlForInput();
-    $("wb-base-url").value = url;
-    $("wb-api-key").value = data[WOXBIN_STORAGE.apiKey] || "";
+  async function renderProfileOptions(selectedId = null) {
+    const state = await loadProfiles();
+    const effectiveSelected = selectedId || state.selectedProfileId || "";
+    profileSelect.innerHTML = "";
+    const createOption = document.createElement("option");
+    createOption.value = "";
+    createOption.textContent = state.profiles.length ? "New profile…" : "Create your first profile…";
+    profileSelect.appendChild(createOption);
+    state.profiles.forEach((profile) => {
+      const option = document.createElement("option");
+      option.value = profile.id;
+      option.textContent = `${profile.label} · ${new URL(profile.baseUrl).hostname}`;
+      profileSelect.appendChild(option);
+    });
+    profileSelect.value = effectiveSelected;
+    return state;
+  }
+
+  async function syncProfileForm(profileId = null) {
+    const state = await renderProfileOptions(profileId);
+    const activeProfile =
+      state.profiles.find((profile) => profile.id === (profileId || state.selectedProfileId || "")) || null;
+    currentProfile = activeProfile;
+    profileLabelInput.value = activeProfile?.label || "";
+    baseUrlInput.value = activeProfile?.baseUrl || defaultUrlForInput();
+    passphraseInput.value = "";
+    if (!activeProfile) {
+      apiKeyInput.value = "";
+      apiKeyInput.placeholder = "Paste secret key";
+      currentKeyId = null;
+      return;
+    }
+
+    const creds = await resolveProfileCredentials(activeProfile);
+    apiKeyInput.value = creds.locked ? "" : creds.apiKey;
+    apiKeyInput.placeholder = creds.locked ? "Locked profile — enter passphrase and unlock" : "Paste secret key";
   }
 
   async function getCreds() {
-    const data = await storageLocalGet([WOXBIN_STORAGE.baseUrl, WOXBIN_STORAGE.apiKey]);
-    return {
-      baseUrl: normalizeBaseUrl(data[WOXBIN_STORAGE.baseUrl]),
-      apiKey: String(data[WOXBIN_STORAGE.apiKey] || "").trim()
-    };
+    currentProfile = currentProfile || (await getSelectedProfile());
+    if (!currentProfile) {
+      throw new Error("Create and save a profile first.");
+    }
+    const passphrase = passphraseInput.value.trim();
+    const resolved = await resolveProfileCredentials(currentProfile, passphrase);
+    if (resolved.locked) {
+      throw new Error("Profile is locked. Enter the passphrase and unlock it first.");
+    }
+    if (passphrase) {
+      passphraseInput.value = "";
+    }
+    return resolved;
   }
 
   async function loadComposerDraft() {
@@ -467,6 +578,15 @@ export async function mountWoxBinCompact(rootEl) {
     if (d.language && $("wb-lang").querySelector(`option[value="${escapeAttr(d.language)}"]`)) {
       $("wb-lang").value = d.language;
     }
+    if (typeof d.folderName === "string") {
+      folderSelect.value = d.folderName;
+    }
+    if (Array.isArray(d.tags)) {
+      tagsInput.value = d.tags.join(", ");
+    }
+    pinnedInput.checked = Boolean(d.pinned);
+    favoriteInput.checked = Boolean(d.favorite);
+    mirrorLocalInput.checked = Boolean(d.mirrorLocal);
   }
 
   const persistDraft = debounce(async () => {
@@ -476,46 +596,129 @@ export async function mountWoxBinCompact(rootEl) {
         content: $("wb-content").value,
         visibility: $("wb-vis").value,
         language: $("wb-lang").value,
+        folderName: folderSelect.value || "",
+        tags: tagsInput.value
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean)
+          .slice(0, 50),
+        pinned: pinnedInput.checked,
+        favorite: favoriteInput.checked,
+        mirrorLocal: mirrorLocalInput.checked,
         updatedAt: Date.now()
       }
     });
   }, DRAFT_DEBOUNCE_MS);
 
-  ["wb-title", "wb-content", "wb-vis", "wb-lang"].forEach((id) => {
+  ["wb-title", "wb-content", "wb-vis", "wb-lang", "wb-folder", "wb-tags", "wb-pinned", "wb-favorite", "wb-mirror-local"].forEach((id) => {
     const el = $(id);
     el.addEventListener("input", () => persistDraft());
     el.addEventListener("change", () => persistDraft());
   });
 
   $("wb-save-creds").addEventListener("click", async () => {
-    const baseUrl = normalizeBaseUrl($("wb-base-url").value);
-    const apiKey = $("wb-api-key").value.trim();
-    if (!baseUrl) {
-      setStatus("Enter a valid https (or http://localhost) site URL.", "err");
-      return;
+    try {
+      const profile = await saveProfile({
+        profileId: profileSelect.value || null,
+        label: profileLabelInput.value,
+        baseUrl: baseUrlInput.value,
+        apiKey: apiKeyInput.value,
+        passphrase: passphraseInput.value.trim()
+      });
+      currentProfile = profile;
+      const presets = await getUrlPresets();
+      if (!presets.includes(profile.baseUrl)) {
+        presets.unshift(profile.baseUrl);
+        await saveUrlPresets(presets);
+      }
+      await syncProfileForm(profile.id);
+      setStatus("Profile saved. Loading library…", "ok");
+      await Promise.all([refreshList(), fetchMe(), loadFolders(), renderApiKeys(), renderOfflineCache()]);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error), "err");
     }
-    if (!apiKey) {
-      setStatus("Paste your API key from the workspace.", "err");
-      return;
-    }
-    await storageLocalSet({
-      [WOXBIN_STORAGE.baseUrl]: baseUrl,
-      [WOXBIN_STORAGE.apiKey]: apiKey
-    });
-    setStatus("Saved. Loading your pastes…", "ok");
-    await refreshList();
-    await fetchMe();
   });
 
-  $("wb-sign-out").addEventListener("click", async () => {
-    await storageLocalRemove([WOXBIN_STORAGE.baseUrl, WOXBIN_STORAGE.apiKey]);
-    $("wb-base-url").value = defaultUrlForInput();
-    $("wb-api-key").value = "";
+  profileSelect.addEventListener("change", async () => {
+    const nextId = profileSelect.value || null;
+    await setSelectedProfileId(nextId);
+    await syncProfileForm(nextId);
     listWrap.innerHTML = "";
-    listMeta.textContent = "";
+    keyList.innerHTML = "";
     connectedEl.textContent = "";
-    loadMoreBtn.disabled = true;
-    setStatus("Signed out on this device.", "ok");
+    if (nextId) {
+      await Promise.allSettled([refreshList(), fetchMe(), loadFolders(), renderApiKeys(), renderOfflineCache()]);
+    } else {
+      folderSelect.innerHTML = `<option value="">No folder</option>`;
+      await renderOfflineCache();
+    }
+  });
+
+  btnNewProfile.addEventListener("click", async () => {
+    await setSelectedProfileId(null);
+    currentProfile = null;
+    await syncProfileForm(null);
+    listWrap.innerHTML = "";
+    keyList.innerHTML = "";
+    connectedEl.textContent = "";
+    folderSelect.innerHTML = `<option value="">No folder</option>`;
+    setStatus("Creating a new profile.", "ok");
+  });
+
+  btnDeleteProfile.addEventListener("click", async () => {
+    const id = profileSelect.value || currentProfile?.id || "";
+    if (!id) {
+      setStatus("Select a profile first.", "err");
+      return;
+    }
+    if (!confirm("Delete this saved profile from the extension?")) {
+      return;
+    }
+    const state = await deleteProfile(id);
+    currentProfile = state.profiles.find((profile) => profile.id === state.selectedProfileId) || null;
+    await syncProfileForm(state.selectedProfileId || null);
+    listWrap.innerHTML = "";
+    keyList.innerHTML = "";
+    connectedEl.textContent = "";
+    if (!currentProfile) {
+      folderSelect.innerHTML = `<option value="">No folder</option>`;
+    }
+    await Promise.allSettled([renderOfflineCache(), currentProfile ? refreshList() : Promise.resolve(), currentProfile ? fetchMe() : Promise.resolve(), currentProfile ? loadFolders() : Promise.resolve(), currentProfile ? renderApiKeys() : Promise.resolve()]);
+    setStatus("Profile deleted.", "ok");
+  });
+
+  btnForgetProfile.addEventListener("click", () => {
+    const id = profileSelect.value || currentProfile?.id || "";
+    if (!id) {
+      setStatus("No encrypted profile is selected.", "err");
+      return;
+    }
+    forgetProfilePassphrase(id);
+    passphraseInput.value = "";
+    apiKeyInput.value = "";
+    apiKeyInput.placeholder = "Locked profile — enter passphrase and unlock";
+    setStatus("Cached passphrase cleared for this profile.", "ok");
+  });
+
+  btnUnlockProfile.addEventListener("click", async () => {
+    const id = profileSelect.value || currentProfile?.id || "";
+    if (!id) {
+      setStatus("Select a profile first.", "err");
+      return;
+    }
+    const passphrase = passphraseInput.value.trim();
+    if (!passphrase) {
+      setStatus("Enter the profile passphrase first.", "err");
+      return;
+    }
+    const unlocked = await unlockProfile(id, passphrase);
+    if (!unlocked) {
+      setStatus("Passphrase did not unlock this profile.", "err");
+      return;
+    }
+    await syncProfileForm(id);
+    setStatus("Profile unlocked.", "ok");
+    await Promise.allSettled([refreshList(), fetchMe(), loadFolders(), renderApiKeys(), renderOfflineCache()]);
   });
 
   async function apiFetch(path, init) {
@@ -548,17 +751,21 @@ export async function mountWoxBinCompact(rootEl) {
 
   async function fetchMe() {
     connectedEl.textContent = "";
-    const { baseUrl, apiKey } = await getCreds();
-    if (!baseUrl || !apiKey) return;
     try {
+      const { baseUrl } = await getCreds();
       const data = await apiFetch("/api/v1/me");
       const u = data?.user;
       if (!u) return;
+      currentPlan = u.plan || "free";
       const label = u.displayName || u.username || u.id || "Account";
       const handle = u.username ? `@${u.username}` : "";
-      connectedEl.textContent = handle ? `Connected as ${label} (${handle})` : `Connected as ${label}`;
-    } catch {
+      const profileLabel = currentProfile?.label ? ` via ${currentProfile.label}` : "";
+      connectedEl.textContent = handle
+        ? `Connected as ${label} (${handle}) · ${currentPlan} plan · ${baseUrl}${profileLabel}`
+        : `Connected as ${label} · ${currentPlan} plan · ${baseUrl}${profileLabel}`;
+    } catch (error) {
       connectedEl.textContent = "";
+      setStatus(error instanceof Error ? error.message : String(error), "err");
     }
   }
 
@@ -575,12 +782,17 @@ export async function mountWoxBinCompact(rootEl) {
     const row = $("wb-recent-row");
     const box = $("wb-recent-btns");
     if (!row || !box) return;
-    const { baseUrl } = await getCreds();
     const data = await storageLocalGet([WOXBIN_STORAGE.recentSlugs]);
     const slugs = Array.isArray(data[WOXBIN_STORAGE.recentSlugs])
       ? data[WOXBIN_STORAGE.recentSlugs].filter(Boolean)
       : [];
     box.innerHTML = "";
+    let baseUrl = "";
+    try {
+      baseUrl = (await getCreds()).baseUrl;
+    } catch {
+      baseUrl = "";
+    }
     if (!baseUrl || !slugs.length) {
       row.hidden = true;
       return;
@@ -599,12 +811,475 @@ export async function mountWoxBinCompact(rootEl) {
     }
   }
 
+  function applyComposerStateFromPaste(body, { duplicate = false } = {}) {
+    editingSlug = duplicate ? null : body.slug || null;
+    $("wb-title").value = body.title || "";
+    $("wb-content").value = body.content || "";
+    if (body.visibility && $("wb-vis").querySelector(`option[value="${escapeAttr(body.visibility)}"]`)) {
+      $("wb-vis").value = body.visibility;
+    }
+    if (body.language && $("wb-lang").querySelector(`option[value="${escapeAttr(body.language)}"]`)) {
+      $("wb-lang").value = body.language;
+    }
+    folderSelect.value = body.folderName || "";
+    tagsInput.value = Array.isArray(body.tags) ? body.tags.join(", ") : "";
+    pinnedInput.checked = Boolean(body.pinned);
+    favoriteInput.checked = Boolean(body.favorite);
+    composerAttachments = (body.files || []).map((f) => ({
+      filename: f.filename,
+      content: f.content,
+      language: f.language || "none",
+      mediaKind: f.mediaKind || undefined,
+      mimeType: f.mimeType || undefined
+    }));
+    updateEditChrome();
+    renderAttachList();
+    persistDraft();
+  }
+
+  function triggerBlobDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function openBlobPreview(blob, fallbackFilename) {
+    const url = URL.createObjectURL(blob);
+    const tab = window.open(url, "_blank", "noopener,noreferrer");
+    if (!tab) {
+      triggerBlobDownload(blob, fallbackFilename);
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+
+  function downloadOfflineEntryJson(entry) {
+    const slug = sanitizeFilenamePart(entry.slug || entry.title || "offline-cache", "offline-cache");
+    const blob = new Blob([JSON.stringify(entry, null, 2)], { type: "application/json" });
+    triggerBlobDownload(blob, `${slug}.offline-cache.json`);
+  }
+
+  function renderOfflineAssetList(entry) {
+    const wrap = document.createElement("div");
+    wrap.className = "wb-offline-assets";
+    const assets = buildOfflineCacheAssets(entry);
+
+    assets.forEach((asset) => {
+      const row = document.createElement("div");
+      row.className = "wb-offline-asset";
+
+      const meta = document.createElement("div");
+      meta.className = "wb-offline-asset__meta";
+      meta.innerHTML = `
+        <strong>${escapeHtml(asset.filename)}</strong>
+        <span class="wb-muted">${escapeHtml(asset.kind)}${asset.id === "body" ? " · main body" : ""}</span>
+      `;
+
+      const actions = document.createElement("div");
+      actions.className = "wb-paste-actions";
+
+      const openBtn = document.createElement("button");
+      openBtn.type = "button";
+      openBtn.className = "wb-btn wb-btn-secondary wb-btn-tiny";
+      openBtn.textContent = asset.kind === "text" ? "Open" : "Preview";
+      openBtn.addEventListener("click", () => {
+        const blob = offlineAssetToBlob(asset);
+        openBlobPreview(blob, asset.filename);
+      });
+
+      const downloadBtn = document.createElement("button");
+      downloadBtn.type = "button";
+      downloadBtn.className = "wb-btn wb-btn-ghost wb-btn-tiny";
+      downloadBtn.textContent = "Download";
+      downloadBtn.addEventListener("click", () => {
+        const blob = offlineAssetToBlob(asset);
+        triggerBlobDownload(blob, asset.filename);
+      });
+
+      actions.append(openBtn, downloadBtn);
+      row.append(meta, actions);
+      wrap.appendChild(row);
+    });
+
+    return wrap;
+  }
+
+  async function renderOfflineCache() {
+    const entries = await loadOfflineCacheEntries();
+    cacheMeta.textContent = `${entries.length} cached`;
+    cacheList.innerHTML = "";
+    if (!entries.length) {
+      cacheList.innerHTML = `<p class="wb-hint" style="margin:0">Use <strong>Cache local</strong> on a cloud paste to keep an offline copy in the extension.</p>`;
+      return;
+    }
+
+    entries.forEach((entry) => {
+      const card = document.createElement("div");
+      card.className = "wb-stack-card";
+      card.innerHTML = `
+        <div class="wb-paste-title">${escapeHtml(entry.title || entry.slug || "Untitled")}</div>
+        <div class="wb-paste-meta">
+          <span class="wb-pill">offline</span>
+          <span class="wb-font-mono">${escapeHtml(entry.language || "none")}</span>
+          <span>${escapeHtml(String((entry.files || []).length))} attachment${(entry.files || []).length === 1 ? "" : "s"}</span>
+          <span>· ${escapeHtml(new Date(entry.cachedAt || Date.now()).toLocaleString())}</span>
+        </div>
+      `;
+      const actions = document.createElement("div");
+      actions.className = "wb-paste-actions";
+
+      const loadBtn = document.createElement("button");
+      loadBtn.type = "button";
+      loadBtn.className = "wb-btn wb-btn-secondary wb-btn-tiny";
+      loadBtn.textContent = "Load to composer";
+      loadBtn.addEventListener("click", () => {
+        applyComposerStateFromPaste(entry, { duplicate: true });
+        setStatus(`Loaded offline cache for ${entry.slug || entry.title}.`, "ok");
+      });
+
+      const exportBtn = document.createElement("button");
+      exportBtn.type = "button";
+      exportBtn.className = "wb-btn wb-btn-secondary wb-btn-tiny";
+      exportBtn.textContent = "Export JSON";
+      exportBtn.addEventListener("click", () => {
+        downloadOfflineEntryJson(entry);
+        setStatus("Offline cache entry exported.", "ok");
+      });
+
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "wb-btn wb-btn-ghost wb-btn-tiny";
+      removeBtn.textContent = "Remove";
+      removeBtn.addEventListener("click", async () => {
+        await removeOfflineCacheEntry(entry.slug);
+        await renderOfflineCache();
+        setStatus("Removed offline cache entry.", "ok");
+      });
+
+      actions.append(loadBtn, exportBtn, removeBtn);
+      card.appendChild(actions);
+      card.appendChild(renderOfflineAssetList(entry));
+      cacheList.appendChild(card);
+    });
+  }
+
+  async function loadFolders() {
+    const previousValue = folderSelect.value || "";
+    folderSelect.innerHTML = `<option value="">No folder</option>`;
+    try {
+      const data = await apiFetch("/api/v1/me/folders");
+      const folders = Array.isArray(data?.folders) ? data.folders : [];
+      folders.forEach((folderName) => {
+        const option = document.createElement("option");
+        option.value = folderName;
+        option.textContent = folderName;
+        folderSelect.appendChild(option);
+      });
+      if (folders.includes(previousValue)) {
+        folderSelect.value = previousValue;
+      }
+    } catch {
+      folderSelect.value = "";
+    }
+  }
+
+  async function renderApiKeys() {
+    keyList.innerHTML = "";
+    try {
+      const data = await apiFetch("/api/v1/me/keys");
+      currentKeyId = data?.currentKeyId || null;
+      const keys = Array.isArray(data?.keys) ? data.keys : [];
+      if (!keys.length) {
+        keyList.innerHTML = `<p class="wb-hint" style="margin:0">No API keys found for this account.</p>`;
+        return;
+      }
+
+      keys.forEach((key) => {
+        const item = document.createElement("div");
+        item.className = "wb-stack-card";
+        item.innerHTML = `
+          <div class="wb-paste-title">${escapeHtml(key.label || "API key")}</div>
+          <div class="wb-paste-meta">
+            <span class="wb-pill">${key.id === currentKeyId ? "current" : "saved"}</span>
+            <span>Created ${escapeHtml(new Date(key.createdAt).toLocaleString())}</span>
+            <span>· Last used ${escapeHtml(key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleString() : "never")}</span>
+          </div>
+        `;
+        const actions = document.createElement("div");
+        actions.className = "wb-paste-actions";
+
+        if (key.id !== currentKeyId) {
+          const useBtn = document.createElement("button");
+          useBtn.type = "button";
+          useBtn.className = "wb-btn wb-btn-secondary wb-btn-tiny";
+          useBtn.textContent = "Use in profile";
+          useBtn.addEventListener("click", () => {
+            setStatus("Create a replacement key first if you need to switch active credentials safely. Newly created keys are shown only once.", "ok");
+          });
+          actions.appendChild(useBtn);
+        }
+
+        const revokeBtn = document.createElement("button");
+        revokeBtn.type = "button";
+        revokeBtn.className = "wb-btn wb-btn-danger wb-btn-tiny";
+        revokeBtn.textContent = key.id === currentKeyId ? "Revoke current" : "Revoke";
+        revokeBtn.addEventListener("click", async () => {
+          if (!confirm(`Revoke API key "${key.label}"?`)) {
+            return;
+          }
+          const result = await apiFetch(`/api/v1/me/keys/${encodeURIComponent(key.id)}`, { method: "DELETE" });
+          await renderApiKeys();
+          if (result?.revokedCurrent) {
+            apiKeyInput.value = "";
+            setStatus("Current key was revoked. Paste a replacement key and save the profile again.", "ok");
+          } else {
+            setStatus("API key revoked.", "ok");
+          }
+        });
+        actions.appendChild(revokeBtn);
+
+        item.appendChild(actions);
+        keyList.appendChild(item);
+      });
+    } catch (error) {
+      keyList.innerHTML = `<p class="wb-hint" style="margin:0">${escapeHtml(
+        error instanceof Error ? error.message : String(error)
+      )}</p>`;
+    }
+  }
+
+  $("wb-create-key").addEventListener("click", async () => {
+    const label = newKeyLabelInput.value.trim();
+    if (!label) {
+      setStatus("Enter a label for the new API key.", "err");
+      return;
+    }
+    try {
+      const data = await apiFetch("/api/v1/me/keys", {
+        method: "POST",
+        body: JSON.stringify({ label })
+      });
+      newKeyLabelInput.value = "";
+      if (data?.key?.token) {
+        apiKeyInput.value = data.key.token;
+        const shouldReplace = confirm("A new API key was created. Replace the active profile key with this new token?");
+        if (shouldReplace) {
+          const profile = await saveProfile({
+            profileId: profileSelect.value || currentProfile?.id || null,
+            label: profileLabelInput.value,
+            baseUrl: baseUrlInput.value,
+            apiKey: data.key.token,
+            passphrase: passphraseInput.value.trim()
+          });
+          currentProfile = profile;
+          await syncProfileForm(profile.id);
+        }
+      }
+      await renderApiKeys();
+      setStatus("New API key created. The token is shown once in the field above.", "ok");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error), "err");
+    }
+  });
+
+  createFolderBtn.addEventListener("click", async () => {
+    const name = prompt("Folder name");
+    if (!name) {
+      return;
+    }
+    try {
+      await apiFetch("/api/v1/me/folders", {
+        method: "POST",
+        body: JSON.stringify({ name })
+      });
+      await loadFolders();
+      folderSelect.value = name.trim();
+      setStatus("Folder created.", "ok");
+      persistDraft();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error), "err");
+    }
+  });
+
+  clearComposerBtn.addEventListener("click", () => {
+    $("wb-title").value = "";
+    $("wb-content").value = "";
+    folderSelect.value = "";
+    tagsInput.value = "";
+    pinnedInput.checked = false;
+    favoriteInput.checked = false;
+    mirrorLocalInput.checked = false;
+    clearEditMode();
+    persistDraft();
+    setStatus("Composer cleared.", "ok");
+  });
+
+  openWorkspaceBtn.addEventListener("click", async () => {
+    try {
+      const { baseUrl } = await getCreds();
+      window.open(joinUrl(baseUrl, "/app"), "_blank", "noopener,noreferrer");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error), "err");
+    }
+  });
+
+  function parseTagsInput() {
+    return tagsInput.value
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+      .slice(0, 50);
+  }
+
+  function clearComposerFields() {
+    $("wb-title").value = "";
+    $("wb-content").value = "";
+    folderSelect.value = "";
+    tagsInput.value = "";
+    pinnedInput.checked = false;
+    favoriteInput.checked = false;
+    mirrorLocalInput.checked = false;
+    clearEditMode();
+    persistDraft();
+  }
+
+  function buildComposerPayload() {
+    return {
+      title: ($("wb-title").value || "").trim() || "Untitled",
+      content: $("wb-content").value || "",
+      language: $("wb-lang").value,
+      visibility: $("wb-vis").value,
+      folderName: folderSelect.value || null,
+      tags: parseTagsInput(),
+      burnAfterRead: false,
+      burnAfterViews: 0,
+      pinned: pinnedInput.checked,
+      favorite: favoriteInput.checked,
+      archived: false,
+      template: false,
+      files: serializeFilesForApi(composerAttachments)
+    };
+  }
+
+  function buildPayloadFromBody(body, overrides = {}) {
+    const payload = {
+      title: (body.title || "").trim() || "Untitled",
+      content: body.content || "",
+      language: body.language || "none",
+      visibility: body.visibility || "private",
+      folderName: body.folderName || null,
+      tags: Array.isArray(body.tags) ? body.tags.filter(Boolean).slice(0, 50) : [],
+      burnAfterRead: Boolean(body.burnAfterRead),
+      burnAfterViews: Number.isFinite(body.burnAfterViews) ? body.burnAfterViews : 0,
+      pinned: Boolean(body.pinned),
+      favorite: Boolean(body.favorite),
+      archived: Boolean(body.archived),
+      template: Boolean(body.template)
+    };
+
+    if (body.expiresAt) {
+      payload.expiresAt = body.expiresAt;
+    }
+
+    if (Array.isArray(body.files)) {
+      payload.files = serializeFilesForApi(
+        body.files.map((file) => ({
+          filename: file.filename,
+          content: file.content,
+          language: file.language || "none",
+          mediaKind: file.mediaKind || undefined,
+          mimeType: file.mimeType || undefined
+        }))
+      );
+    }
+
+    return { ...payload, ...overrides };
+  }
+
+  async function loadPasteBody(slug) {
+    return apiFetch(`/api/v1/pastes/${encodeURIComponent(slug)}`);
+  }
+
+  async function cachePasteLocally(body) {
+    await pushOfflineCacheEntry({
+      slug: body.slug,
+      title: body.title,
+      content: body.content,
+      language: body.language,
+      visibility: body.visibility,
+      folderName: body.folderName || "",
+      tags: Array.isArray(body.tags) ? body.tags : [],
+      pinned: Boolean(body.pinned),
+      favorite: Boolean(body.favorite),
+      files: Array.isArray(body.files) ? body.files : [],
+      cachedAt: Date.now()
+    });
+    await renderOfflineCache();
+  }
+
+  async function importPasteIntoLocalVault(body) {
+    const bridge = window.__bookmarkfsVaultBridge;
+    if (!bridge || typeof bridge.importPaste !== "function") {
+      throw new Error("Local vault bridge is not available in this extension view.");
+    }
+    return bridge.importPaste(body, {
+      targetDir: `woxbin-imports/${sanitizeFilenamePart(body.slug || body.title || "paste", "paste")}`
+    });
+  }
+
+  async function mirrorCurrentPasteLocally(slug) {
+    const bridge = window.__bookmarkfsVaultBridge;
+    if (!bridge || typeof bridge.importPaste !== "function") {
+      return false;
+    }
+    const body = await loadPasteBody(slug);
+    await bridge.importPaste(body, {
+      targetDir: `woxbin-mirror/${sanitizeFilenamePart(body.slug || body.title || "paste", "paste")}`
+    });
+    return true;
+  }
+
+  function applyPendingComposePayload(payload) {
+    clearEditMode();
+    $("wb-title").value = payload.title || "";
+    $("wb-content").value = payload.content || "";
+    if (payload.visibility && $("wb-vis").querySelector(`option[value="${escapeAttr(payload.visibility)}"]`)) {
+      $("wb-vis").value = payload.visibility;
+    }
+    if (payload.language && $("wb-lang").querySelector(`option[value="${escapeAttr(payload.language)}"]`)) {
+      $("wb-lang").value = payload.language;
+    }
+    folderSelect.value = payload.folderName || "";
+    tagsInput.value = Array.isArray(payload.tags) ? payload.tags.join(", ") : "";
+    pinnedInput.checked = Boolean(payload.pinned);
+    favoriteInput.checked = Boolean(payload.favorite);
+    mirrorLocalInput.checked = Boolean(payload.mirrorLocal);
+    composerAttachments = Array.isArray(payload.attachments)
+      ? payload.attachments.map((file) => ({
+          filename: file.filename,
+          content: file.content,
+          language: file.language || "none",
+          mediaKind: file.mediaKind || undefined,
+          mimeType: file.mimeType || undefined
+        }))
+      : [];
+    renderAttachList();
+    updateEditChrome();
+    persistDraft();
+  }
+
   function renderPasteCard(p, baseUrl) {
     const title = (p.title || p.slug || "").slice(0, 120);
     const slug = p.slug || "";
     const pageUrl = joinUrl(baseUrl, `/p/${slug}`);
     const rawUrl = joinUrl(baseUrl, `/raw/${slug}`);
     const updated = p.updatedAt ? new Date(p.updatedAt).toLocaleString() : "";
+    const tags = Array.isArray(p.tags) ? p.tags.slice(0, 4) : [];
+    const folderName = p.folderName || "";
 
     const card = document.createElement("div");
     card.className = "wb-paste-card";
@@ -612,103 +1287,156 @@ export async function mountWoxBinCompact(rootEl) {
       <div class="wb-paste-title">${escapeHtml(title)}</div>
       <div class="wb-paste-meta">
         <span class="wb-pill">${escapeHtml(p.visibility || "")}</span>
-        <span class="wb-font-mono">${escapeHtml(p.language || "")}</span>
+        <span class="wb-font-mono">${escapeHtml(p.language || "none")}</span>
+        ${p.pinned ? '<span class="wb-pill">pinned</span>' : ""}
+        ${p.favorite ? '<span class="wb-pill">favorite</span>' : ""}
+        ${folderName ? `<span class="wb-pill">folder:${escapeHtml(folderName)}</span>` : ""}
         <span>· ${escapeHtml(updated)}</span>
       </div>
+      ${tags.length ? `<div class="wb-paste-tags">${tags.map((tag) => `<span class="wb-tag">${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
       <div class="wb-paste-actions"></div>
     `;
     const actions = card.querySelector(".wb-paste-actions");
 
-    const mkBtn = (label, primary) => {
+    const mkBtn = (label, variant = "secondary") => {
       const b = document.createElement("button");
       b.type = "button";
-      b.className = `wb-btn wb-btn-tiny ${primary ? "wb-btn-primary" : "wb-btn-secondary"}`;
+      b.className = `wb-btn wb-btn-tiny wb-btn-${variant}`;
       b.textContent = label;
       return b;
     };
 
-    const bOpen = mkBtn("Open", true);
+    const bOpen = mkBtn("Open", "primary");
     bOpen.addEventListener("click", () => {
       window.open(pageUrl, "_blank", "noopener,noreferrer");
     });
-    const bRaw = mkBtn("Raw URL", false);
-    bRaw.addEventListener("click", async () => {
-      try {
-        await navigator.clipboard.writeText(rawUrl);
-        setStatus("Raw URL copied.", "ok");
-      } catch {
-        setStatus("Could not copy.", "err");
-      }
+
+    const bRaw = mkBtn("Open raw");
+    bRaw.addEventListener("click", () => {
+      window.open(rawUrl, "_blank", "noopener,noreferrer");
     });
-    const bPage = mkBtn("Copy link", false);
-    bPage.addEventListener("click", async () => {
+
+    const bCopy = mkBtn("Copy link");
+    bCopy.addEventListener("click", async () => {
       try {
         await navigator.clipboard.writeText(pageUrl);
         setStatus("Page URL copied.", "ok");
       } catch {
-        setStatus("Could not copy.", "err");
+        setStatus("Could not copy the page URL.", "err");
       }
     });
-    const bBody = mkBtn("Copy body", false);
+
+    const bEdit = mkBtn("Edit");
+    bEdit.addEventListener("click", async () => {
+      setStatus("Loading paste…", "");
+      try {
+        const body = await loadPasteBody(slug);
+        applyComposerStateFromPaste(body);
+        setStatus(`Editing ${body.slug || slug}. Ctrl+Enter to save.`, "ok");
+        $("wb-content").focus();
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : String(error), "err");
+      }
+    });
+
+    const bDuplicate = mkBtn("Duplicate");
+    bDuplicate.addEventListener("click", async () => {
+      setStatus("Loading paste…", "");
+      try {
+        const body = await loadPasteBody(slug);
+        applyComposerStateFromPaste(body, { duplicate: true });
+        setStatus(`Loaded ${body.slug || slug} into composer as a new paste.`, "ok");
+        $("wb-title").focus();
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : String(error), "err");
+      }
+    });
+
+    const bPin = mkBtn(p.pinned ? "Unpin" : "Pin");
+    bPin.addEventListener("click", async () => {
+      setStatus("Updating paste…", "");
+      try {
+        const body = await loadPasteBody(slug);
+        await apiFetch(`/api/v1/pastes/${encodeURIComponent(slug)}`, {
+          method: "PATCH",
+          body: JSON.stringify(buildPayloadFromBody(body, { pinned: !body.pinned }))
+        });
+        setStatus(!body.pinned ? "Paste pinned." : "Paste unpinned.", "ok");
+        await refreshList();
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : String(error), "err");
+      }
+    });
+
+    const bFav = mkBtn(p.favorite ? "Unfavorite" : "Favorite");
+    bFav.addEventListener("click", async () => {
+      setStatus("Updating paste…", "");
+      try {
+        const body = await loadPasteBody(slug);
+        await apiFetch(`/api/v1/pastes/${encodeURIComponent(slug)}`, {
+          method: "PATCH",
+          body: JSON.stringify(buildPayloadFromBody(body, { favorite: !body.favorite }))
+        });
+        setStatus(!body.favorite ? "Paste favorited." : "Paste unfavorited.", "ok");
+        await refreshList();
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : String(error), "err");
+      }
+    });
+
+    const bCache = mkBtn("Cache local");
+    bCache.addEventListener("click", async () => {
+      setStatus("Caching paste locally…", "");
+      try {
+        const body = await loadPasteBody(slug);
+        await cachePasteLocally(body);
+        setStatus(`Cached ${body.slug || slug} offline in the extension.`, "ok");
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : String(error), "err");
+      }
+    });
+
+    const bImport = mkBtn("To vault");
+    bImport.addEventListener("click", async () => {
+      setStatus("Importing into local vault…", "");
+      try {
+        const body = await loadPasteBody(slug);
+        const stored = await importPasteIntoLocalVault(body);
+        setStatus(`Imported ${stored.length || 1} file(s) into the local vault.`, "ok");
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : String(error), "err");
+      }
+    });
+
+    const bBody = mkBtn("Copy body", "ghost");
     bBody.addEventListener("click", async () => {
       setStatus("Loading body…", "");
       try {
-        const body = await apiFetch(`/api/v1/pastes/${encodeURIComponent(slug)}`);
-        const text = body?.content ?? "";
-        await navigator.clipboard.writeText(text);
+        const body = await loadPasteBody(slug);
+        await navigator.clipboard.writeText(body?.content ?? "");
         setStatus("Body copied to clipboard.", "ok");
-      } catch (e) {
-        setStatus(e instanceof Error ? e.message : String(e), "err");
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : String(error), "err");
       }
     });
-    const bEdit = mkBtn("Edit", false);
-    bEdit.addEventListener("click", async () => {
-      setStatus("Loading…", "");
-      try {
-        const body = await apiFetch(`/api/v1/pastes/${encodeURIComponent(slug)}`);
-        editingSlug = body.slug || slug;
-        $("wb-title").value = body.title || "";
-        $("wb-content").value = body.content || "";
-        if (body.visibility && $("wb-vis").querySelector(`option[value="${escapeAttr(body.visibility)}"]`)) {
-          $("wb-vis").value = body.visibility;
-        }
-        if (body.language && $("wb-lang").querySelector(`option[value="${escapeAttr(body.language)}"]`)) {
-          $("wb-lang").value = body.language;
-        }
-        composerAttachments = (body.files || []).map((f) => ({
-          filename: f.filename,
-          content: f.content,
-          language: f.language || "none",
-          mediaKind: f.mediaKind || undefined,
-          mimeType: f.mimeType || undefined
-        }));
-        updateEditChrome();
-        renderAttachList();
-        setStatus(`Editing ${editingSlug}. Ctrl+Enter to save.`, "ok");
-        $("wb-content").focus();
-      } catch (e) {
-        setStatus(e instanceof Error ? e.message : String(e), "err");
-      }
-    });
-    const bDel = mkBtn("Delete", false);
-    bDel.classList.add("wb-btn-danger");
+
+    const bDel = mkBtn("Delete", "danger");
     bDel.addEventListener("click", async () => {
       if (!confirm(`Delete paste "${title}" (${slug})? This cannot be undone.`)) return;
       setStatus("Deleting…", "");
       try {
         await apiFetch(`/api/v1/pastes/${encodeURIComponent(slug)}`, { method: "DELETE" });
         if (editingSlug === slug) {
-          $("wb-title").value = "";
-          $("wb-content").value = "";
-          clearEditMode();
+          clearComposerFields();
         }
         setStatus(`Deleted ${slug}.`, "ok");
         await refreshList();
-      } catch (e) {
-        setStatus(e instanceof Error ? e.message : String(e), "err");
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : String(error), "err");
       }
     });
-    actions.append(bOpen, bRaw, bPage, bBody, bEdit, bDel);
+
+    actions.append(bOpen, bRaw, bCopy, bEdit, bDuplicate, bPin, bFav, bCache, bImport, bBody, bDel);
     return card;
   }
 
@@ -786,62 +1514,38 @@ export async function mountWoxBinCompact(rootEl) {
   });
 
   async function submitComposer() {
-    const title = ($("wb-title").value || "").trim() || "Untitled";
-    const content = $("wb-content").value || "";
-    const visibility = $("wb-vis").value;
-    const language = $("wb-lang").value;
-    const files = serializeFilesForApi(composerAttachments);
-
-    const payload = {
-      title,
-      content,
-      language,
-      visibility,
-      tags: [],
-      burnAfterRead: false,
-      burnAfterViews: 0,
-      pinned: false,
-      favorite: false,
-      archived: false,
-      template: false,
-      files
-    };
+    const payload = buildComposerPayload();
 
     setStatus(editingSlug ? "Saving…" : "Creating…", "");
     try {
+      let slug = editingSlug;
       if (editingSlug) {
         await apiFetch(`/api/v1/pastes/${encodeURIComponent(editingSlug)}`, {
           method: "PATCH",
           body: JSON.stringify(payload)
         });
         setStatus(`Updated ${editingSlug}.`, "ok");
-        clearEditMode();
-        $("wb-title").value = "";
-        $("wb-content").value = "";
       } else {
         const created = await apiFetch("/api/v1/pastes", {
           method: "POST",
           body: JSON.stringify(payload)
         });
-        const slug = created.slug || created.id;
+        slug = created.slug || created.id;
         const { baseUrl: bu } = await getCreds();
         const pageUrl = joinUrl(bu, created.url || `/p/${slug}`);
-        $("wb-content").value = "";
-        composerAttachments = [];
-        renderAttachList();
-        await storageLocalSet({
-          [WOXBIN_STORAGE.draft]: {
-            title: $("wb-title").value,
-            content: "",
-            visibility: $("wb-vis").value,
-            language: $("wb-lang").value,
-            updatedAt: Date.now()
-          }
-        });
         await pushRecentSlug(slug);
         setStatus(`Created ${slug}.`, "ok");
         window.open(pageUrl, "_blank", "noopener,noreferrer");
       }
+
+      if (mirrorLocalInput.checked && slug) {
+        const mirrored = await mirrorCurrentPasteLocally(slug);
+        if (mirrored) {
+          setStatus(`${editingSlug ? "Saved" : "Created"} ${slug} and mirrored it to the local vault.`, "ok");
+        }
+      }
+
+      clearComposerFields();
       await refreshList();
     } catch (e) {
       setStatus(e instanceof Error ? e.message : String(e), "err");
@@ -851,13 +1555,22 @@ export async function mountWoxBinCompact(rootEl) {
   btnCreate.addEventListener("click", () => void submitComposer());
 
   $("wb-open-app").addEventListener("click", async () => {
-    const { baseUrl } = await getCreds();
-    const bu = baseUrl || normalizeBaseUrl($("wb-base-url").value);
-    if (!bu) {
-      setStatus("Enter and save a site URL first.", "err");
-      return;
+    try {
+      const { baseUrl } = await getCreds();
+      const bu = baseUrl || normalizeBaseUrl($("wb-base-url").value);
+      if (!bu) {
+        setStatus("Enter and save a site URL first.", "err");
+        return;
+      }
+      window.open(joinUrl(bu, "/app"), "_blank", "noopener,noreferrer");
+    } catch (error) {
+      const bu = normalizeBaseUrl($("wb-base-url").value);
+      if (!bu) {
+        setStatus(error instanceof Error ? error.message : String(error), "err");
+        return;
+      }
+      window.open(joinUrl(bu, "/app"), "_blank", "noopener,noreferrer");
     }
-    window.open(joinUrl(bu, "/app"), "_blank", "noopener,noreferrer");
   });
 
   $("wb-content").addEventListener("keydown", (ev) => {
@@ -880,30 +1593,19 @@ export async function mountWoxBinCompact(rootEl) {
   });
 
   await loadUrlPresetsIntoDatalist();
-  await loadCreds();
+  await syncProfileForm();
   await loadComposerDraft();
+  await renderOfflineCache();
 
-  const pending = await storageLocalGet(["woxbin_pending_compose"]);
-  const pc = pending.woxbin_pending_compose;
+  const pc = await takePendingCompose();
   if (pc && typeof pc === "object") {
-    if (pc.title) $("wb-title").value = String(pc.title).slice(0, 500);
-    if (pc.content != null) $("wb-content").value = String(pc.content);
-    if (pc.visibility && $("wb-vis").querySelector(`option[value="${escapeAttr(pc.visibility)}"]`)) {
-      $("wb-vis").value = pc.visibility;
-    }
-    if (pc.language && $("wb-lang").querySelector(`option[value="${escapeAttr(pc.language)}"]`)) {
-      $("wb-lang").value = pc.language;
-    }
-    await storageLocalRemove(["woxbin_pending_compose"]);
+    applyPendingComposePayload(pc);
     setStatus("Loaded from vault or context menu.", "ok");
-    persistDraft();
   }
 
-  const { baseUrl, apiKey } = await getCreds();
-  if (baseUrl && apiKey) {
-    await refreshList();
+  if (currentProfile) {
+    await Promise.allSettled([refreshList(), loadFolders(), renderApiKeys(), renderOfflineCache()]);
   } else {
-    setStatus("");
     await renderRecentSlugs();
   }
 }

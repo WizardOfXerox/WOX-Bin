@@ -114,7 +114,46 @@ export default async function TeamPastesPage({ searchParams }: Props) {
                 </div>
               ) : (
                 <div className="glass-panel overflow-hidden">
-                  <div className="overflow-x-auto">
+                  <div className="grid gap-3 p-4 sm:hidden">
+                    {pastes.map((row) => (
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4" key={row.slug}>
+                        <Link
+                          className="font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
+                          href={`/p/${row.slug}`}
+                        >
+                          {row.title?.trim() || "Untitled"}
+                        </Link>
+                        <dl className="mt-3 grid gap-2 text-sm text-muted-foreground">
+                          <div className="flex items-center justify-between gap-3">
+                            <dt>Author</dt>
+                            <dd className="text-right">
+                              {authorLabel(row)}
+                              {row.authorUsername ? ` @${row.authorUsername}` : ""}
+                            </dd>
+                          </div>
+                          <div className="flex items-center justify-between gap-3">
+                            <dt>Visibility</dt>
+                            <dd>
+                              <Badge className="capitalize border-white/20 bg-transparent">{row.visibility}</Badge>
+                            </dd>
+                          </div>
+                          <div className="flex items-center justify-between gap-3">
+                            <dt>Syntax</dt>
+                            <dd className="text-right">
+                              {row.language && row.language !== "none" ? row.language : "—"}
+                            </dd>
+                          </div>
+                          <div className="flex items-center justify-between gap-3">
+                            <dt>Updated</dt>
+                            <dd className="text-right">
+                              {formatDistanceToNow(new Date(row.updatedAt), { addSuffix: true })}
+                            </dd>
+                          </div>
+                        </dl>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="hidden overflow-x-auto sm:block">
                     <table className="w-full min-w-[640px] border-collapse text-left text-sm">
                       <thead>
                         <tr className="border-b border-white/10 bg-white/[0.04] text-xs uppercase tracking-wider text-muted-foreground">

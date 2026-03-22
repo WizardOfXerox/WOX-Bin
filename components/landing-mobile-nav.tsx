@@ -50,19 +50,31 @@ export function LandingMobileNav() {
       >
         <DialogHeader className="text-left">
           <DialogTitle className="text-base font-semibold">Menu</DialogTitle>
-          <DialogDescription>Archive, account, and workspace</DialogDescription>
+          <DialogDescription>Archive, help, support, account, and workspace</DialogDescription>
         </DialogHeader>
         <nav aria-label="Primary" className="flex flex-col gap-3">
-          <DialogClose asChild>
-            <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
-              <Link href="/archive">Public archive</Link>
-            </Button>
-          </DialogClose>
-          <DialogClose asChild>
-            <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
-              <Link href="/pricing">Pricing</Link>
-            </Button>
-          </DialogClose>
+          <div className="grid grid-cols-2 gap-3">
+            <DialogClose asChild>
+              <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
+                <Link href="/archive">Archive</Link>
+              </Button>
+            </DialogClose>
+            <DialogClose asChild>
+              <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
+                <Link href="/pricing">Pricing</Link>
+              </Button>
+            </DialogClose>
+            <DialogClose asChild>
+              <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
+                <Link href="/help">Help</Link>
+              </Button>
+            </DialogClose>
+            <DialogClose asChild>
+              <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
+                <Link href="/support">Support</Link>
+              </Button>
+            </DialogClose>
+          </div>
           {status === "loading" ? (
             <div aria-hidden className="h-12 w-full animate-pulse rounded-full bg-muted/40" />
           ) : session?.user ? (

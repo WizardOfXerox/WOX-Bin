@@ -29,7 +29,9 @@ export function DocShell({ title, subtitle, children }: Props) {
               {item.label}
             </Link>
           ))}
-          <span className="mx-1 text-border">|</span>
+          <span aria-hidden className="mx-1 hidden text-border sm:inline">
+            |
+          </span>
           <Link className="rounded-md px-2 py-1 text-muted-foreground hover:bg-muted hover:text-foreground" href="/">
             Home
           </Link>

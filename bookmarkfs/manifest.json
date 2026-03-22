@@ -1,7 +1,7 @@
 {
-    "name": "BookmarkFS + Wox-Bin",
-    "description": "Bookmark backup in synced bookmarks, plus compact Wox-Bin (API key) for cloud pastes.",
-    "version": "0.1",
+    "name": "WOX-Bin Companion + BookmarkFS",
+    "description": "WOX-Bin cloud companion with multi-site API-key profiles, plus an experimental local BookmarkFS vault.",
+    "version": "0.4.0",
     "manifest_version": 3,
     "background": {
         "service_worker": "background.js",
@@ -21,7 +21,7 @@
         "page": "./dist/index.html"
     },
     "action": {
-        "title": "Wox-Bin & BookmarkFS",
+        "title": "WOX-Bin Companion",
         "default_popup": "./dist/index.html"
     },
     "web_accessible_resources": [{
@@ -38,6 +38,8 @@
         "tabs"
     ],
     "host_permissions": [
-        "<all_urls>"
+        "https://*/*",
+        "http://localhost/*",
+        "http://127.0.0.1/*"
     ]
 }

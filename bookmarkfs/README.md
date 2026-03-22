@@ -1,42 +1,75 @@
-<div align="center">
-    <h1>BookmarkFS - the dumbest project i've ever made</h1>
-</div>
-Exploits the google chrome bookmark sync service to store files for free
+# WOX-Bin Companion + BookmarkFS
 
-# Installation and usage
-1. Download the code as a zip and unzip it
-2. Go to chrome://extensions and turn on developer mode
-3. Click "Load Unpacked" and select the unzipped folder
+Browser extension with two surfaces:
 
-To upload a file, click on the icon for the extension and it will open up a page where you can upload, download, and delete files
+- `WOX-Bin cloud`: the primary mode. Connect one or more WOX-Bin sites with API keys, manage keys, browse pastes, publish from the popup, cache cloud pastes offline, and bridge content into the local vault.
+- `Local vault (experimental)`: the original BookmarkFS concept. Files are chunked into Chrome bookmarks under a `bookmarkfs` folder and synced by browser bookmark sync behavior.
 
-# How does it work?
-Every bookmark can contain a maximum of 9092 charaters before google refuses to sync them. Using base64 encoding, this means you can fit around 72kb into a single bookmark.
-When you upload a file, it gets encoded into base64, split into multiple bookmarks, and stored into folders corresponding with the file name.
+The extension is now intentionally `WOX-Bin-first`. The bookmark-backed vault remains available for offline or experimental use, but it is not positioned as a durable cloud file system.
 
-# Demo
+## Current feature set
 
+### Cloud mode
+- Multi-site saved profiles
+- Optional API-key encryption at rest with a local passphrase
+- API key list, create, and revoke from inside the extension
+- Paste browse/search
+- Edit, duplicate, delete, pin, favorite
+- Folder and tag support in the composer
+- Context-menu compose handoff from pages, selections, links, and images
+- Offline cache for cloud pastes
+- Import a cloud paste into the local vault
+- Mirror a newly published paste into the local vault
 
-https://user-images.githubusercontent.com/58010778/190885315-206a6bbf-eab1-4d0d-a7f6-bb4a15c30914.mp4
+### Local vault mode
+- Upload files into bookmark-backed storage
+- Export and import the full vault as JSON
+- Drag and drop local files or remote asset URLs
+- Duplicate detection by content hash
+- Resume checkpoints for non-encrypted uploads
+- Lightweight metadata index cache for faster reloads
+- Verify and rebuild the local index cache
+- Bridge local files into the WOX-Bin composer as text or attachments
 
+## Trust model
 
+### WOX-Bin cloud
+- Uses `chrome.storage.local` for saved profiles and drafts
+- API keys can be stored plaintext on-device or encrypted with a passphrase
+- Hosted data lives on the connected WOX-Bin deployment
 
+### Local vault
+- Stores file data in bookmark titles and metadata nodes under the `bookmarkfs` folder
+- Depends on browser bookmark sync behavior and bookmark limits
+- Best treated as experimental storage, backup, or offline scratch space
+- Large libraries can still stress the browser even though the extension now avoids some repeated metadata reads
 
-# Things you might be wondering
+## Build
 
-"Why?"
-    "Science isn't about why, it's about why not" - Cave Johnson
+```bash
+npm install
+npm run build
+```
 
-"What's the max file size?"
-    Not infinite, unfortunately. The syncing should be theoretically infinite, I've tested with over 10k bookmarks and file sizes > 100MB, but the bottleneck is your computer's memory. When you launch the extension, all of the files will eventually get loaded into RAM, slowing things down quite a bit and eventually crashing chrome with enough files. There might be ways to get around this.
+The bundle is written to `bookmarkfs/dist`.
 
-"Why folders? there aren't any actual bookmarks"
-    Using bookmarks works, and since the url section can be used as well, you can get over well double the storage density. However, chrome does not seem to sync bookmarks that long nested so deeply.
-    Fortunately, it has no problems with me using folders and storing as much of them as I want 
+## Load in Chrome
 
+1. Open `chrome://extensions`
+2. Enable `Developer mode`
+3. Click `Load unpacked`
+4. Select the `bookmarkfs` folder
 
-# Disclaimer
-DO NOT hover over the bookmarks folder when large files are uploaded. It will freeze chrome, or if you're using a chromebook it crashes the entire chromebook. At one point it even made Xorg crash.
+## Default cloud URL
 
+To prefill the extension with a WOX-Bin deployment URL at build time, set one of:
 
-Partially inspired by spreadsheetfs
+- `bookmarkfs/.env` with `WOXBIN_DEFAULT_SITE_URL=https://your-site`
+- root `.env.local` with `NEXT_PUBLIC_APP_URL=https://your-site`
+
+Then rebuild the extension.
+
+## Docs
+
+- [documentation.md](./documentation.md): operator and development guide
+- [ROADMAP.md](./ROADMAP.md): implemented roadmap and next slices

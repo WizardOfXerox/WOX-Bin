@@ -533,7 +533,7 @@ export function AdminUserDetailPanel({ userId }: { userId: string }) {
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
-            <div className="min-w-[220px] flex-1">
+            <div className="min-w-0 flex-1 sm:min-w-[220px]">
               <label className="text-xs text-muted-foreground" htmlFor="admin-user-paste-search">
                 Search this user&apos;s pastes
               </label>
@@ -574,7 +574,61 @@ export function AdminUserDetailPanel({ userId }: { userId: string }) {
             </p>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-white/10">
+          <div className="space-y-3 md:hidden">
+            {pasteRows.map((paste) => (
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4" key={paste.id}>
+                <div className="space-y-1">
+                  <div className="font-medium line-clamp-2">{paste.title}</div>
+                  <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                    <Link className="text-cyan-300/90 hover:underline" href={`/p/${paste.slug}`} rel="noreferrer" target="_blank">
+                      /p/{paste.slug}
+                    </Link>
+                    <Link className="hover:text-foreground hover:underline" href={`/admin/pastes?q=${encodeURIComponent(paste.slug)}`}>
+                      open in paste search
+                    </Link>
+                  </div>
+                </div>
+                <dl className="mt-4 grid gap-2 text-sm text-muted-foreground">
+                  <div className="flex items-center justify-between gap-3">
+                    <dt>Visibility</dt>
+                    <dd className="capitalize text-right">{paste.visibility}</dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <dt>Status</dt>
+                    <dd><Badge>{paste.status}</Badge></dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <dt>Views</dt>
+                    <dd>{paste.viewCount}</dd>
+                  </div>
+                </dl>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {(["active", "hidden", "deleted"] as const).map((status) => (
+                    <Button
+                      className="h-8 px-2 text-xs"
+                      disabled={actingSlug === paste.slug || paste.status === status}
+                      key={status}
+                      onClick={() => void setModeration(paste.slug, status)}
+                      type="button"
+                      variant={paste.status === status ? "default" : "outline"}
+                    >
+                      {status}
+                    </Button>
+                  ))}
+                </div>
+                <p className="mt-4 text-xs text-muted-foreground">
+                  {paste.updatedAt ? formatDate(paste.updatedAt) : "—"}
+                </p>
+              </div>
+            ))}
+            {!pasteLoading && pasteRows.length === 0 ? (
+              <div className="rounded-xl border border-white/10 px-3 py-8 text-center text-muted-foreground">
+                No pastes matched these filters.
+              </div>
+            ) : null}
+          </div>
+
+          <div className="hidden overflow-x-auto rounded-xl border border-white/10 md:block">
             <table className="w-full min-w-[980px] border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-white/10 bg-white/[0.03] text-xs uppercase tracking-wide text-muted-foreground">

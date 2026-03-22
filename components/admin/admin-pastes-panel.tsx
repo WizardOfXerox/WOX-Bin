@@ -141,7 +141,7 @@ export function AdminPastesPanel({ initialQ, initialStatus }: Props) {
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-[200px] flex-1">
+        <div className="min-w-0 flex-1 sm:min-w-[200px]">
           <label className="text-xs text-muted-foreground" htmlFor="admin-paste-search">
             Search slug, title, owner username, or owner email
           </label>
@@ -193,7 +193,72 @@ export function AdminPastesPanel({ initialQ, initialStatus }: Props) {
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-xl border border-white/10">
+      <div className="space-y-3 md:hidden">
+        {rows.map((p) => (
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4" key={p.id}>
+            <div className="space-y-1">
+              <div className="font-medium line-clamp-2">{p.title}</div>
+              <Link className="text-xs text-cyan-300/90 hover:underline" href={`/p/${p.slug}`} rel="noreferrer" target="_blank">
+                /p/{p.slug}
+              </Link>
+            </div>
+            <dl className="mt-4 grid gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center justify-between gap-3">
+                <dt>Owner</dt>
+                <dd className="text-right">
+                  {p.userId ? (
+                    <Link className="hover:text-foreground hover:underline" href={`/admin/users/${p.userId}`}>
+                      {p.ownerUsername ? `@${p.ownerUsername}` : p.ownerEmail ?? p.userId.slice(0, 8)}
+                    </Link>
+                  ) : (
+                    "Anonymous"
+                  )}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt>Visibility</dt>
+                <dd className="capitalize text-right">{p.visibility}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt>Status</dt>
+                <dd
+                  className={
+                    p.status === "active"
+                      ? "text-emerald-300"
+                      : p.status === "hidden"
+                        ? "text-amber-200"
+                        : "text-destructive-foreground"
+                  }
+                >
+                  {p.status}
+                </dd>
+              </div>
+            </dl>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {(["active", "hidden", "deleted"] as const).map((s) => (
+                <Button
+                  className="h-8 px-2 text-xs"
+                  disabled={actingSlug === p.slug || p.status === s}
+                  key={s}
+                  onClick={() => void setModeration(p.slug, s)}
+                  type="button"
+                  variant={p.status === s ? "default" : "outline"}
+                >
+                  {s}
+                </Button>
+              ))}
+            </div>
+            <p className="mt-4 text-xs text-muted-foreground">{p.updatedAt ? formatDate(p.updatedAt) : "—"}</p>
+          </div>
+        ))}
+        {!loading && rows.length === 0 ? (
+          <div className="rounded-xl border border-white/10 px-3 py-8 text-center text-muted-foreground">
+            No pastes match these filters.
+          </div>
+        ) : null}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-xl border border-white/10 md:block">
         <table className="w-full min-w-[960px] border-collapse text-left text-sm">
           <thead>
             <tr className="border-b border-white/10 bg-white/[0.03] text-xs uppercase tracking-wide text-muted-foreground">

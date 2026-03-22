@@ -1,25 +1,28 @@
 {
   "name": "bookmarkfs",
-  "version": "1.0.0",
-  "description": "Exploits the google chrome bookmark sync service to store files for free",
+  "version": "0.4.0",
+  "description": "WOX-Bin browser companion with an experimental BookmarkFS local vault",
+  "type": "module",
   "scripts": {
-    "build": "webpack --config webpack.config.js",
+    "build": "webpack --config webpack.config.cjs",
     "test": "node --test test/*.test.cjs"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/CoolElectronics/bookmarkfs.git"
+    "url": "git+https://github.com/WizardOfXerox/WOX-Bin.git"
   },
   "keywords": [
     "bookmark",
-    "filesystem"
+    "filesystem",
+    "wox-bin",
+    "chrome-extension"
   ],
-  "author": "CoolElectronics",
+  "author": "WizardOfXerox",
   "license": "GPL-3.0-or-later",
   "bugs": {
-    "url": "https://github.com/CoolElectronics/bookmarkfs/issues"
+    "url": "https://github.com/WizardOfXerox/WOX-Bin/issues"
   },
-  "homepage": "https://github.com/CoolElectronics/bookmarkfs#readme",
+  "homepage": "https://github.com/WizardOfXerox/WOX-Bin/tree/main/bookmarkfs#readme",
   "dependencies": {
     "base65536": "^4.0.2",
     "fflate": "^0.7.3",

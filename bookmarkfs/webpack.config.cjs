@@ -43,7 +43,7 @@ const defaultSiteUrl =
 
 module.exports = {
   entry: "./src/index.js",
-  mode: "development",
+  mode: "production",
   devtool: false,
   experiments: {
     asyncWebAssembly: true,
@@ -65,6 +65,8 @@ module.exports = {
     }),
     new CopyPlugin({
       patterns: [
+        { from: "src/ui/index.html", to: "index.html" },
+        { from: "src/ui/style.css", to: "style.css" },
         { from: "node_modules/node-unrar-js/dist/js/unrar.wasm", to: "unrar.wasm" }
       ]
     })

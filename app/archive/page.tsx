@@ -90,7 +90,31 @@ export default async function ArchivePage() {
         </p>
       ) : (
         <div className="glass-panel overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="grid gap-3 p-4 sm:hidden">
+            {pastes.map((paste) => (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4" key={paste.id}>
+                <Link
+                  className="font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
+                  href={`/p/${paste.slug}`}
+                >
+                  {paste.title?.trim() || "Untitled"}
+                </Link>
+                <dl className="mt-3 grid gap-2 text-sm text-muted-foreground">
+                  <div className="flex items-center justify-between gap-3">
+                    <dt>Posted</dt>
+                    <dd className="text-right">
+                      {formatDistanceToNow(new Date(paste.updatedAt), { addSuffix: true })}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <dt>Syntax</dt>
+                    <dd className="text-right">{syntaxLabel(paste.language)}</dd>
+                  </div>
+                </dl>
+              </div>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto sm:block">
             <table className="w-full min-w-[520px] border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-white/10 bg-white/[0.04] text-xs uppercase tracking-wider text-muted-foreground">
