@@ -14,7 +14,6 @@ import {
   Image as ImageIcon,
   LockKeyhole,
   MessageSquare,
-  MessageSquareReply,
   Printer,
   Share2,
   Star
@@ -433,7 +432,6 @@ export function PublicPasteShell({
 
   const authorName = paste.author.displayName || paste.author.username || "Anonymous";
   const forkHref = `/app?fork=${encodeURIComponent(paste.slug)}`;
-  const replyHref = `/app?reply=${encodeURIComponent(paste.slug)}`;
 
   return (
     <main className="wox-public-paste-print-root mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:py-8 md:px-6 md:py-10">
@@ -477,12 +475,6 @@ export function PublicPasteShell({
                 <Link href={forkHref} prefetch={false} title="Open workspace with a fork of this paste">
                   <GitFork className="h-4 w-4" />
                   Fork
-                </Link>
-              </Button>
-              <Button asChild className="w-full sm:w-auto" type="button" variant="outline">
-                <Link href={replyHref} prefetch={false} title="Open workspace with a reply paste draft">
-                  <MessageSquareReply className="h-4 w-4" />
-                  Reply as paste
                 </Link>
               </Button>
               <Button className="w-full sm:w-auto" type="button" variant="outline" onClick={handlePrintPaste}>

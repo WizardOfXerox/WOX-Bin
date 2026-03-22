@@ -58,8 +58,7 @@ import {
   Upload,
   Video,
   WandSparkles,
-  X,
-  MessageSquareReply
+  X
 } from "lucide-react";
 
 import { PasteLineageBanner } from "@/components/paste-lineage-banner";
@@ -305,8 +304,6 @@ type Props = {
   sessionUser: SessionUser | null;
   /** Open workspace with a fork draft of this public slug (consumed once after load). */
   initialForkSlug?: string;
-  /** Open workspace with a reply draft targeting this public slug (consumed once after load). */
-  initialReplySlug?: string;
 };
 
 function sortPastes(pastes: WorkspacePaste[]) {
@@ -415,26 +412,6 @@ function buildForkFromSource(src: WorkspacePaste, workspaceMode: WorkspaceMode):
     forkedFrom: { slug: src.slug, title: src.title },
     replyToId: null,
     replyTo: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }) as WorkspacePaste;
-  return markNewAccountDraft(next, workspaceMode);
-}
-
-/** New paste that replies to `src` (empty body; conversation lineage). */
-function buildReplyFromSource(src: WorkspacePaste, workspaceMode: WorkspaceMode): WorkspacePaste {
-  const next = createEmptyPaste({
-    ...src,
-    id: undefined,
-    slug: undefined,
-    title: `Re: ${src.title}`,
-    content: "",
-    files: [],
-    versions: [],
-    forkedFromId: null,
-    forkedFrom: null,
-    replyToId: src.id,
-    replyTo: { slug: src.slug, title: src.title },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   }) as WorkspacePaste;
@@ -600,7 +577,7 @@ function usageWidth(used: number, limit: number) {
   return `${Math.min(100, Math.round((used / limit) * 100))}%`;
 }
 
-export function WorkspaceShell({ sessionUser, initialForkSlug, initialReplySlug }: Props) {
+export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [mode, setMode] = useState<WorkspaceMode>(sessionUser ? "account" : "local");
@@ -691,8 +668,8 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialReplySlug 
   const deferredSearch = useDeferredValue(search);
   const effectiveEditorFontPx = narrowEditorViewport ? Math.max(editorFontSize, 16) : editorFontSize;
   const sessionUserId = sessionUser?.id;
-  const lastForkReplyImportKeyRef = useRef<string | null>(null);
-  const forkReplyImportInFlightRef = useRef<string | null>(null);
+  const lastForkImportKeyRef = useRef<string | null>(null);
+  const forkImportInFlightRef = useRef<string | null>(null);
 
   async function loadAccountWorkspace() {
     const [workspaceResponse, keysResponse, localResult] = await Promise.all([
@@ -818,20 +795,18 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialReplySlug 
 
   useEffect(() => {
     const fork = initialForkSlug?.trim();
-    const reply = initialReplySlug?.trim();
-    const slug = fork || reply;
+    const slug = fork;
     if (!slug) {
       return;
     }
-    const kind: "fork" | "reply" = fork ? "fork" : "reply";
-    const importKey = `${kind}:${slug}`;
+    const importKey = `fork:${slug}`;
     if (loading) {
       return;
     }
-    if (lastForkReplyImportKeyRef.current === importKey || forkReplyImportInFlightRef.current === importKey) {
+    if (lastForkImportKeyRef.current === importKey || forkImportInFlightRef.current === importKey) {
       return;
     }
-    forkReplyImportInFlightRef.current = importKey;
+    forkImportInFlightRef.current = importKey;
 
     let cancelled = false;
     void (async () => {
@@ -844,7 +819,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialReplySlug 
             setError(
               errBody?.error ??
                 (res.status === 423
-                  ? "Password required — unlock the paste in /p/… in this browser, then try Fork or Reply again."
+                  ? "Password required — unlock the paste in /p/… in this browser, then try Fork again."
                   : `Could not load paste (${res.status}).`)
             );
           }
@@ -858,11 +833,11 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialReplySlug 
           return;
         }
         const src = normalizeRemotePaste(remote);
-        const next = kind === "fork" ? buildForkFromSource(src, mode) : buildReplyFromSource(src, mode);
+        const next = buildForkFromSource(src, mode);
         if (cancelled) {
           return;
         }
-        lastForkReplyImportKeyRef.current = importKey;
+        lastForkImportKeyRef.current = importKey;
         setSnapshot((current) =>
           sanitizeSnapshot({
             folders: current.folders,
@@ -872,17 +847,13 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialReplySlug 
         setSidebarFolder((folder) => (folder === PUBLIC_FEED_FOLDER ? "all" : folder));
         setSelectedId(next.id);
         setPublishUrl(null);
-        setStatus(
-          kind === "fork"
-            ? `Forked “${remote.title}” from the web — save to publish.`
-            : `Reply draft for “${remote.title}” — save when ready.`
-        );
+        setStatus(`Forked “${remote.title}” from the web — save to publish.`);
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : "Could not import paste.");
         }
       } finally {
-        forkReplyImportInFlightRef.current = null;
+        forkImportInFlightRef.current = null;
         if (!cancelled) {
           router.replace("/app", { scroll: false });
         }
@@ -892,7 +863,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialReplySlug 
     return () => {
       cancelled = true;
     };
-  }, [initialForkSlug, initialReplySlug, loading, mode, router]);
+  }, [initialForkSlug, loading, mode, router]);
 
   useLayoutEffect(() => {
     try {
@@ -1675,25 +1646,6 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialReplySlug 
     setStatus("Created a fork of this paste (same content). Save to persist lineage.");
   }
 
-  function handleReplyPaste() {
-    if (!selectedPaste) {
-      return;
-    }
-
-    const reply = buildReplyFromSource(selectedPaste, mode);
-
-    setSnapshot((current) =>
-      sanitizeSnapshot({
-        folders: current.folders,
-        pastes: [reply, ...current.pastes]
-      })
-    );
-    leavePublicFeedForNewWorkspacePaste();
-    setSelectedId(reply.id);
-    setPublishUrl(null);
-    setStatus("Started a reply paste (empty editor). Save when ready.");
-  }
-
   async function handleDeleteFolder(folderName: string) {
     if (!confirm(`Delete folder "${folderName}"? Pastes in this folder will move to no folder.`)) {
       return;
@@ -1976,31 +1928,11 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialReplySlug 
     setStatus(`Forked "${src.title}".`);
   }
 
-  function replyPasteById(pasteId: string) {
-    const src = snapshot.pastes.find((p) => p.id === pasteId) ?? publicFeedPastes.find((p) => p.id === pasteId);
-    if (!src) {
-      return;
-    }
-
-    const reply = buildReplyFromSource(src, mode);
-
-    setSnapshot((current) =>
-      sanitizeSnapshot({
-        folders: current.folders,
-        pastes: [reply, ...current.pastes]
-      })
-    );
-    leavePublicFeedForNewWorkspacePaste();
-    setSelectedId(reply.id);
-    setPublishUrl(null);
-    setStatus(`Reply to "${src.title}" — empty draft created.`);
-  }
-
   async function deletePasteById(pasteId: string) {
     const paste = snapshot.pastes.find((p) => p.id === pasteId);
     if (!paste) {
       if (publicFeedPastes.some((p) => p.id === pasteId)) {
-        setError("Public feed pastes are read-only here. Fork or reply to add a copy to your library.");
+        setError("Public feed pastes are read-only here. Fork to add a copy to your library.");
       }
       return;
     }
@@ -3201,10 +3133,6 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialReplySlug 
                       <WandSparkles className="mr-2 h-4 w-4" />
                       Fork
                     </ContextMenuItem>
-                    <ContextMenuItem onSelect={() => replyPasteById(paste.id)}>
-                      <MessageSquareReply className="mr-2 h-4 w-4" />
-                      Reply as paste
-                    </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem
                       onSelect={() => {
@@ -3447,15 +3375,6 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialReplySlug 
                         >
                           <WandSparkles className="h-4 w-4" />
                           Fork
-                        </Button>
-                        <Button
-                          onClick={handleReplyPaste}
-                          size={editorPaneCompact ? "sm" : "default"}
-                          type="button"
-                          variant="outline"
-                        >
-                          <MessageSquareReply className="h-4 w-4" />
-                          Reply as paste
                         </Button>
                         <Button
                           disabled={!selectedPasteInWorkspace}
@@ -3932,10 +3851,6 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialReplySlug 
                     <ContextMenuItem onSelect={handleDuplicatePaste}>
                       <WandSparkles className="mr-2 h-4 w-4" />
                       Fork paste
-                    </ContextMenuItem>
-                    <ContextMenuItem onSelect={handleReplyPaste}>
-                      <MessageSquareReply className="mr-2 h-4 w-4" />
-                      Reply as paste
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem
