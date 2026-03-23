@@ -8,7 +8,10 @@ import { Suspense, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { normalizeAuthRedirectUrl } from "@/lib/auth-client-redirect";
+import {
+  getAuthNoticeRedirectUrl,
+  normalizePostSignInRedirectUrl
+} from "@/lib/auth-client-redirect";
 
 const SESSION_ERROR_MESSAGES: Record<string, string> = {
   SessionRevoked: "This session was signed out or revoked elsewhere. Sign in again.",
@@ -92,13 +95,19 @@ function SignInPageContent() {
       callbackUrl: "/app"
     });
 
+    const noticeRedirectUrl = getAuthNoticeRedirectUrl(result?.url);
+    if (noticeRedirectUrl) {
+      window.location.href = noticeRedirectUrl;
+      return;
+    }
+
     if (!result || result.error) {
       setError("Sign in failed. Check your username/email and password.");
       setLoading(false);
       return;
     }
 
-    window.location.href = normalizeAuthRedirectUrl(result.url, "/app");
+    window.location.href = normalizePostSignInRedirectUrl(result.url, "/app");
   }
 
   async function handleMagicLink(event: FormEvent<HTMLFormElement>) {

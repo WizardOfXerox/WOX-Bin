@@ -35,13 +35,14 @@ const providers: NonNullable<NextAuthOptions["providers"]> = [
     },
     async authorize(credentials, req) {
       const ip = getRequestIpFromHeaderRecord(req.headers as Record<string, unknown> | undefined);
-      const limit = await rateLimit("sign-in", ip);
+      const identifier = credentialsIdentifierSchema.safeParse(credentials?.identifier);
+      const password = typeof credentials?.password === "string" ? credentials.password : "";
+
+      const rateLimitKey = identifier.success ? `${ip}:${identifier.data.toLowerCase()}` : ip;
+      const limit = await rateLimit("sign-in", rateLimitKey);
       if (!limit.success) {
         return null;
       }
-
-      const identifier = credentialsIdentifierSchema.safeParse(credentials?.identifier);
-      const password = typeof credentials?.password === "string" ? credentials.password : "";
 
       if (!identifier.success || !password) {
         return null;
@@ -350,14 +351,22 @@ export const authOptions: NextAuthOptions = {
         return "/sign-in?authError=emailNotVerified";
       }
 
-      if ((account?.provider === "google" || account?.provider === "email") && existing && !existing.username) {
-        await db
-          .update(users)
-          .set({
-            onboardingComplete: false,
-            updatedAt: new Date()
-          })
-          .where(eq(users.id, user.id));
+      if (account?.provider === "google" || account?.provider === "email") {
+        const patch: Partial<typeof users.$inferInsert> = {
+          updatedAt: new Date()
+        };
+
+        if (existing?.email && !existing.emailVerified) {
+          patch.emailVerified = new Date();
+        }
+
+        if (existing && !existing.username) {
+          patch.onboardingComplete = false;
+        }
+
+        if (Object.keys(patch).length > 1) {
+          await db.update(users).set(patch).where(eq(users.id, user.id));
+        }
       }
 
       return true;

@@ -28,11 +28,14 @@ if not exist "node_modules\next" (
 REM Optional: cap Node heap so a bad compile is less likely to exhaust all RAM (remove line if you need more)
 if not defined NODE_OPTIONS set NODE_OPTIONS=--max-old-space-size=4096
 
+echo Ensuring localhost:3000 is free...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\kill-dev-server.ps1" -Port 3000 >nul
+
 echo Starting WOX-Bin Next.js app...
 echo If this is your first database run, execute: npm run db:push
 echo.
-echo NOTE: Each time you run this file, a NEW dev server starts ^(more Node processes^).
-echo If Task Manager shows many Node entries, close old "WOX-Bin Next" windows or run: kill-dev-server.bat
+echo This launcher now reclaims localhost:3000 before starting the dev server.
+echo If Task Manager still shows old Node entries from previous alternate ports, you can run: kill-dev-server.bat
 echo.
 start "WOX-Bin Next" cmd /k "cd /d ""%~dp0"" && npm run dev"
 timeout /t 3 /nobreak >nul
