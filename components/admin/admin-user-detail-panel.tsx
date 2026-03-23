@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { getPasteSharePath } from "@/lib/paste-links";
 import type { PlanId, PlanStatus } from "@/lib/plans";
 import { formatDate } from "@/lib/utils";
 
@@ -46,6 +47,7 @@ type UserPasteRow = {
   id: string;
   slug: string;
   title: string;
+  secretMode: boolean;
   status: PasteStatus;
   visibility: string;
   viewCount: number;
@@ -580,8 +582,8 @@ export function AdminUserDetailPanel({ userId }: { userId: string }) {
                 <div className="space-y-1">
                   <div className="font-medium line-clamp-2">{paste.title}</div>
                   <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                    <Link className="text-cyan-300/90 hover:underline" href={`/p/${paste.slug}`} rel="noreferrer" target="_blank">
-                      /p/{paste.slug}
+                    <Link className="text-cyan-300/90 hover:underline" href={getPasteSharePath(paste.slug, paste.secretMode)} rel="noreferrer" target="_blank">
+                      {getPasteSharePath(paste.slug, paste.secretMode)}
                     </Link>
                     <Link className="hover:text-foreground hover:underline" href={`/admin/pastes?q=${encodeURIComponent(paste.slug)}`}>
                       open in paste search
@@ -646,8 +648,8 @@ export function AdminUserDetailPanel({ userId }: { userId: string }) {
                     <td className="px-3 py-3 align-top">
                       <div className="font-medium line-clamp-2">{paste.title}</div>
                       <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                        <Link className="text-cyan-300/90 hover:underline" href={`/p/${paste.slug}`} rel="noreferrer" target="_blank">
-                          /p/{paste.slug}
+                        <Link className="text-cyan-300/90 hover:underline" href={getPasteSharePath(paste.slug, paste.secretMode)} rel="noreferrer" target="_blank">
+                          {getPasteSharePath(paste.slug, paste.secretMode)}
                         </Link>
                         <Link className="hover:text-foreground hover:underline" href={`/admin/pastes?q=${encodeURIComponent(paste.slug)}`}>
                           open in paste search

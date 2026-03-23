@@ -38,6 +38,16 @@ export function createPasteAccessGrant(slug: string, passwordHash: string) {
   return `${issuedAt}.${digest}`;
 }
 
+export function createPasteCaptchaGrant(slug: string) {
+  const secret = requireEnv("AUTH_SECRET");
+  const issuedAt = Date.now().toString();
+  const digest = createHmac("sha256", secret)
+    .update(`${slug}:captcha:${issuedAt}`)
+    .digest("hex");
+
+  return `${issuedAt}.${digest}`;
+}
+
 export function verifyPasteAccessGrant(slug: string, passwordHash: string, token: string | null | undefined) {
   if (!token) {
     return false;
@@ -60,6 +70,33 @@ export function verifyPasteAccessGrant(slug: string, passwordHash: string, token
 
   const expected = createHmac("sha256", secret)
     .update(`${slug}:${passwordHash}:${issuedAt}`)
+    .digest("hex");
+
+  return timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+}
+
+export function verifyPasteCaptchaGrant(slug: string, token: string | null | undefined) {
+  if (!token) {
+    return false;
+  }
+
+  const [issuedAt, signature] = token.split(".");
+  if (!issuedAt || !signature) {
+    return false;
+  }
+
+  const maxAgeMs = 1000 * 60 * 60 * 12;
+  if (Date.now() - Number(issuedAt) > maxAgeMs) {
+    return false;
+  }
+
+  const secret = env.AUTH_SECRET;
+  if (!secret) {
+    return false;
+  }
+
+  const expected = createHmac("sha256", secret)
+    .update(`${slug}:captcha:${issuedAt}`)
     .digest("hex");
 
   return timingSafeEqual(Buffer.from(signature), Buffer.from(expected));

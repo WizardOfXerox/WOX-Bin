@@ -176,12 +176,14 @@ function Rb({
   title,
   onClick,
   disabled,
-  children
+  children,
+  tutorialTarget
 }: {
   title: string;
   onClick: () => void;
   disabled?: boolean;
   children: React.ReactNode;
+  tutorialTarget?: string;
 }) {
   const compact = useRibbonCompact();
   return (
@@ -189,6 +191,7 @@ function Rb({
       className={cn(
         compact ? "h-7 gap-0.5 px-1 text-[9px]" : "h-8 gap-1 px-1.5 text-[10px] sm:px-2"
       )}
+      data-tutorial={tutorialTarget}
       disabled={disabled}
       onClick={onClick}
       size="sm"
@@ -487,7 +490,7 @@ export function WorkspaceEditorRibbon({
           </RibbonGroup>
 
           <RibbonGroup label="Reuse">
-            <Rb disabled={dis} onClick={onOpenTemplates} title="Templates">
+            <Rb disabled={dis} onClick={onOpenTemplates} title="Templates" tutorialTarget="templates-button">
               <BookTemplate className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Templates</span>
             </Rb>

@@ -75,6 +75,11 @@ import {
   type PrintLayoutPreset,
   type RibbonTab
 } from "@/components/workspace/workspace-editor-ribbon";
+import {
+  findVisibleTutorialTarget,
+  WorkspaceTutorial,
+  type WorkspaceTutorialStep
+} from "@/components/workspace/workspace-tutorial";
 import { applyShiftTab, applyTab } from "@/lib/editor-indent";
 import {
   isLightSyntaxTheme,
@@ -137,6 +142,7 @@ import {
 import { FileDropSurface } from "@/components/ui/file-drop-surface";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { BUILTIN_TEMPLATES } from "@/lib/builtin-templates";
 import {
   BURN_VIEW_OPTIONS,
@@ -161,6 +167,7 @@ import {
   saveLocalPaste,
   storeAnonymousClaim
 } from "@/lib/local-workspace";
+import { getPasteSharePath, getPasteShareUrl } from "@/lib/paste-links";
 import { findBracketPairAtCursor } from "@/lib/bracket-match";
 import { normalizeRawPasteFetchUrl } from "@/lib/import-paste-url";
 import {
@@ -179,7 +186,7 @@ import {
 } from "@/lib/workspace-import";
 import type { AccountPlanSummary, PlanId, PlanStatus } from "@/lib/plans";
 import type { PasteDraft, PasteVersionDraft, PublicPasteRecord } from "@/lib/types";
-import { cn, formatDate, normalizeTagList } from "@/lib/utils";
+import { cn, formatDate, normalizeOptionalSlug, normalizeTagList, slugify } from "@/lib/utils";
 
 /** Sidebar folder sentinel: public feed (legacy “everyone’s public”). */
 const PUBLIC_FEED_FOLDER = "__wox_public_feed__";
@@ -250,7 +257,13 @@ function markNewAccountDraft(paste: WorkspacePaste, workspaceMode: WorkspaceMode
   if (workspaceMode !== "account") {
     return paste;
   }
-  return { ...paste, serverPersisted: false };
+  const normalizedSlug = normalizeOptionalSlug(paste.slug);
+  const looksProvisional = !normalizedSlug || normalizedSlug === slugify(paste.id);
+  return {
+    ...paste,
+    slug: looksProvisional ? "" : normalizedSlug,
+    serverPersisted: false
+  };
 }
 
 function isAccountOnlyDraft(paste: WorkspacePaste, workspaceMode: WorkspaceMode): boolean {
@@ -263,7 +276,7 @@ type FolderModalState =
   | { open: true; mode: "rename"; from: string };
 
 function buildPasteFingerprint(paste: WorkspacePaste) {
-  return `${paste.id}|${paste.slug ?? ""}|${paste.content}|${paste.title}|${paste.visibility}|${paste.folder ?? ""}|${paste.pinned}|${paste.favorite}|${paste.archived}|${paste.template}|${JSON.stringify(paste.files)}`;
+  return `${paste.id}|${paste.slug ?? ""}|${paste.content}|${paste.title}|${paste.visibility}|${paste.folder ?? ""}|${paste.pinned}|${paste.favorite}|${paste.archived}|${paste.template}|${paste.secretMode}|${paste.captchaRequired}|${JSON.stringify(paste.files)}`;
 }
 
 type WorkspaceSnapshot = {
@@ -305,6 +318,7 @@ type Props = {
   sessionUser: SessionUser | null;
   /** Open workspace with a fork draft of this public slug (consumed once after load). */
   initialForkSlug?: string;
+  initialTutorialRequested?: boolean;
 };
 
 function sortPastes(pastes: WorkspacePaste[]) {
@@ -318,6 +332,162 @@ function sortPastes(pastes: WorkspacePaste[]) {
 }
 
 type SortOrder = "pinned_updated" | "newest" | "oldest" | "title" | "updated";
+
+const TUTORIAL_STORAGE_PREFIX = "woxbin_workspace_tutorial_seen";
+
+const DESKTOP_TUTORIAL_STEPS: WorkspaceTutorialStep[] = [
+  {
+    id: "library",
+    targetId: "library-sidebar",
+    title: "Library, folders, and search",
+    description: "This sidebar is the control center for your workspace. It is where you search, filter, batch-manage, import, and open pastes.",
+    bullets: [
+      "Use search to scan titles, content, and tags across the current workspace.",
+      "Folders, quick filters, and sort order shape what you are looking at before you edit anything.",
+      "Import and export live at the bottom of the library so backups stay close to the source list."
+    ],
+    emphasis: "The fastest way to move around WOX-Bin is: filter in the library, open the paste, then work in the editor."
+  },
+  {
+    id: "editor",
+    targetId: "editor-main",
+    title: "Main editor surface",
+    description: "This is the primary editing area. WOX-Bin treats it as the working document, not a tiny form field.",
+    bullets: [
+      "Write plain text, code, Markdown, notes, or structured data directly in the editor.",
+      "The ribbon above the editor exposes formatting, JSON tools, find/replace, printing, and code image export.",
+      "Your selected paste stays loaded here while the side panels handle organization and metadata."
+    ],
+    emphasis: "If you can see the editor, you are in the part of the app that matters most. Everything else exists to support this surface."
+  },
+  {
+    id: "templates",
+    targetId: "templates-button",
+    title: "Templates and reusable starters",
+    description: "Templates let you start from structure instead of a blank page.",
+    bullets: [
+      "Built-in starters cover supported languages and the full WOX-Bin megademo example.",
+      "Your own pastes can become reusable templates with the “Save as template” toggle in details.",
+      "Templates can carry content, files, tags, and folder defaults so repeat work stays fast."
+    ],
+    emphasis: "New accounts start with the big example paste so you can inspect a full-featured document immediately."
+  },
+  {
+    id: "files",
+    targetId: "files-section",
+    title: "Files, attachments, and media",
+    description: "A paste can be more than one body field. This section lets you attach extra files and media directly to the paste.",
+    bullets: [
+      "Add extra text/code files for multi-file snippets or grouped references.",
+      "Drag images or videos into the drop zone to attach visual context.",
+      "Attachments count toward plan limits, so this area is also where hosted size usage becomes visible."
+    ],
+    emphasis: "Use this when one paste needs related assets, not when you want to split work into separate pastes."
+  },
+  {
+    id: "details",
+    targetId: "details-panel",
+    title: "Sharing, privacy, and advanced settings",
+    description: "The details panel is where a draft becomes a managed asset.",
+    bullets: [
+      "Visibility, category, tags, password, burn rules, versioning, and template status all live here.",
+      "This is also where you configure share behavior and copy public links after a save.",
+      "Folder assignment and metadata stay separate from the editor so the writing surface stays clean."
+    ],
+    emphasis: "If a paste needs to be private, public, protected, pinned, or reusable, this panel is where you do it."
+  },
+  {
+    id: "comments",
+    targetId: "comments-section",
+    title: "Comments, replies, and support flow",
+    description: "WOX-Bin supports threaded comment discussion on saved pastes, and support/help live in the same product surface rather than outside it.",
+    bullets: [
+      "Saved hosted pastes can receive comments and comment replies from signed-in users.",
+      "Use Help for documented answers and Support when you need a real ticket with staff follow-up.",
+      "If you are publishing something public-facing, this is the collaboration layer that sits below the content."
+    ],
+    emphasis: "You can reopen this tutorial later from the Tutorial button in the workspace header."
+  }
+];
+
+const MOBILE_TUTORIAL_STEPS: WorkspaceTutorialStep[] = [
+  {
+    id: "library-mobile",
+    targetId: "library-button",
+    title: "Library access on mobile",
+    description: "On phones the editor stays primary, so the library moves behind this button instead of permanently taking screen space.",
+    bullets: [
+      "Tap Library to browse folders, search, import, export, and open other pastes.",
+      "This keeps the editing surface visible instead of compressing the app into stacked panels.",
+      "The same workspace data is available here; only the layout changes."
+    ],
+    emphasis: "Mobile prioritizes editing first. Use the library when you need to navigate, then return to the editor."
+  },
+  {
+    id: "editor-mobile",
+    targetId: "editor-main",
+    title: "Editor-first mobile workspace",
+    description: "The editor is the main screen on mobile. That is intentional: the most important action should remain visible and usable.",
+    bullets: [
+      "Write and edit directly here without sidebars fighting for vertical space.",
+      "The ribbon still gives you formatting, JSON actions, templates, and code image export.",
+      "The bottom bar keeps the high-frequency actions close to your thumb."
+    ],
+    emphasis: "If you are working from a phone, this is the page state you should spend most of your time in."
+  },
+  {
+    id: "templates-mobile",
+    targetId: "templates-button",
+    title: "Templates on mobile",
+    description: "Templates are still available on mobile through the editor ribbon.",
+    bullets: [
+      "Use built-in language starters or the WOX-Bin megademo when you need a structured starting point.",
+      "Your own saved templates appear in the same dialog as built-ins.",
+      "This is the fastest path when you know the kind of paste you are about to create."
+    ],
+    emphasis: "The tutorial keeps the target focused so you can learn the mobile control layout without losing context."
+  },
+  {
+    id: "files-mobile",
+    targetId: "files-section",
+    title: "Attachments and media on mobile",
+    description: "Files and media are handled inline under the editor so you can keep the paste and its assets together.",
+    bullets: [
+      "Attach additional files when a paste needs more than one document.",
+      "Upload screenshots or media when support, documentation, or demos need visual proof.",
+      "This section is also where multi-file examples become reusable templates."
+    ],
+    emphasis: "If you need a richer paste than just one block of text, this is the section to use."
+  },
+  {
+    id: "details-mobile",
+    targetId: "details-button",
+    title: "Advanced settings on demand",
+    description: "On mobile, advanced settings open from this Details button instead of staying docked on screen.",
+    bullets: [
+      "Tap it for visibility, password, tags, folder, versions, and sharing controls.",
+      "This keeps the core editor clean while still exposing the full hosted feature set.",
+      "The same privacy and publishing controls are available here as on desktop."
+    ],
+    emphasis: "When you want to publish, protect, pin, template, or share a paste from a phone, use Details."
+  },
+  {
+    id: "comments-mobile",
+    targetId: "comments-section",
+    title: "Comments and help surfaces",
+    description: "Below the paste, WOX-Bin keeps discussion and support close to the content instead of sending users off-platform.",
+    bullets: [
+      "Saved hosted pastes can receive threaded comments and replies.",
+      "Help documents known answers; Support opens an actual ticket when you need staff action.",
+      "The Tutorial button remains available in the header so you can rerun this guide later."
+    ],
+    emphasis: "That is the full working loop: navigate, edit, attach, configure, publish, then discuss or request help."
+  }
+];
+
+function tutorialStorageKey(userId: string) {
+  return `${TUTORIAL_STORAGE_PREFIX}:${userId}`;
+}
 
 function applySidebarSort(pastes: WorkspacePaste[], order: SortOrder): WorkspacePaste[] {
   if (order === "pinned_updated") {
@@ -379,8 +549,10 @@ function sanitizeSnapshot(snapshot: WorkspaceSnapshot): WorkspaceSnapshot {
 }
 
 function buildPastePayload(paste: WorkspacePaste) {
+  const requestedSlug = normalizeOptionalSlug(paste.slug);
   return {
-    slug: paste.slug,
+    id: paste.id,
+    slug: requestedSlug || undefined,
     title: paste.title,
     content: paste.content,
     language: paste.language,
@@ -389,6 +561,8 @@ function buildPastePayload(paste: WorkspacePaste) {
     tags: normalizeTagList(paste.tags),
     visibility: paste.visibility,
     password: paste.password,
+    secretMode: paste.secretMode,
+    captchaRequired: paste.captchaRequired,
     burnAfterRead: paste.burnAfterRead,
     burnAfterViews: paste.burnAfterViews,
     pinned: paste.pinned,
@@ -459,19 +633,21 @@ function formatCount(value: number) {
 
 function ShareBuilderPanel({
   slug,
+  secretMode,
   lineStart,
   lineEnd,
   onLineStartChange,
   onLineEndChange
 }: {
   slug: string;
+  secretMode: boolean;
   lineStart: string;
   lineEnd: string;
   onLineStartChange: (v: string) => void;
   onLineEndChange: (v: string) => void;
 }) {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const base = `${origin}/p/${slug}`;
+  const base = getPasteShareUrl(origin, slug, secretMode);
   const n = lineStart.trim() ? Math.max(1, Number.parseInt(lineStart, 10) || 1) : 0;
   const m = lineEnd.trim() ? Math.max(n, Number.parseInt(lineEnd, 10) || n) : n;
   const hash =
@@ -522,7 +698,7 @@ function ShareBuilderPanel({
       </p>
 
       <div className="space-y-2 rounded-xl border border-border bg-muted/40 p-3">
-        <p className="text-xs font-medium text-muted-foreground">Share URL</p>
+        <p className="text-xs font-medium text-muted-foreground">{secretMode ? "Secret link URL" : "Share URL"}</p>
         <p className="break-all font-mono text-xs text-foreground">{shareUrl}</p>
         <Button
           onClick={() => void navigator.clipboard.writeText(shareUrl)}
@@ -578,7 +754,7 @@ function usageWidth(used: number, limit: number) {
   return `${Math.min(100, Math.round((used / limit) * 100))}%`;
 }
 
-export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
+export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRequested = false }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [mode, setMode] = useState<WorkspaceMode>(sessionUser ? "account" : "local");
@@ -660,6 +836,8 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
   const [phoneViewport, setPhoneViewport] = useState(false);
   const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
   /** Mobile: editor uses transparent text over Prism — need ≥16px to avoid iOS zoom and keep overlay aligned. */
   const [narrowEditorViewport, setNarrowEditorViewport] = useState(false);
   const mdPreviewRef = useRef<HTMLDivElement>(null);
@@ -671,6 +849,31 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
   const sessionUserId = sessionUser?.id;
   const lastForkImportKeyRef = useRef<string | null>(null);
   const forkImportInFlightRef = useRef<string | null>(null);
+  const tutorialAutoOpenHandledRef = useRef(false);
+  const tutorialSteps = useMemo(() => (phoneViewport ? MOBILE_TUTORIAL_STEPS : DESKTOP_TUTORIAL_STEPS), [phoneViewport]);
+
+  const openTutorial = useCallback((step = 0) => {
+    setWorkspaceMobileMenuOpen(false);
+    setTutorialStepIndex(Math.max(0, Math.min(step, tutorialSteps.length - 1)));
+    setTutorialOpen(true);
+  }, [tutorialSteps.length]);
+
+  const markTutorialSeen = useCallback(() => {
+    if (typeof window === "undefined" || !sessionUserId) {
+      return;
+    }
+    window.localStorage.setItem(tutorialStorageKey(sessionUserId), "1");
+  }, [sessionUserId]);
+
+  const closeTutorial = useCallback(
+    (completed: boolean) => {
+      setTutorialOpen(false);
+      if (completed || sessionUserId) {
+        markTutorialSeen();
+      }
+    },
+    [markTutorialSeen, sessionUserId]
+  );
 
   async function loadAccountWorkspace() {
     const [workspaceResponse, keysResponse, localResult] = await Promise.all([
@@ -1026,6 +1229,71 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
       setSelectedId(snapshot.pastes[0]!.id);
     }
   }, [selectedId, snapshot.pastes, sidebarFolder, publicFeedPastes]);
+
+  useEffect(() => {
+    if (tutorialAutoOpenHandledRef.current || loading) {
+      return;
+    }
+    if (snapshot.pastes.length > 0 && !selectedId) {
+      return;
+    }
+
+    tutorialAutoOpenHandledRef.current = true;
+
+    if (initialTutorialRequested) {
+      openTutorial(0);
+      return;
+    }
+
+    if (!sessionUserId || typeof window === "undefined") {
+      return;
+    }
+
+    const seen = window.localStorage.getItem(tutorialStorageKey(sessionUserId)) === "1";
+    const shouldAutoOpen = snapshot.pastes.length <= 1;
+    if (!seen && shouldAutoOpen) {
+      openTutorial(0);
+    }
+  }, [initialTutorialRequested, loading, openTutorial, selectedId, sessionUserId, snapshot.pastes.length]);
+
+  useEffect(() => {
+    if (!tutorialOpen) {
+      return;
+    }
+
+    const step = tutorialSteps[tutorialStepIndex];
+    if (!step) {
+      return;
+    }
+
+    if (phoneViewport) {
+      setMobileLibraryOpen(false);
+      setMobileDetailsOpen(false);
+    } else {
+      if (step.targetId === "library-sidebar") {
+        setLeftSidebarCollapsed(false);
+      }
+      if (step.targetId === "details-panel") {
+        setRightSidebarCollapsed(false);
+      }
+    }
+
+    if (step.targetId === "templates-button") {
+      setRibbonCollapsed(false);
+      setRibbonTab("insert");
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      const target = findVisibleTutorialTarget(step.targetId);
+      target?.scrollIntoView({
+        block: "center",
+        inline: "nearest",
+        behavior: "smooth"
+      });
+    }, 140);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [phoneViewport, tutorialOpen, tutorialStepIndex, tutorialSteps]);
 
   useEffect(() => {
     if (sidebarFolder !== PUBLIC_FEED_FOLDER) {
@@ -2483,7 +2751,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
     };
 
     await storeAnonymousClaim(body.paste.slug, body.claimToken);
-    const url = `${window.location.origin}/p/${body.paste.slug}`;
+    const url = getPasteShareUrl(window.location.origin, body.paste.slug, body.paste.secretMode);
     setPublishUrl(url);
     setStatus("Published anonymously. Save the share link or sign in later to claim it.");
     setPublishing(false);
@@ -2544,7 +2812,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
       return;
     }
 
-    const url = `${window.location.origin}/p/${selectedPaste.slug}`;
+    const url = getPasteShareUrl(window.location.origin, selectedPaste.slug, selectedPaste.secretMode);
     await navigator.clipboard.writeText(url);
     setStatus("Copied the share link.");
   }
@@ -2833,7 +3101,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
         overlayClassName="rounded-xl"
         overlayMessage="Drop to import JSON backup or text/code file"
       >
-        <Card className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl">
+        <Card className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl" data-tutorial="library-sidebar">
         <CardContent className="flex min-h-0 flex-1 flex-col p-0">
           <div className="border-b border-border px-3 py-2 sm:px-5 sm:py-4">
             <div className="flex items-start justify-between gap-2">
@@ -3196,7 +3464,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
                         <ContextMenuItem
                           disabled={paste.visibility === "private"}
                           onSelect={() => {
-                            const url = `${window.location.origin}/p/${paste.slug}`;
+                            const url = getPasteShareUrl(window.location.origin, paste.slug, paste.secretMode);
                             void navigator.clipboard.writeText(url);
                             setStatus("Copied share link.");
                           }}
@@ -3344,23 +3612,48 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
                     ) : null}
                     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3 md:gap-4">
                       <div className="min-w-0 w-full flex-1 sm:w-auto">
-                        <Input
-                          className={cn(
-                            "border-none bg-transparent px-0 font-semibold shadow-none focus-visible:ring-0 print:hidden",
-                            editorPaneCompact
-                              ? "text-lg leading-snug sm:text-xl"
-                              : "text-xl leading-tight md:text-3xl"
-                          )}
-                          disabled={!selectedPasteInWorkspace}
-                          onChange={(event) =>
-                            updateSelectedPaste((paste) => ({
-                              ...paste,
-                              title: event.target.value,
-                              updatedAt: new Date().toISOString()
-                            }))
-                          }
-                          value={selectedPaste.title}
-                        />
+                        {phoneViewport ? (
+                          <Textarea
+                            className={cn(
+                              "min-h-0 resize-none overflow-hidden border-none bg-transparent px-0 py-0 font-semibold shadow-none focus-visible:ring-0 print:hidden",
+                              editorPaneCompact ? "text-lg leading-snug" : "text-2xl leading-tight"
+                            )}
+                            disabled={!selectedPasteInWorkspace}
+                            onChange={(event) =>
+                              updateSelectedPaste((paste) => ({
+                                ...paste,
+                                title: event.target.value,
+                                updatedAt: new Date().toISOString()
+                              }))
+                            }
+                            onInput={(event) => {
+                              const target = event.currentTarget;
+                              target.style.height = "0px";
+                              target.style.height = `${Math.min(target.scrollHeight, 144)}px`;
+                            }}
+                            rows={1}
+                            style={{ height: "auto" }}
+                            value={selectedPaste.title}
+                          />
+                        ) : (
+                          <Input
+                            className={cn(
+                              "border-none bg-transparent px-0 font-semibold shadow-none focus-visible:ring-0 print:hidden",
+                              editorPaneCompact
+                                ? "text-lg leading-snug sm:text-xl"
+                                : "text-xl leading-tight md:text-3xl"
+                            )}
+                            disabled={!selectedPasteInWorkspace}
+                            onChange={(event) =>
+                              updateSelectedPaste((paste) => ({
+                                ...paste,
+                                title: event.target.value,
+                                updatedAt: new Date().toISOString()
+                              }))
+                            }
+                            value={selectedPaste.title}
+                          />
+                        )}
                         <h1 className="wox-print-title hidden text-2xl font-semibold leading-tight text-black print:block dark:print:text-black">
                           {selectedPaste.title.trim() || "Untitled"}
                         </h1>
@@ -3744,6 +4037,62 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
                 </div>
               ) : null}
 
+              {selectedPaste.language === "markdown" ? (
+                <div className="rounded-[1.1rem] border border-border bg-muted/35 p-3 print:hidden">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                        Markdown helpers
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Inserts Markdown syntax into the current selection.
+                      </p>
+                    </div>
+                    <Button onClick={toggleMdPreviewRibbon} size="sm" type="button" variant="outline">
+                      {mdPreviewOpen ? "Hide preview" : "Show preview"}
+                    </Button>
+                  </div>
+                  <div className="mt-3 flex flex-nowrap gap-2 overflow-x-auto pb-1">
+                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit((v, s, e) => wrapSelection(v, s, e, "**", "**"))} size="sm" type="button" variant="outline">
+                      Bold
+                    </Button>
+                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit((v, s, e) => wrapSelection(v, s, e, "*", "*"))} size="sm" type="button" variant="outline">
+                      Italic
+                    </Button>
+                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit((v, s, e) => wrapSelection(v, s, e, "<u>", "</u>"))} size="sm" type="button" variant="outline">
+                      Underline
+                    </Button>
+                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit((v, s, e) => wrapSelection(v, s, e, "~~", "~~"))} size="sm" type="button" variant="outline">
+                      Strike
+                    </Button>
+                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit((v, s, e) => insertAtSelection(v, s, e, "# "))} size="sm" type="button" variant="outline">
+                      H1
+                    </Button>
+                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit((v, s, e) => insertAtSelection(v, s, e, "[Link text](https://example.com)"))} size="sm" type="button" variant="outline">
+                      Link
+                    </Button>
+                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit(bulletBlock)} size="sm" type="button" variant="outline">
+                      Bullets
+                    </Button>
+                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit(numberBlock)} size="sm" type="button" variant="outline">
+                      Numbered
+                    </Button>
+                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit(quoteBlock)} size="sm" type="button" variant="outline">
+                      Quote
+                    </Button>
+                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit((v, s, e) => insertCodeFence(v, s, e, ""))} size="sm" type="button" variant="outline">
+                      Code block
+                    </Button>
+                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit(insertMarkdownTable)} size="sm" type="button" variant="outline">
+                      Table
+                    </Button>
+                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit(insertHorizontalRule)} size="sm" type="button" variant="outline">
+                      Divider
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
               <div
                 className={
                   mdPreviewOpen && selectedPaste.language === "markdown"
@@ -3753,7 +4102,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
               >
                 <ContextMenu>
                   <ContextMenuTrigger asChild>
-                    <div className="min-h-0 min-w-0 outline-none print:h-auto print:min-h-0 [&:focus]:outline-none">
+                    <div className="min-h-0 min-w-0 outline-none print:h-auto print:min-h-0 [&:focus]:outline-none" data-tutorial="editor-main">
                       <PrismOverlayEditor
                         activeIndentGuides={editorActiveIndentGuides}
                         className="print:overflow-visible"
@@ -3955,7 +4304,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
                         <ContextMenuItem
                           onSelect={() => {
                             window.open(
-                              `${window.location.origin}/p/${selectedPaste.slug}`,
+                              getPasteShareUrl(window.location.origin, selectedPaste.slug, selectedPaste.secretMode),
                               "_blank",
                               "noopener,noreferrer"
                             );
@@ -3987,6 +4336,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
               <FileDropSurface
                 activeClassName="rounded-2xl ring-2 ring-primary/20"
                 className="relative space-y-4 print:hidden"
+                data-tutorial="files-section"
                 disabled={!selectedPasteInWorkspace}
                 onFiles={(files) => {
                   for (const f of files) {
@@ -4272,7 +4622,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
                 )}
               </FileDropSurface>
 
-              <div className="print:hidden">
+              <div className="print:hidden" data-tutorial="comments-section">
                 <WorkspacePasteComments
                   signedIn={Boolean(sessionUser)}
                   slug={
@@ -4284,6 +4634,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
               <div className="flex flex-wrap gap-3 text-sm text-muted-foreground print:hidden">
                 <span>{selectedPaste.content.length} characters</span>
                 <span>{selectedPaste.content.trim() ? selectedPaste.content.trim().split(/\s+/).length : 0} words</span>
+                <span>{selectedPaste.viewCount.toLocaleString()} view{selectedPaste.viewCount === 1 ? "" : "s"}</span>
                 <span>Updated {formatDate(selectedPaste.updatedAt)}</span>
               </div>
                 </div>
@@ -4312,7 +4663,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
   function renderDetails() {
     const sortedWorkspaceFolders = [...snapshot.folders].sort((a, b) => a.localeCompare(b));
     return (
-      <div className="workspace-details flex h-full min-h-0 flex-col gap-5 overflow-y-auto workspace-scrollbar-hide">
+      <div className="workspace-details flex h-full min-h-0 flex-col gap-5 overflow-y-auto workspace-scrollbar-hide" data-tutorial="details-panel">
         {sessionUser && mode === "account" && accountPlan ? (
           <Card>
             <CardContent className="space-y-5">
@@ -4586,13 +4937,13 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
                   </label>
                   <select
                     className="h-11 w-full rounded-2xl border border-border bg-card/80 px-4 text-sm"
-                    disabled={!selectedPasteInWorkspace}
+                    disabled={!selectedPasteInWorkspace || selectedPaste.secretMode}
                     id="wox-paste-visibility"
                     title="Who can see this paste"
                     onChange={(event) =>
                       updateSelectedPaste((paste) => ({
                         ...paste,
-                        visibility: event.target.value as PasteDraft["visibility"],
+                        visibility: paste.secretMode ? "unlisted" : (event.target.value as PasteDraft["visibility"]),
                         updatedAt: new Date().toISOString()
                       }))
                     }
@@ -4604,6 +4955,38 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
                       </option>
                     ))}
                   </select>
+                  {selectedPaste.secretMode ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Secret links always save as unlisted and stay out of archive, feed, comments, and stars.
+                    </p>
+                  ) : null}
+                </div>
+
+                <div>
+                  <label
+                    className="mb-2 block text-xs uppercase tracking-[0.24em] text-muted-foreground"
+                    htmlFor="wox-paste-custom-url"
+                  >
+                    Custom URL
+                  </label>
+                  <Input
+                    disabled={!selectedPasteInWorkspace}
+                    id="wox-paste-custom-url"
+                    onChange={(event) =>
+                      updateSelectedPaste((paste) => ({
+                        ...paste,
+                        slug: normalizeOptionalSlug(event.target.value),
+                        updatedAt: new Date().toISOString()
+                      }))
+                    }
+                    placeholder="Leave blank to auto-generate from title"
+                    value={selectedPaste.slug || ""}
+                  />
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {selectedPaste.slug
+                      ? `Share path: ${getPasteSharePath(selectedPaste.slug, selectedPaste.secretMode)}`
+                      : "Leave this blank to generate the URL from the title when you save or publish."}
+                  </p>
                 </div>
 
                 <div>
@@ -4690,6 +5073,29 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
                   </div>
                 ) : null}
 
+                <div className="grid gap-3 text-sm sm:grid-cols-2">
+                  <div className="rounded-[1.2rem] border border-border bg-muted/40 px-4 py-3">
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">Created</p>
+                    <p className="mt-2 font-medium text-foreground">{formatDate(selectedPaste.createdAt)}</p>
+                  </div>
+                  <div className="rounded-[1.2rem] border border-border bg-muted/40 px-4 py-3">
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">Updated</p>
+                    <p className="mt-2 font-medium text-foreground">{formatDate(selectedPaste.updatedAt)}</p>
+                  </div>
+                  <div className="rounded-[1.2rem] border border-border bg-muted/40 px-4 py-3">
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">Views</p>
+                    <p className="mt-2 font-medium text-foreground">
+                      {selectedPaste.viewCount.toLocaleString()} view{selectedPaste.viewCount === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                  <div className="rounded-[1.2rem] border border-border bg-muted/40 px-4 py-3">
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">Engagement</p>
+                    <p className="mt-2 font-medium text-foreground">
+                      {(selectedPaste.commentsCount ?? 0).toLocaleString()} comments · {(selectedPaste.stars ?? 0).toLocaleString()} stars
+                    </p>
+                  </div>
+                </div>
+
                 <div>
                   <label className="mb-2 block text-xs uppercase tracking-[0.24em] text-muted-foreground">
                     Password
@@ -4711,6 +5117,50 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
 
                 {/* Full-width column: sidebar is ~360px; multi-column grids squish labels */}
                 <div className="flex flex-col gap-3">
+                  <label className="flex w-full cursor-pointer items-center gap-3 rounded-[1.2rem] border border-border bg-muted/40 px-4 py-3 text-sm">
+                    <input
+                      checked={selectedPaste.secretMode}
+                      className="size-4 shrink-0 rounded border border-input accent-primary"
+                      disabled={!selectedPasteInWorkspace}
+                      onChange={(event) =>
+                        updateSelectedPaste((paste) => ({
+                          ...paste,
+                          secretMode: event.target.checked,
+                          visibility: event.target.checked ? "unlisted" : paste.visibility,
+                          burnAfterRead: event.target.checked ? true : paste.burnAfterRead,
+                          updatedAt: new Date().toISOString()
+                        }))
+                      }
+                      type="checkbox"
+                    />
+                    <span className="min-w-0 leading-snug">
+                      Secret link mode
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        Uses a dedicated <code className="rounded bg-background/70 px-1">/s/</code> URL, hides community features, and defaults to burn after read.
+                      </span>
+                    </span>
+                  </label>
+                  <label className="flex w-full cursor-pointer items-center gap-3 rounded-[1.2rem] border border-border bg-muted/40 px-4 py-3 text-sm">
+                    <input
+                      checked={selectedPaste.captchaRequired}
+                      className="size-4 shrink-0 rounded border border-input accent-primary"
+                      disabled={!selectedPasteInWorkspace || selectedPaste.visibility === "private"}
+                      onChange={(event) =>
+                        updateSelectedPaste((paste) => ({
+                          ...paste,
+                          captchaRequired: paste.visibility === "private" ? false : event.target.checked,
+                          updatedAt: new Date().toISOString()
+                        }))
+                      }
+                      type="checkbox"
+                    />
+                    <span className="min-w-0 leading-snug">
+                      Require Turnstile challenge before viewing
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        Applies to public and unlisted pastes. Private pastes ignore this setting.
+                      </span>
+                    </span>
+                  </label>
                   <label className="flex w-full cursor-pointer items-center gap-3 rounded-[1.2rem] border border-border bg-muted/40 px-4 py-3 text-sm">
                     <input
                       checked={selectedPaste.burnAfterRead}
@@ -4828,9 +5278,11 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
                   <div>
                     <p className="font-medium text-foreground">Sharing</p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      {mode === "account"
-                        ? "Public and unlisted pastes get a stable share URL after save."
-                        : "Anonymous publish keeps drafts local and sends a shareable copy to the hosted backend."}
+                      {selectedPaste.secretMode
+                        ? "Secret links use a dedicated /s URL and stay out of archive, feed, comments, and stars."
+                        : mode === "account"
+                          ? "Public and unlisted pastes get a stable share URL after save."
+                          : "Anonymous publish keeps drafts local and sends a shareable copy to the hosted backend."}
                     </p>
                   </div>
 
@@ -5162,6 +5614,18 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
                     Local
                   </Button>
                 </div>
+                <Button
+                  className="h-10 min-h-11 px-3 text-sm"
+                  onClick={() => {
+                    setWorkspaceMobileMenuOpen(false);
+                    openTutorial(0);
+                  }}
+                  type="button"
+                  variant="outline"
+                >
+                  <WandSparkles className="mr-1 h-4 w-4" />
+                  Tutorial
+                </Button>
                 {sessionUser.role === "admin" ? (
                   <Button asChild className="h-10 min-h-11 px-3 text-sm" type="button" variant="outline">
                     <Link className="inline-flex items-center gap-1.5" href="/admin" onClick={() => setWorkspaceMobileMenuOpen(false)}>
@@ -5182,6 +5646,19 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
               </>
             ) : (
               <>
+                <Button
+                  className="h-10 min-h-11 flex-1 text-sm"
+                  onClick={() => {
+                    setWorkspaceMobileMenuOpen(false);
+                    openTutorial(0);
+                  }}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  <WandSparkles className="mr-1 h-4 w-4" />
+                  Tutorial
+                </Button>
                 <Button
                   asChild
                   className="h-10 min-h-11 flex-1 text-sm"
@@ -5230,6 +5707,15 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
                     Local
                   </Button>
                 </div>
+                <Button
+                  className="h-10 min-h-11 px-3 text-sm"
+                  onClick={() => openTutorial(0)}
+                  type="button"
+                  variant="outline"
+                >
+                  <WandSparkles className="mr-1 h-4 w-4" />
+                  Tutorial
+                </Button>
                 {sessionUser.role === "admin" ? (
                   <Button asChild className="h-10 min-h-11 px-3 text-sm" type="button" variant="outline">
                     <Link className="inline-flex items-center gap-1.5" href="/admin">
@@ -5250,6 +5736,10 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
             </div>
           ) : (
             <div className="flex w-full flex-wrap gap-2">
+              <Button className="h-10 min-h-11 flex-1 text-sm sm:flex-initial" onClick={() => openTutorial(0)} size="sm" type="button" variant="outline">
+                <WandSparkles className="mr-1 h-4 w-4" />
+                Tutorial
+              </Button>
               <Button asChild className="h-10 min-h-11 flex-1 text-sm sm:flex-initial" size="sm" variant="outline">
                 <Link href="/sign-in">Sign in</Link>
               </Button>
@@ -5370,6 +5860,10 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
                     <span className="hidden sm:inline">Local</span>
                   </Button>
                 </div>
+                <Button className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm" onClick={() => openTutorial(0)} type="button" variant="outline">
+                  <WandSparkles className="h-3.5 w-3.5 sm:mr-1 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Tutorial</span>
+                </Button>
                 {sessionUser.role === "admin" ? (
                   <Button asChild className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm" type="button" variant="outline">
                     <Link className="inline-flex items-center gap-1.5" href="/admin">
@@ -5390,6 +5884,10 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
               </>
             ) : (
               <div className="flex flex-wrap gap-2">
+                <Button className="h-8 text-xs sm:h-9 sm:text-sm" onClick={() => openTutorial(0)} size="sm" type="button" variant="outline">
+                  <WandSparkles className="h-3.5 w-3.5 sm:mr-1 sm:h-4 sm:w-4" />
+                  Tutorial
+                </Button>
                 <Button asChild className="h-8 text-xs sm:h-9 sm:text-sm" size="sm" variant="outline">
                   <Link href="/sign-in">Sign in</Link>
                 </Button>
@@ -5476,6 +5974,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
             <div className="mb-1 flex items-center justify-between gap-2 print:hidden">
               <Button
                 className="h-9 px-3 text-xs"
+                data-tutorial="library-button"
                 onClick={() => setMobileLibraryOpen(true)}
                 size="sm"
                 type="button"
@@ -5486,6 +5985,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
               </Button>
               <Button
                 className="h-9 px-3 text-xs"
+                data-tutorial="details-button"
                 disabled={!selectedPaste}
                 onClick={() => setMobileDetailsOpen(true)}
                 size="sm"
@@ -5583,7 +6083,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
       {selectedPaste ? (
         phoneViewport ? (
           <div className="glass-panel z-10 flex shrink-0 items-center justify-between gap-2 border-t border-border px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] print:hidden md:hidden">
-            <Button className="min-h-10 flex-1" onClick={() => setMobileLibraryOpen(true)} size="sm" type="button" variant="outline">
+            <Button className="min-h-10 flex-1" data-tutorial="library-button" onClick={() => setMobileLibraryOpen(true)} size="sm" type="button" variant="outline">
               <PanelLeft className="h-4 w-4" />
               Library
             </Button>
@@ -5597,6 +6097,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
             </Button>
             <Button
               className="min-h-10 flex-1"
+              data-tutorial="details-button"
               disabled={!selectedPaste}
               onClick={() => setMobileDetailsOpen(true)}
               size="sm"
@@ -5632,6 +6133,14 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
         )
       ) : null}
       </div>
+
+      <WorkspaceTutorial
+        onClose={closeTutorial}
+        onStepIndexChange={setTutorialStepIndex}
+        open={tutorialOpen}
+        stepIndex={tutorialStepIndex}
+        steps={tutorialSteps}
+      />
 
       <Dialog onOpenChange={setMobileLibraryOpen} open={phoneViewport && mobileLibraryOpen}>
         <DialogContent className="flex h-[min(92dvh,56rem)] w-[calc(100vw-1rem)] max-w-none flex-col overflow-hidden rounded-[1.25rem] p-0 sm:max-w-xl">
@@ -5967,6 +6476,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
               onLineEndChange={setShareLineEnd}
               onLineStartChange={setShareLineStart}
               slug={selectedPaste.slug}
+              secretMode={selectedPaste.secretMode}
             />
           ) : (
             <p className="text-sm text-muted-foreground">Save this paste to your account to get a public slug and share URLs.</p>

@@ -146,6 +146,8 @@ export const pasteInputSchema = z.object({
   tags: z.array(z.string().trim().min(1).max(32)).max(50).default([]),
   visibility: z.enum(["public", "unlisted", "private"]).default("private"),
   password: z.string().trim().max(128).nullable().optional(),
+  secretMode: z.boolean().default(false),
+  captchaRequired: z.boolean().default(false),
   burnAfterRead: z.boolean().default(false),
   burnAfterViews: z.number().int().nonnegative().max(100).default(0),
   pinned: z.boolean().default(false),

@@ -5,7 +5,7 @@ import { auth } from "@/auth";
 import { getPasteForViewer } from "@/lib/paste-service";
 import { jsonError } from "@/lib/http";
 import { viewerFromSession } from "@/lib/session";
-import { getPasteAccessCookieName } from "@/lib/paste-access";
+import { getPasteAccessCookieName, getPasteCaptchaCookieName } from "@/lib/paste-access";
 
 type Params = {
   params: Promise<{
@@ -19,11 +19,13 @@ export async function GET(_: Request, { params }: Params) {
   const { slug } = await params;
   const cookieStore = await cookies();
   const accessGrant = cookieStore.get(getPasteAccessCookieName(slug))?.value ?? null;
+  const captchaGrant = cookieStore.get(getPasteCaptchaCookieName(slug))?.value ?? null;
 
   const result = await getPasteForViewer({
     slug,
     viewer,
     accessGrant,
+    captchaGrant,
     trackView: true
   });
 
@@ -32,8 +34,10 @@ export async function GET(_: Request, { params }: Params) {
   }
 
   if (result.locked) {
-    return jsonError("Password required.", 423, {
-      requiresPassword: true
+    return jsonError(result.lockReason === "captcha" ? "CAPTCHA required." : "Password required.", 423, {
+      requiresPassword: result.lockReason === "password",
+      requiresCaptcha: result.lockReason === "captcha",
+      lockReason: result.lockReason
     });
   }
 

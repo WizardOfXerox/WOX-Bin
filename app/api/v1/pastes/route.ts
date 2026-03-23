@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { createPasteFromApiKey, listPastesForApiKey } from "@/lib/paste-service";
+import { createPasteFromApiKey, listPastesForApiKey, SlugConflictError } from "@/lib/paste-service";
 import { jsonError, planLimitErrorResponse } from "@/lib/http";
+import { getPasteSharePath } from "@/lib/paste-links";
 import { pasteInputSchema } from "@/lib/validators";
 import { getRequestIp } from "@/lib/request";
 import { rateLimit } from "@/lib/rate-limit";
@@ -72,12 +73,15 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         id: paste.slug,
-        url: `/p/${paste.slug}`,
+        url: getPasteSharePath(paste.slug, paste.secretMode),
         rawUrl: `/raw/${paste.slug}`
       },
       { status: 201 }
     );
   } catch (error) {
+    if (error instanceof SlugConflictError) {
+      return jsonError(error.message, 409);
+    }
     return planLimitErrorResponse(error) ?? jsonError("Could not create the paste.", 500);
   }
 }

@@ -6,7 +6,7 @@ import { createCommentForPaste, listCommentsForPaste } from "@/lib/paste-service
 import { jsonError } from "@/lib/http";
 import { viewerFromSession } from "@/lib/session";
 import { commentInputSchema } from "@/lib/validators";
-import { getPasteAccessCookieName } from "@/lib/paste-access";
+import { getPasteAccessCookieName, getPasteCaptchaCookieName } from "@/lib/paste-access";
 import { rateLimit } from "@/lib/rate-limit";
 import { getRequestIp } from "@/lib/request";
 
@@ -22,7 +22,8 @@ export async function GET(_: Request, { params }: Params) {
   const { slug } = await params;
   const cookieStore = await cookies();
   const accessGrant = cookieStore.get(getPasteAccessCookieName(slug))?.value ?? null;
-  const comments = await listCommentsForPaste(slug, viewer, accessGrant);
+  const captchaGrant = cookieStore.get(getPasteCaptchaCookieName(slug))?.value ?? null;
+  const comments = await listCommentsForPaste(slug, viewer, accessGrant, captchaGrant);
   return NextResponse.json({ comments });
 }
 
@@ -47,12 +48,14 @@ export async function POST(request: Request, { params }: Params) {
 
   const cookieStore = await cookies();
   const accessGrant = cookieStore.get(getPasteAccessCookieName(slug))?.value ?? null;
+  const captchaGrant = cookieStore.get(getPasteCaptchaCookieName(slug))?.value ?? null;
   const row = await createCommentForPaste({
     slug,
     userId: session.user.id,
     content: parsed.data.content,
     parentId: parsed.data.parentId ?? null,
-    accessGrant
+    accessGrant,
+    captchaGrant
   });
 
   if (!row) {

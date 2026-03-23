@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { getPasteAccessCookieName } from "@/lib/paste-access";
+import { getPasteAccessCookieName, getPasteCaptchaCookieName } from "@/lib/paste-access";
 import { getPasteForViewer } from "@/lib/paste-service";
 import { publicScrapeRateGate } from "@/lib/public-scrape";
 import {
@@ -34,11 +34,13 @@ export async function GET(request: Request, { params }: Params) {
   const viewer = viewerFromSession(session);
   const cookieStore = await cookies();
   const accessGrant = cookieStore.get(getPasteAccessCookieName(slug))?.value ?? null;
+  const captchaGrant = cookieStore.get(getPasteCaptchaCookieName(slug))?.value ?? null;
 
   const result = await getPasteForViewer({
     slug,
     viewer,
     accessGrant,
+    captchaGrant,
     trackView: true
   });
 
@@ -58,13 +60,16 @@ export async function GET(request: Request, { params }: Params) {
   }
 
   if (result.locked) {
-    return new NextResponse("This paste is password-protected.", {
-      status: 423,
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        ...rateMeta
+    return new NextResponse(
+      result.lockReason === "captcha" ? "This paste requires CAPTCHA verification." : "This paste is password-protected.",
+      {
+        status: 423,
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          ...rateMeta
+        }
       }
-    });
+    );
   }
 
   if (format === "html" || format === "htm") {

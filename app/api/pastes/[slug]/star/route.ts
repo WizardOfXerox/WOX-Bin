@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 import { auth } from "@/auth";
 import { jsonError } from "@/lib/http";
 import { togglePasteStar } from "@/lib/paste-service";
+import { getPasteAccessCookieName, getPasteCaptchaCookieName } from "@/lib/paste-access";
 import { rateLimit } from "@/lib/rate-limit";
 import { getRequestIp } from "@/lib/request";
 
@@ -25,7 +27,10 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   const { slug } = await params;
-  const result = await togglePasteStar(slug, session.user.id);
+  const cookieStore = await cookies();
+  const accessGrant = cookieStore.get(getPasteAccessCookieName(slug))?.value ?? null;
+  const captchaGrant = cookieStore.get(getPasteCaptchaCookieName(slug))?.value ?? null;
+  const result = await togglePasteStar(slug, session.user.id, accessGrant, captchaGrant);
   if (!result) {
     return jsonError("Paste not found.", 404);
   }

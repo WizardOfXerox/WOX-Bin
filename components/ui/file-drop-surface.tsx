@@ -1,15 +1,14 @@
 "use client";
 
-import { useCallback, useRef, useState, type DragEvent, type ReactNode } from "react";
+import { useCallback, useRef, useState, type DragEvent, type HTMLAttributes, type ReactNode } from "react";
 
 import { dataTransferHasFiles } from "@/lib/file-drop";
 import { cn } from "@/lib/utils";
 
-export type FileDropSurfaceProps = {
+export type FileDropSurfaceProps = HTMLAttributes<HTMLDivElement> & {
   /** Receives dropped files (empty drags are ignored). */
   onFiles: (files: File[]) => void | Promise<void>;
   disabled?: boolean;
-  className?: string;
   /** Applied to the wrapper while a file drag is active over the zone. */
   activeClassName?: string;
   /** Optional message on the glass overlay (pointer-events: none). */
@@ -29,7 +28,8 @@ export function FileDropSurface({
   activeClassName,
   overlayMessage,
   overlayClassName,
-  children
+  children,
+  ...props
 }: FileDropSurfaceProps) {
   const depth = useRef(0);
   const [active, setActive] = useState(false);
@@ -103,6 +103,7 @@ export function FileDropSurface({
       onDragLeave={disabled ? undefined : onDragLeave}
       onDragOver={disabled ? undefined : onDragOver}
       onDrop={disabled ? undefined : onDrop}
+      {...props}
     >
       {children}
       {active && overlayMessage ? (

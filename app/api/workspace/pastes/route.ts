@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { listWorkspaceSnapshot, savePasteForUser } from "@/lib/paste-service";
+import { listWorkspaceSnapshot, savePasteForUser, SlugConflictError } from "@/lib/paste-service";
 import { jsonError, planLimitErrorResponse } from "@/lib/http";
 import { getUserPlanSummary } from "@/lib/usage-service";
 import { pasteInputSchema } from "@/lib/validators";
@@ -59,6 +59,9 @@ export async function POST(request: Request) {
       plan
     });
   } catch (error) {
+    if (error instanceof SlugConflictError) {
+      return jsonError(error.message, 409);
+    }
     const planErr = planLimitErrorResponse(error);
     if (planErr) {
       return planErr;

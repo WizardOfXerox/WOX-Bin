@@ -171,6 +171,18 @@ export function LandingPage({ session }: Props) {
               <span aria-hidden className="hidden text-border sm:inline">
                 ·
               </span>
+              <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/quick">
+                Quick paste
+              </Link>
+              <span aria-hidden className="hidden text-border sm:inline">
+                ·
+              </span>
+              <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/clipboard">
+                Clipboard buckets
+              </Link>
+              <span aria-hidden className="hidden text-border sm:inline">
+                ·
+              </span>
               <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/changelog">
                 Changelog
               </Link>
@@ -320,6 +332,21 @@ export function LandingPage({ session }: Props) {
                     </Link>
                   </li>
                   <li>
+                    <Link className="text-primary underline-offset-4 hover:underline" href="/quick">
+                      Quick paste
+                    </Link>
+                  </li>
+                  <li>
+                    <Link className="text-primary underline-offset-4 hover:underline" href="/fragment">
+                      Fragment share
+                    </Link>
+                  </li>
+                  <li>
+                    <Link className="text-primary underline-offset-4 hover:underline" href="/clipboard">
+                      Clipboard buckets
+                    </Link>
+                  </li>
+                  <li>
                     <Link className="text-primary underline-offset-4 hover:underline" href="/help">
                       Help &amp; answers
                     </Link>
@@ -431,6 +458,12 @@ export function LandingPage({ session }: Props) {
           </span>
           <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/bookmarkfs">
             BookmarkFS
+          </Link>
+          <span aria-hidden className="hidden text-border sm:inline">
+            ·
+          </span>
+          <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/quick">
+            Quick paste
           </Link>
           <span aria-hidden className="hidden text-border sm:inline">
             ·

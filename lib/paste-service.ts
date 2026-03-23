@@ -12,7 +12,16 @@ import {
   stars,
   users
 } from "@/lib/db/schema";
-import { createPasteAccessGrant, hashIp, hashPassword, hashToken, randomToken, verifyPassword, verifyPasteAccessGrant } from "@/lib/crypto";
+import {
+  createPasteAccessGrant,
+  hashIp,
+  hashPassword,
+  hashToken,
+  randomToken,
+  verifyPassword,
+  verifyPasteAccessGrant,
+  verifyPasteCaptchaGrant
+} from "@/lib/crypto";
 import { logAudit } from "@/lib/audit";
 import { PlanLimitError, formatPlanName, type PlanId } from "@/lib/plans";
 import { getStoredBytesForPasteInput, getUserPlanSummary } from "@/lib/usage-service";
@@ -29,6 +38,7 @@ type Viewer = {
 const MAX_VISIBLE_WORKSPACE_VERSIONS = 25;
 
 type SavePasteInput = {
+  id?: string | null;
   slug?: string | null;
   title: string;
   content: string;
@@ -38,6 +48,8 @@ type SavePasteInput = {
   tags?: string[];
   visibility: "public" | "unlisted" | "private";
   password?: string | null;
+  secretMode?: boolean;
+  captchaRequired?: boolean;
   burnAfterRead?: boolean;
   burnAfterViews?: number;
   pinned?: boolean;
@@ -55,6 +67,13 @@ type SavePasteInput = {
     mimeType?: string | null;
   }>;
 };
+
+export class SlugConflictError extends Error {
+  constructor(message = "That custom URL is already taken.") {
+    super(message);
+    this.name = "SlugConflictError";
+  }
+}
 
 function isModerator(viewer?: Viewer | null) {
   return viewer?.role === "moderator" || viewer?.role === "admin";
@@ -160,6 +179,27 @@ async function ensureUniqueSlug(desired: string, excludeId?: string | null) {
   }
 
   return `${base}-${randomToken().slice(0, 10)}`;
+}
+
+async function resolveRequestedSlug(
+  desired: string,
+  options?: {
+    excludeId?: string | null;
+    strict?: boolean;
+  }
+) {
+  const excludeId = options?.excludeId ?? null;
+  const normalized = slugify(desired);
+  const [existing] = await db.select({ id: pastes.id }).from(pastes).where(eq(pastes.slug, normalized)).limit(1);
+
+  if (existing && existing.id !== excludeId) {
+    if (options?.strict) {
+      throw new SlugConflictError();
+    }
+    return ensureUniqueSlug(normalized, excludeId);
+  }
+
+  return normalized;
 }
 
 async function ensureDefaultFolders(userId: string) {
@@ -324,13 +364,16 @@ async function hydratePaste(
     slug: row.slug,
     title: row.title,
     content: row.content,
+    viewCount: row.viewCount,
     language: row.language,
     folder: row.folderName,
     category: row.category,
     tags: row.tags ?? [],
     visibility: row.visibility,
+    secretMode: row.secretMode,
     burnAfterRead: row.burnAfterRead,
     burnAfterViews: row.burnAfterViews,
+    captchaRequired: row.captchaRequired,
     favorite: row.favorite,
     archived: row.archived,
     template: row.template,
@@ -356,6 +399,7 @@ async function hydratePaste(
     starredByViewer: starState.starredByViewer,
     canEdit: isOwner(row.userId ?? null, viewer),
     requiresPassword: Boolean(row.passwordHash) && !isOwner(row.userId ?? null, viewer),
+    requiresCaptcha: Boolean(row.captchaRequired) && !isOwner(row.userId ?? null, viewer),
     status: row.status
   };
 }
@@ -536,15 +580,25 @@ export async function savePasteForUser(userId: string, input: SavePasteInput) {
   }
 
   const planSummary = await getUserPlanSummary(userId);
-  const existing = input.slug
+  const requestedId = typeof input.id === "string" && input.id.trim() ? input.id.trim() : null;
+  const requestedSlug = typeof input.slug === "string" ? input.slug.trim() : "";
+  const existing = requestedId
     ? (
         await db
           .select()
           .from(pastes)
-          .where(and(eq(pastes.slug, input.slug), eq(pastes.userId, userId), ne(pastes.status, "deleted")))
+          .where(and(eq(pastes.id, requestedId), eq(pastes.userId, userId), ne(pastes.status, "deleted")))
           .limit(1)
       )[0]
-    : null;
+    : requestedSlug
+      ? (
+          await db
+            .select()
+            .from(pastes)
+            .where(and(eq(pastes.slug, requestedSlug), eq(pastes.userId, userId), ne(pastes.status, "deleted")))
+            .limit(1)
+        )[0]
+      : null;
 
   const currentFiles = existing ? await getFilesForPaste(existing.id) : [];
   const nextFiles = existing && input.files === undefined ? currentFiles : (input.files ?? []);
@@ -600,7 +654,12 @@ export async function savePasteForUser(userId: string, input: SavePasteInput) {
     });
   }
 
-  const slug = await ensureUniqueSlug(input.slug || input.title, existing?.id);
+  const slug = await resolveRequestedSlug(requestedSlug || input.title, {
+    excludeId: existing?.id,
+    strict: Boolean(requestedSlug)
+  });
+  const secretMode = Boolean(input.secretMode);
+  const visibility = secretMode ? "unlisted" : input.visibility;
   const passwordHash = input.password ? await hashPassword(input.password) : existing?.passwordHash ?? null;
   const nextValues = {
     slug,
@@ -610,9 +669,11 @@ export async function savePasteForUser(userId: string, input: SavePasteInput) {
     folderName: input.folderName ?? null,
     category: input.category ?? null,
     tags: normalizeTagList(input.tags),
-    visibility: input.visibility,
+    visibility,
     passwordHash,
-    burnAfterRead: Boolean(input.burnAfterRead),
+    secretMode,
+    captchaRequired: Boolean(input.captchaRequired),
+    burnAfterRead: secretMode ? Boolean(input.burnAfterRead ?? true) : Boolean(input.burnAfterRead),
     burnAfterViews: input.burnAfterViews ?? 0,
     pinned: Boolean(input.pinned),
     favorite: Boolean(input.favorite),
@@ -676,7 +737,8 @@ export async function savePasteForUser(userId: string, input: SavePasteInput) {
     targetType: "paste",
     targetId: pasteId,
     metadata: {
-      visibility: input.visibility,
+      visibility,
+      secretMode,
       slug
     }
   });
@@ -728,8 +790,13 @@ export async function deletePasteForUser(userId: string, slug: string) {
 }
 
 export async function createAnonymousPaste(input: SavePasteInput, ip: string | null) {
-  const slug = await ensureUniqueSlug(input.slug || input.title);
+  const requestedSlug = typeof input.slug === "string" ? input.slug.trim() : "";
+  const slug = await resolveRequestedSlug(requestedSlug || input.title, {
+    strict: Boolean(requestedSlug)
+  });
   const claimToken = randomToken("claim");
+  const secretMode = Boolean(input.secretMode);
+  const visibility = secretMode ? "unlisted" : input.visibility === "private" ? "unlisted" : input.visibility;
   const passwordHash = input.password ? await hashPassword(input.password) : null;
   const pasteId = randomToken("paste");
 
@@ -743,10 +810,12 @@ export async function createAnonymousPaste(input: SavePasteInput, ip: string | n
     folderName: null,
     category: input.category ?? null,
     tags: normalizeTagList(input.tags),
-    visibility: input.visibility === "private" ? "unlisted" : input.visibility,
+    visibility,
     passwordHash,
+    secretMode,
+    captchaRequired: Boolean(input.captchaRequired),
     anonymousClaimHash: hashToken(claimToken),
-    burnAfterRead: Boolean(input.burnAfterRead),
+    burnAfterRead: secretMode ? Boolean(input.burnAfterRead ?? true) : Boolean(input.burnAfterRead),
     burnAfterViews: input.burnAfterViews ?? 0,
     pinned: false,
     favorite: false,
@@ -779,7 +848,8 @@ export async function createAnonymousPaste(input: SavePasteInput, ip: string | n
     ip,
     metadata: {
       slug,
-      visibility: input.visibility
+      visibility,
+      secretMode
     }
   });
 
@@ -840,6 +910,7 @@ export async function getPasteForViewer(options: {
   viewer?: Viewer | null;
   suppliedPassword?: string | null;
   accessGrant?: string | null;
+  captchaGrant?: string | null;
   trackView?: boolean;
 }) {
   const [row] = await db
@@ -852,7 +923,9 @@ export async function getPasteForViewer(options: {
     return {
       paste: null,
       locked: false,
-      grantedAccess: null as string | null
+      grantedAccess: null as string | null,
+      grantedCaptcha: null as string | null,
+      lockReason: null as "password" | "captcha" | null
     };
   }
 
@@ -861,7 +934,9 @@ export async function getPasteForViewer(options: {
     return {
       paste: null,
       locked: false,
-      grantedAccess: null as string | null
+      grantedAccess: null as string | null,
+      grantedCaptcha: null as string | null,
+      lockReason: null as "password" | "captcha" | null
     };
   }
 
@@ -872,7 +947,9 @@ export async function getPasteForViewer(options: {
     return {
       paste: null,
       locked: false,
-      grantedAccess: null
+      grantedAccess: null,
+      grantedCaptcha: null,
+      lockReason: null
     };
   }
 
@@ -880,11 +957,26 @@ export async function getPasteForViewer(options: {
     return {
       paste: null,
       locked: false,
-      grantedAccess: null
+      grantedAccess: null,
+      grantedCaptcha: null,
+      lockReason: null
     };
   }
 
   let grantedAccess: string | null = null;
+
+  if (row.captchaRequired && !owner && !moderator) {
+    const alreadyGrantedCaptcha = verifyPasteCaptchaGrant(row.slug, options.captchaGrant);
+    if (!alreadyGrantedCaptcha) {
+      return {
+        paste: await hydratePaste(row, options.viewer),
+        locked: true,
+        grantedAccess: null,
+        grantedCaptcha: null,
+        lockReason: "captcha" as const
+      };
+    }
+  }
 
   if (row.passwordHash && !owner && !moderator) {
     const alreadyGranted = verifyPasteAccessGrant(row.slug, row.passwordHash, options.accessGrant);
@@ -894,7 +986,9 @@ export async function getPasteForViewer(options: {
       return {
         paste: await hydratePaste(row, options.viewer),
         locked: true,
-        grantedAccess: null
+        grantedAccess: null,
+        grantedCaptcha: null,
+        lockReason: "password" as const
       };
     }
 
@@ -923,7 +1017,9 @@ export async function getPasteForViewer(options: {
   return {
     paste: await hydratePaste(row, options.viewer),
     locked: false,
-    grantedAccess
+    grantedAccess,
+    grantedCaptcha: null as string | null,
+    lockReason: null as "password" | "captcha" | null
   };
 }
 
@@ -934,6 +1030,7 @@ export async function listFeedPastes(limit = 50) {
     .where(
       and(
         eq(pastes.visibility, "public"),
+        eq(pastes.secretMode, false),
         eq(pastes.status, "active"),
         isNull(pastes.deletedAt),
         isNull(pastes.passwordHash)
@@ -945,15 +1042,25 @@ export async function listFeedPastes(limit = 50) {
   return Promise.all(rows.map((row) => hydratePaste(row, null)));
 }
 
-export async function listCommentsForPaste(slug: string, viewer?: Viewer | null, accessGrant?: string | null) {
+export async function listCommentsForPaste(
+  slug: string,
+  viewer?: Viewer | null,
+  accessGrant?: string | null,
+  captchaGrant?: string | null
+) {
   const access = await getPasteForViewer({
     slug,
     viewer,
     accessGrant,
+    captchaGrant,
     trackView: false
   });
 
   if (!access.paste || access.locked) {
+    return [];
+  }
+
+  if (access.paste.secretMode) {
     return [];
   }
 
@@ -987,11 +1094,13 @@ export async function createCommentForPaste(options: {
   content: string;
   parentId?: number | null;
   accessGrant?: string | null;
+  captchaGrant?: string | null;
 }) {
   const access = await getPasteForViewer({
     slug: options.slug,
     viewer: { id: options.userId, role: "user" },
     accessGrant: options.accessGrant,
+    captchaGrant: options.captchaGrant,
     trackView: false
   });
 
@@ -1000,6 +1109,10 @@ export async function createCommentForPaste(options: {
   }
 
   if (access.paste.status !== "active") {
+    return null;
+  }
+
+  if (access.paste.secretMode) {
     return null;
   }
 
@@ -1025,14 +1138,25 @@ export async function createCommentForPaste(options: {
   return row;
 }
 
-export async function togglePasteStar(slug: string, userId: string) {
+export async function togglePasteStar(
+  slug: string,
+  userId: string,
+  accessGrant?: string | null,
+  captchaGrant?: string | null
+) {
   const access = await getPasteForViewer({
     slug,
     viewer: { id: userId, role: "user" },
+    accessGrant,
+    captchaGrant,
     trackView: false
   });
 
   if (!access.paste || access.locked) {
+    return null;
+  }
+
+  if (access.paste.secretMode) {
     return null;
   }
 
@@ -1227,6 +1351,7 @@ export async function listPastesForApiKey(
     title: string;
     language: string;
     visibility: string;
+    secretMode: boolean;
     folderName: string | null;
     tags: string[];
     pinned: boolean;
@@ -1268,6 +1393,7 @@ export async function listPastesForApiKey(
       title: pastes.title,
       language: pastes.language,
       visibility: pastes.visibility,
+      secretMode: pastes.secretMode,
       folderName: pastes.folderName,
       tags: pastes.tags,
       pinned: pastes.pinned,
@@ -1286,6 +1412,7 @@ export async function listPastesForApiKey(
       title: r.title,
       language: r.language,
       visibility: r.visibility,
+      secretMode: r.secretMode,
       folderName: r.folderName,
       tags: r.tags ?? [],
       pinned: r.pinned,
@@ -1331,6 +1458,7 @@ export async function getPasteBodyForApiKeyOwner(
   content: string;
   language: string;
   visibility: string;
+  secretMode: boolean;
   folderName: string | null;
   tags: string[];
   pinned: boolean;
@@ -1356,6 +1484,7 @@ export async function getPasteBodyForApiKeyOwner(
       content: pastes.content,
       language: pastes.language,
       visibility: pastes.visibility,
+      secretMode: pastes.secretMode,
       folderName: pastes.folderName,
       tags: pastes.tags,
       pinned: pastes.pinned,
@@ -1378,6 +1507,7 @@ export async function getPasteBodyForApiKeyOwner(
     content: row.content,
     language: row.language,
     visibility: row.visibility,
+    secretMode: row.secretMode,
     folderName: row.folderName,
     tags: row.tags ?? [],
     pinned: row.pinned,
@@ -1415,7 +1545,7 @@ export async function updatePasteForApiKey(
     return null;
   }
 
-  const paste = await savePasteForUser(keyRow.userId, { ...input, slug });
+  const paste = await savePasteForUser(keyRow.userId, { ...input, id: owned.id });
 
   await logAudit({
     actorUserId: keyRow.userId,

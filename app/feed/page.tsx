@@ -66,6 +66,7 @@ export default async function FeedPage() {
                   </p>
                 </div>
                 <div className="text-right text-sm text-muted-foreground">
+                  <p>{paste.viewCount.toLocaleString()} views</p>
                   <p>{paste.stars} stars</p>
                   <p>{paste.commentsCount} comments</p>
                 </div>

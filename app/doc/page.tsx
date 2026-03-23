@@ -61,6 +61,13 @@ export default function DocIndexPage() {
           — browser extension positioning, local vault model, and how it fits with hosted WOX-Bin.
         </li>
         <li>
+          <Link href="/quick">
+            <strong className="text-foreground">Quick share surfaces</strong>
+          </Link>{" "}
+          — <code>/quick</code>, <code>/fragment</code>, and <code>/clipboard</code> for fast public, fragment-only, and
+          temporary text handoff flows.
+        </li>
+        <li>
           <Link href="/changelog">
             <strong className="text-foreground">Changelog</strong>
           </Link>{" "}

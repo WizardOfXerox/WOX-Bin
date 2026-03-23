@@ -49,6 +49,7 @@ export async function GET(request: Request) {
         id: pastes.id,
         slug: pastes.slug,
         title: pastes.title,
+        secretMode: pastes.secretMode,
         status: pastes.status,
         visibility: pastes.visibility,
         ownerUserId: users.id,

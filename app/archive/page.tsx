@@ -110,6 +110,10 @@ export default async function ArchivePage() {
                     <dt>Syntax</dt>
                     <dd className="text-right">{syntaxLabel(paste.language)}</dd>
                   </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <dt>Views</dt>
+                    <dd className="text-right">{paste.viewCount.toLocaleString()}</dd>
+                  </div>
                 </dl>
               </div>
             ))}
@@ -121,6 +125,7 @@ export default async function ArchivePage() {
                   <th className="px-4 py-3 font-medium md:px-5">Name / title</th>
                   <th className="whitespace-nowrap px-4 py-3 font-medium md:px-5">Posted</th>
                   <th className="whitespace-nowrap px-4 py-3 font-medium md:px-5">Syntax</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium md:px-5">Views</th>
                 </tr>
               </thead>
               <tbody>
@@ -145,6 +150,9 @@ export default async function ArchivePage() {
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-muted-foreground md:px-5">
                       {syntaxLabel(paste.language)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-muted-foreground md:px-5">
+                      {paste.viewCount.toLocaleString()}
                     </td>
                   </tr>
                 ))}

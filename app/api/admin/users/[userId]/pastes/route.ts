@@ -53,6 +53,7 @@ export async function GET(request: Request, { params }: Params) {
         id: pastes.id,
         slug: pastes.slug,
         title: pastes.title,
+        secretMode: pastes.secretMode,
         status: pastes.status,
         visibility: pastes.visibility,
         viewCount: pastes.viewCount,

@@ -16,6 +16,9 @@ const CONFIG = {
   "forgot-password": { max: 5, windowMs: 60 * 60_000 },
   "reset-password": { max: 10, windowMs: 60 * 60_000 },
   "anonymous-publish": { max: 20, windowMs: 60 * 60_000 },
+  "cli-text-upload": { max: 30, windowMs: 60 * 60_000 },
+  "file-drop-upload": { max: 20, windowMs: 60 * 60_000 },
+  "file-drop-manage": { max: 30, windowMs: 60 * 60_000 },
   "resend-verification": { max: 5, windowMs: 60 * 60_000 }
 } as const;
 

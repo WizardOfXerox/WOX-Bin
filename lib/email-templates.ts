@@ -1,4 +1,5 @@
 import { getConfiguredAppOrigin } from "@/lib/request";
+import { getPasteShareUrl } from "@/lib/paste-links";
 import type { SupportTicketStatus } from "@/lib/support";
 
 type EmailAction = {
@@ -33,6 +34,7 @@ type AccountModerationEmailInput = {
 type PasteModerationEmailInput = {
   title: string;
   slug: string;
+  secretMode?: boolean;
   status: "active" | "hidden" | "deleted";
   reason?: string | null;
 };
@@ -367,7 +369,7 @@ export function buildAccountModerationEmail(input: AccountModerationEmailInput):
 }
 
 export function buildPasteModerationEmail(input: PasteModerationEmailInput): RenderedEmail {
-  const pasteUrl = appHomeUrl() ? `${appHomeUrl()}/p/${input.slug}` : null;
+  const pasteUrl = appHomeUrl() ? getPasteShareUrl(appHomeUrl()!, input.slug, Boolean(input.secretMode)) : null;
   const details = compactLines([
     `Paste title: ${input.title}`,
     `Paste slug: ${input.slug}`,

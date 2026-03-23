@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { createAnonymousPaste } from "@/lib/paste-service";
+import { createAnonymousPaste, SlugConflictError } from "@/lib/paste-service";
 import { jsonError } from "@/lib/http";
 import { publicPasteInputSchema } from "@/lib/validators";
 import { getRequestIp } from "@/lib/request";
@@ -27,6 +27,13 @@ export async function POST(request: Request) {
     });
   }
 
-  const result = await createAnonymousPaste(parsed.data, ip);
-  return NextResponse.json(result, { status: 201 });
+  try {
+    const result = await createAnonymousPaste(parsed.data, ip);
+    return NextResponse.json(result, { status: 201 });
+  } catch (error) {
+    if (error instanceof SlugConflictError) {
+      return jsonError(error.message, 409);
+    }
+    return jsonError("Could not create the anonymous paste.", 500);
+  }
 }

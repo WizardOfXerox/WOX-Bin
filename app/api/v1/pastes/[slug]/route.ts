@@ -3,9 +3,11 @@ import { NextResponse } from "next/server";
 import {
   deletePasteForApiKey,
   getPasteBodyForApiKeyOwner,
+  SlugConflictError,
   updatePasteForApiKey
 } from "@/lib/paste-service";
 import { jsonError, planLimitErrorResponse } from "@/lib/http";
+import { getPasteSharePath } from "@/lib/paste-links";
 import { getRequestIp } from "@/lib/request";
 import { rateLimit } from "@/lib/rate-limit";
 import { pasteInputUpdateSchema } from "@/lib/validators";
@@ -59,7 +61,7 @@ export async function PATCH(request: Request, { params }: Params) {
     return jsonError(parsed.error.issues[0]?.message ?? "Invalid paste payload.");
   }
 
-  const { id: _omitId, slug: _omitSlug, ...rest } = parsed.data;
+  const { id: _omitId, ...rest } = parsed.data;
 
   try {
     const paste = await updatePasteForApiKey(token, slug, rest, ip);
@@ -69,10 +71,13 @@ export async function PATCH(request: Request, { params }: Params) {
 
     return NextResponse.json({
       id: paste.slug,
-      url: `/p/${paste.slug}`,
+      url: getPasteSharePath(paste.slug, paste.secretMode),
       rawUrl: `/raw/${paste.slug}`
     });
   } catch (error) {
+    if (error instanceof SlugConflictError) {
+      return jsonError(error.message, 409);
+    }
     return planLimitErrorResponse(error) ?? jsonError("Could not update the paste.", 500);
   }
 }

@@ -6,6 +6,7 @@ import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 type WorkspacePageProps = {
   searchParams: Promise<{
     fork?: string;
+    tutorial?: string;
   }>;
 };
 
@@ -14,6 +15,8 @@ export default async function WorkspacePage({ searchParams }: WorkspacePageProps
   const sp = await searchParams;
   const initialForkSlug =
     typeof sp.fork === "string" && sp.fork.trim() ? sp.fork.trim() : undefined;
+  const initialTutorialRequested =
+    typeof sp.tutorial === "string" && ["1", "true", "yes"].includes(sp.tutorial.toLowerCase());
 
   if (session?.user?.id && (!session.user.onboardingComplete || !session.user.username)) {
     redirect("/account/onboarding");
@@ -22,6 +25,7 @@ export default async function WorkspacePage({ searchParams }: WorkspacePageProps
   return (
     <WorkspaceShell
       initialForkSlug={initialForkSlug}
+      initialTutorialRequested={initialTutorialRequested}
       sessionUser={
         session?.user?.id
           ? {

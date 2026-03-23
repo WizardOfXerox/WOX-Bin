@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { getPasteSharePath } from "@/lib/paste-links";
 
 type SearchUser = {
   id: string;
@@ -21,6 +22,7 @@ type SearchPaste = {
   id: string;
   slug: string;
   title: string;
+  secretMode: boolean;
   status: "active" | "hidden" | "deleted";
   visibility: string;
   ownerUserId: string | null;
@@ -165,7 +167,7 @@ export function AdminSearchPanel() {
                           <Link className="line-clamp-1 font-medium hover:underline" href={`/admin/pastes?q=${encodeURIComponent(paste.slug)}`}>
                             {paste.title}
                           </Link>
-                          <div className="text-xs text-muted-foreground">/p/{paste.slug}</div>
+                          <div className="text-xs text-muted-foreground">{getPasteSharePath(paste.slug, paste.secretMode)}</div>
                           <div className="mt-1 text-xs text-muted-foreground">
                             {paste.ownerUserId ? (
                               <Link className="hover:text-foreground hover:underline" href={`/admin/users/${paste.ownerUserId}`}>

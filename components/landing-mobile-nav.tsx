@@ -72,6 +72,11 @@ export function LandingMobileNav({ initialSession = null }: Props) {
             </DialogClose>
             <DialogClose asChild>
               <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
+                <Link href="/quick">Quick paste</Link>
+              </Button>
+            </DialogClose>
+            <DialogClose asChild>
+              <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
                 <Link href="/help">Help</Link>
               </Button>
             </DialogClose>

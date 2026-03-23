@@ -12,6 +12,9 @@ type LimitName =
   | "forgot-password"
   | "reset-password"
   | "anonymous-publish"
+  | "cli-text-upload"
+  | "file-drop-upload"
+  | "file-drop-manage"
   | "comment"
   | "star"
   | "api-key-create"
@@ -71,6 +74,24 @@ const limiterFactory = () => ({
     limiter: Ratelimit.slidingWindow(20, "1 h"),
     analytics: true,
     prefix: "wox:anon"
+  }),
+  "cli-text-upload": new Ratelimit({
+    redis: redis!,
+    limiter: Ratelimit.slidingWindow(30, "1 h"),
+    analytics: true,
+    prefix: "wox:cli:text"
+  }),
+  "file-drop-upload": new Ratelimit({
+    redis: redis!,
+    limiter: Ratelimit.slidingWindow(20, "1 h"),
+    analytics: true,
+    prefix: "wox:file:upload"
+  }),
+  "file-drop-manage": new Ratelimit({
+    redis: redis!,
+    limiter: Ratelimit.slidingWindow(30, "1 h"),
+    analytics: true,
+    prefix: "wox:file:manage"
   }),
   comment: new Ratelimit({
     redis: redis!,

@@ -40,6 +40,7 @@ export async function POST(request: Request, { params }: Params) {
       id: pastes.id,
       slug: pastes.slug,
       title: pastes.title,
+      secretMode: pastes.secretMode,
       ownerEmail: users.email
     })
     .from(pastes)
@@ -66,6 +67,7 @@ export async function POST(request: Request, { params }: Params) {
     const email = buildPasteModerationEmail({
       title: target.title,
       slug: target.slug,
+      secretMode: target.secretMode,
       status: parsed.data.status,
       reason: parsed.data.reason ?? null
     });

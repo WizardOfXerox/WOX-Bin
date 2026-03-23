@@ -16,6 +16,15 @@ export function slugify(input: string) {
   return normalized || "paste";
 }
 
+export function normalizeOptionalSlug(input: string) {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64);
+}
+
 export function formatDate(value: string | Date | null | undefined) {
   if (!value) {
     return "Just now";

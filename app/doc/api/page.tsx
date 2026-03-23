@@ -97,7 +97,56 @@ export default function DocApiPage() {
         API key). See <a href="/doc/scraping">Scraping &amp; public data</a> for the rate-limit table.
       </p>
 
-      <h2>6. Other endpoints</h2>
+      <h2>6. CLI drop endpoints</h2>
+      <p>
+        WOX-Bin also exposes two lightweight anonymous CLI upload surfaces. These are documented in{" "}
+        <code>docs/CLI-DROPS.md</code>.
+      </p>
+
+      <h3>POST /api/public/termbin</h3>
+      <p>
+        Termbin-style text upload over HTTP. Send raw text in the request body and WOX-Bin returns a plain-text URL under{" "}
+        <code>/t/[slug]</code>. Optional query params: <code>expires</code> (hours) and <code>burn=1</code>.
+      </p>
+
+      <h3>POST /api/public/upload</h3>
+      <p>
+        0x0-style multipart upload. Accepts <code>file</code> or <code>url</code>, plus optional <code>secret</code>{" "}
+        and <code>expires</code>. Returns a plain-text file URL under <code>/x/[slug]/[filename]</code> and includes an{" "}
+        <code>X-Token</code> header for management operations.
+      </p>
+
+      <h3>POST /x/[slug]/[filename]</h3>
+      <p>
+        File management endpoint for anonymous uploads. Send multipart form data with <code>token</code> plus either{" "}
+        <code>delete</code> or <code>expires</code>.
+      </p>
+
+      <h3>GET/POST/DELETE /api/public/clipboard/[slug]</h3>
+      <p>
+        Text-first temporary bucket API. <code>GET</code> reads the bucket, increments views, and respects burn-after-read.
+        <code>POST</code> creates or updates a bucket when you send the original manage token. <code>DELETE</code> removes
+        the bucket when you send the manage token. Use the <code>x-manage-token</code> header or JSON body field{" "}
+        <code>token</code>.
+      </p>
+
+      <h2>7. Client-only share routes</h2>
+      <p>
+        WOX-Bin also includes browser-first routes that are useful outside the normal workspace:
+      </p>
+      <ul>
+        <li>
+          <code>/quick</code> — fast anonymous/public/secret paste publishing on top of <code>/api/public/pastes</code>.
+        </li>
+        <li>
+          <code>/fragment</code> — no-server-storage route; content lives only in the URL fragment.
+        </li>
+        <li>
+          <code>/clipboard</code> and <code>/c/[slug]</code> — short-lived text buckets for cross-device handoff.
+        </li>
+      </ul>
+
+      <h2>8. Other endpoints</h2>
       <ul>
         <li>
           <code>GET /api/pastes/[slug]</code> — public paste payload for viewers (visibility rules apply).
@@ -118,7 +167,7 @@ export default function DocApiPage() {
         </li>
       </ul>
 
-      <h2>7. Rate limits &amp; plan errors</h2>
+      <h2>9. Rate limits &amp; plan errors</h2>
       <p>
         API-key routes use Redis-backed limits when <code>UPSTASH_REDIS_*</code> is set. Expect <code>429</code> when
         exceeded. Plan overages may return <code>403</code> with extra fields (<code>code</code>, <code>plan</code>,

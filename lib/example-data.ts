@@ -57,6 +57,12 @@ function normalizeImportedPasteDraft(paste: Record<string, unknown>): PasteDraft
     slug: typeof paste.slug === "string" && paste.slug.trim() ? paste.slug : id,
     title: typeof paste.title === "string" && paste.title.trim() ? paste.title : "Untitled",
     content: typeof paste.content === "string" ? paste.content : "",
+    viewCount:
+      typeof paste.viewCount === "number"
+        ? Math.max(0, paste.viewCount)
+        : typeof paste.views === "number"
+          ? Math.max(0, paste.views)
+          : 0,
     language: typeof paste.language === "string" && paste.language ? paste.language : "none",
     folder: typeof paste.folder === "string" && paste.folder.trim() ? paste.folder : null,
     category: typeof paste.category === "string" && paste.category.trim() ? paste.category : null,
@@ -68,6 +74,8 @@ function normalizeImportedPasteDraft(paste: Record<string, unknown>): PasteDraft
         ? paste.visibility
         : visibilityFromLegacyExposure(typeof paste.exposure === "number" ? paste.exposure : 2),
     password: typeof paste.password === "string" ? paste.password : null,
+    secretMode: Boolean(paste.secretMode),
+    captchaRequired: Boolean(paste.captchaRequired),
     burnAfterRead: Boolean(paste.burnAfterRead),
     burnAfterViews: typeof paste.burnAfterViews === "number" ? Math.max(0, paste.burnAfterViews) : 0,
     favorite: Boolean(paste.favorite),
@@ -140,6 +148,8 @@ export type StarterAccountPasteSeed = {
   tags: string[];
   visibility: "public" | "unlisted" | "private";
   password: null;
+  secretMode: boolean;
+  captchaRequired: boolean;
   burnAfterRead: boolean;
   burnAfterViews: number;
   pinned: boolean;
@@ -162,6 +172,8 @@ export function buildStarterAccountPasteSeed(): StarterAccountPasteSeed {
     tags: [...bigExampleTemplatePaste.tags],
     visibility: "private",
     password: null,
+    secretMode: false,
+    captchaRequired: false,
     burnAfterRead: false,
     burnAfterViews: 0,
     pinned: true,

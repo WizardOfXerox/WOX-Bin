@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { getPasteSharePath } from "@/lib/paste-links";
 import { formatDate } from "@/lib/utils";
 
 type ModStatus = "active" | "hidden" | "deleted";
@@ -14,6 +15,7 @@ type AdminPasteRow = {
   id: string;
   slug: string;
   title: string;
+  secretMode: boolean;
   status: ModStatus;
   visibility: string;
   userId: string | null;
@@ -198,8 +200,8 @@ export function AdminPastesPanel({ initialQ, initialStatus }: Props) {
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4" key={p.id}>
             <div className="space-y-1">
               <div className="font-medium line-clamp-2">{p.title}</div>
-              <Link className="text-xs text-cyan-300/90 hover:underline" href={`/p/${p.slug}`} rel="noreferrer" target="_blank">
-                /p/{p.slug}
+              <Link className="text-xs text-cyan-300/90 hover:underline" href={getPasteSharePath(p.slug, p.secretMode)} rel="noreferrer" target="_blank">
+                {getPasteSharePath(p.slug, p.secretMode)}
               </Link>
             </div>
             <dl className="mt-4 grid gap-2 text-sm text-muted-foreground">
@@ -275,8 +277,8 @@ export function AdminPastesPanel({ initialQ, initialStatus }: Props) {
               <tr className="border-b border-white/5 hover:bg-white/[0.02]" key={p.id}>
                 <td className="px-3 py-3 align-top">
                   <div className="font-medium line-clamp-2">{p.title}</div>
-                  <Link className="text-xs text-cyan-300/90 hover:underline" href={`/p/${p.slug}`} rel="noreferrer" target="_blank">
-                    /p/{p.slug}
+                  <Link className="text-xs text-cyan-300/90 hover:underline" href={getPasteSharePath(p.slug, p.secretMode)} rel="noreferrer" target="_blank">
+                    {getPasteSharePath(p.slug, p.secretMode)}
                   </Link>
                 </td>
                 <td className="px-3 py-3 align-top text-muted-foreground">

@@ -26,10 +26,12 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { PasteLineageBanner } from "@/components/paste-lineage-banner";
+import { TurnstileField } from "@/components/turnstile-field";
 import { CodeImageDialog } from "@/components/workspace/code-image-dialog";
 import { PrismLineMap } from "@/components/workspace/prism-line-map";
 import { buildThreadedComments, commentAuthorLabel } from "@/lib/comment-thread";
 import { parseUserMarkdown } from "@/lib/markdown/parse-user-markdown";
+import { getPasteShareUrl } from "@/lib/paste-links";
 import {
   readHtmlViewPref,
   readLineGuidesPref,
@@ -179,6 +181,7 @@ function MarkupAttachmentViewer({
         <PrismLineMap
           content={file.content}
           language={file.language}
+          linkifyUrls
           showLineNumbers={showLineNumbers}
           showLineSeparators={showLineSeparators}
         />
@@ -191,6 +194,7 @@ type Props = {
   initialPaste: PublicPasteRecord;
   initialComments: CommentRecord[];
   initialLocked: boolean;
+  initialAccessRequirement: "password" | "captcha" | null;
   signedIn: boolean;
 };
 
@@ -202,6 +206,7 @@ export function PublicPasteShell({
   initialPaste,
   initialComments,
   initialLocked,
+  initialAccessRequirement,
   signedIn
 }: Props) {
   const [paste, setPaste] = useState(initialPaste);
@@ -210,6 +215,7 @@ export function PublicPasteShell({
   const [password, setPassword] = useState("");
   const [unlockError, setUnlockError] = useState<string | null>(null);
   const [pendingUnlock, setPendingUnlock] = useState(false);
+  const [accessRequirement, setAccessRequirement] = useState<"password" | "captcha" | null>(initialAccessRequirement);
   const [pendingStar, setPendingStar] = useState(false);
   const [comment, setComment] = useState("");
   const [commentError, setCommentError] = useState<string | null>(null);
@@ -298,7 +304,12 @@ export function PublicPasteShell({
       if (nextPaste) {
         setPaste(nextPaste);
         setLocked(false);
+        setAccessRequirement(null);
       }
+    } else if (pasteResponse.status === 423) {
+      const body = await readJson<{ lockReason?: "password" | "captcha"; requiresPassword?: boolean; requiresCaptcha?: boolean }>(pasteResponse);
+      setLocked(true);
+      setAccessRequirement(body?.lockReason ?? (body?.requiresCaptcha ? "captcha" : body?.requiresPassword ? "password" : null));
     }
 
     if (commentsResponse.ok) {
@@ -317,11 +328,34 @@ export function PublicPasteShell({
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ password })
+      body: JSON.stringify({
+        password: password.trim() || undefined,
+        turnstileToken:
+          (document.querySelector('input[name="cf-turnstile-response"]') as HTMLInputElement | null)?.value ?? ""
+      })
     });
 
     if (!response.ok) {
-      const body = await readJson<{ error?: string }>(response);
+      const body = await readJson<{
+        error?: string;
+        lockReason?: "password" | "captcha";
+        requiresPassword?: boolean;
+        requiresCaptcha?: boolean;
+      }>(response);
+      const nextRequirement =
+        body?.lockReason ?? (body?.requiresCaptcha ? "captcha" : body?.requiresPassword ? "password" : null);
+
+      if (response.status === 423 && nextRequirement) {
+        setAccessRequirement(nextRequirement);
+        setUnlockError(
+          nextRequirement === "password"
+            ? "CAPTCHA complete. Enter the paste password to continue."
+            : body?.error ?? "Complete the CAPTCHA to continue."
+        );
+        setPendingUnlock(false);
+        return;
+      }
+
       setUnlockError(body?.error ?? "Could not unlock paste.");
       setPendingUnlock(false);
       return;
@@ -410,7 +444,7 @@ export function PublicPasteShell({
     const href =
       target === "raw"
         ? `${window.location.origin}/raw/${paste.slug}`
-        : `${window.location.origin}/p/${paste.slug}`;
+        : getPasteShareUrl(window.location.origin, paste.slug, paste.secretMode);
 
     await navigator.clipboard.writeText(href);
   }
@@ -432,6 +466,7 @@ export function PublicPasteShell({
 
   const authorName = paste.author.displayName || paste.author.username || "Anonymous";
   const forkHref = `/app?fork=${encodeURIComponent(paste.slug)}`;
+  const secretMode = paste.secretMode;
 
   return (
     <main className="wox-public-paste-print-root mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:py-8 md:px-6 md:py-10">
@@ -439,15 +474,19 @@ export function PublicPasteShell({
         <div className="border-b border-white/10 bg-white/[0.03] px-4 py-5 sm:px-6 sm:py-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-3xl">
-              <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Public paste</p>
+              <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                {secretMode ? "Secret link" : "Public paste"}
+              </p>
               <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
                 {paste.title}
               </h1>
               <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                 <Badge>{paste.visibility}</Badge>
                 <Badge>{paste.language}</Badge>
+                {secretMode ? <Badge>Secret mode</Badge> : null}
                 {paste.category ? <Badge>{paste.category}</Badge> : null}
                 {paste.requiresPassword ? <Badge>Password protected</Badge> : null}
+                {paste.requiresCaptcha ? <Badge>CAPTCHA required</Badge> : null}
                 {paste.burnAfterRead ? <Badge>Burn after read</Badge> : null}
                 {paste.burnAfterViews > 0 ? <Badge>Burn after {paste.burnAfterViews} views</Badge> : null}
               </div>
@@ -457,8 +496,18 @@ export function PublicPasteShell({
                 replyTo={paste.replyTo ?? null}
               />
               <p className="mt-4 text-sm leading-7 text-muted-foreground">
-                Posted by <span className="text-foreground">{authorName}</span> on {formatDate(paste.createdAt)}.
-                Updated {formatDate(paste.updatedAt)}.
+                {secretMode ? (
+                  <>
+                    Shared by <span className="text-foreground">{authorName}</span> on {formatDate(paste.createdAt)}.
+                    Updated {formatDate(paste.updatedAt)}. {paste.viewCount.toLocaleString()} view{paste.viewCount === 1 ? "" : "s"}.
+                    This link stays out of the public archive and disables comments and stars.
+                  </>
+                ) : (
+                  <>
+                    Posted by <span className="text-foreground">{authorName}</span> on {formatDate(paste.createdAt)}.
+                    Updated {formatDate(paste.updatedAt)}. {paste.viewCount.toLocaleString()} view{paste.viewCount === 1 ? "" : "s"}.
+                  </>
+                )}
               </p>
             </div>
 
@@ -512,16 +561,18 @@ export function PublicPasteShell({
               <Button asChild className="w-full sm:w-auto" type="button" variant="ghost">
                 <Link href={`/raw/${paste.slug}`}>Raw</Link>
               </Button>
-              <Button
-                className="col-span-2 w-full sm:col-auto sm:w-auto"
-                disabled={!signedIn || pendingStar || locked}
-                onClick={handleStar}
-                type="button"
-                variant="secondary"
-              >
-                <Star className="h-4 w-4" />
-                {paste.starredByViewer ? "Starred" : "Star"} ({paste.stars})
-              </Button>
+              {!secretMode ? (
+                <Button
+                  className="col-span-2 w-full sm:col-auto sm:w-auto"
+                  disabled={!signedIn || pendingStar || locked}
+                  onClick={handleStar}
+                  type="button"
+                  variant="secondary"
+                >
+                  <Star className="h-4 w-4" />
+                  {paste.starredByViewer ? "Starred" : "Star"} ({paste.stars})
+                </Button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -535,23 +586,37 @@ export function PublicPasteShell({
                     <LockKeyhole className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold">Password required</h2>
+                    <h2 className="text-lg font-semibold">
+                      {accessRequirement === "captcha" ? "Human verification required" : "Password required"}
+                    </h2>
                     <p className="text-sm text-muted-foreground">
-                      This paste is protected. Enter the password to view the content and comments.
+                      {accessRequirement === "captcha"
+                        ? "This paste requires a Turnstile challenge before the content and comments are shown."
+                        : "This paste is protected. Enter the password to view the content and comments."}
                     </p>
                   </div>
                 </div>
 
                 <form className="space-y-4" onSubmit={handleUnlock}>
-                  <Input
-                    onChange={(event) => setPassword(event.target.value)}
-                    placeholder="Paste password"
-                    type="password"
-                    value={password}
-                  />
+                  {accessRequirement === "captcha" ? (
+                    <TurnstileField siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY} />
+                  ) : (
+                    <Input
+                      onChange={(event) => setPassword(event.target.value)}
+                      placeholder="Paste password"
+                      type="password"
+                      value={password}
+                    />
+                  )}
                   {unlockError ? <p className="text-sm text-destructive">{unlockError}</p> : null}
                   <Button disabled={pendingUnlock} type="submit">
-                    {pendingUnlock ? "Unlocking..." : "Unlock paste"}
+                    {pendingUnlock
+                      ? accessRequirement === "captcha"
+                        ? "Verifying..."
+                        : "Unlocking..."
+                      : accessRequirement === "captcha"
+                        ? "Verify and continue"
+                        : "Unlock paste"}
                   </Button>
                 </form>
               </CardContent>
@@ -662,6 +727,7 @@ export function PublicPasteShell({
                   <PrismLineMap
                     content={paste.content}
                     language={paste.language}
+                    linkifyUrls
                     showLineNumbers={showLineNumbers}
                     showLineSeparators={showLineSeparators}
                   />
@@ -732,6 +798,7 @@ export function PublicPasteShell({
                           <PrismLineMap
                             content={file.content}
                             language={file.language}
+                            linkifyUrls
                             showLineNumbers={showLineNumbers}
                             showLineSeparators={showLineSeparators}
                           />
@@ -757,7 +824,11 @@ export function PublicPasteShell({
               <Badge>{comments.length} messages</Badge>
             </div>
             <Separator />
-            {locked ? (
+            {secretMode ? (
+              <div className="rounded-[1.25rem] border border-dashed border-border bg-black/10 p-4 text-sm text-muted-foreground">
+                Secret links do not support public comments or stars.
+              </div>
+            ) : locked ? (
               <p className="text-sm text-muted-foreground">Unlock the paste to read or post comments.</p>
             ) : threadedComments.length === 0 ? (
               <p className="text-sm text-muted-foreground">
@@ -802,7 +873,7 @@ export function PublicPasteShell({
               </div>
             )}
 
-            {!locked ? (
+            {!locked && !secretMode ? (
               signedIn ? (
                 <form className="space-y-4" onSubmit={handleComment}>
                   {replyTarget ? (
@@ -851,7 +922,9 @@ export function PublicPasteShell({
               <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.03] p-4">
                 <p className="font-medium text-foreground">Visibility</p>
                 <p className="mt-2">
-                  {paste.visibility === "public"
+                  {secretMode
+                    ? "Secret link mode. Hidden from archive, feed, comments, and stars."
+                    : paste.visibility === "public"
                     ? "Listed in the public feed."
                     : paste.visibility === "unlisted"
                       ? "Available by direct link only."
@@ -860,7 +933,11 @@ export function PublicPasteShell({
               </div>
               <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.03] p-4">
                 <p className="font-medium text-foreground">Activity</p>
-                <p className="mt-2">{paste.commentsCount} comments and {paste.stars} stars.</p>
+                <p className="mt-2">
+                  {secretMode
+                    ? `${paste.viewCount.toLocaleString()} view${paste.viewCount === 1 ? "" : "s"} tracked. Comments and stars are disabled.`
+                    : `${paste.commentsCount} comments and ${paste.stars} stars.`}
+                </p>
               </div>
             </div>
 

@@ -34,12 +34,15 @@ export type PasteDraft = {
   slug: string;
   title: string;
   content: string;
+  viewCount: number;
   language: string;
   folder: string | null;
   category: string | null;
   tags: string[];
   visibility: Visibility;
   password: string | null;
+  secretMode: boolean;
+  captchaRequired: boolean;
   burnAfterRead: boolean;
   burnAfterViews: number;
   favorite: boolean;
@@ -73,6 +76,7 @@ export type PublicPasteRecord = Omit<PasteDraft, "password"> & {
   starredByViewer: boolean;
   canEdit: boolean;
   requiresPassword: boolean;
+  requiresCaptcha: boolean;
   status: "active" | "hidden" | "deleted";
 };
 

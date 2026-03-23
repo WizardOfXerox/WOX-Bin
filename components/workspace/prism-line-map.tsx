@@ -3,11 +3,13 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
 
 import { Prism } from "@/lib/prism-setup";
+import { buildPrivacyRedirectHref } from "@/lib/outbound-links";
 import { prismGrammarForLanguage } from "@/lib/prism-language";
 
 import "prismjs/themes/prism-tomorrow.css";
 
 const MAX_LINES = 4000;
+const URL_RE = /\bhttps?:\/\/[^\s<>"']+/gi;
 
 function escapeHtml(text: string) {
   return text
@@ -17,11 +19,64 @@ function escapeHtml(text: string) {
     .replace(/"/g, "&quot;");
 }
 
+function escapeAttr(text: string) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function trimTrailingUrlPunctuation(value: string) {
+  let url = value;
+  let trailing = "";
+
+  while (url.length > 0 && /[.,!?;:)\]}]/.test(url[url.length - 1] ?? "")) {
+    trailing = `${url[url.length - 1]}${trailing}`;
+    url = url.slice(0, -1);
+  }
+
+  return {
+    url,
+    trailing
+  };
+}
+
 function highlightLine(line: string, grammar: string): string {
   if (grammar === "plain" || !Prism.languages[grammar]) {
     return escapeHtml(line);
   }
   return Prism.highlight(line, Prism.languages[grammar]!, grammar);
+}
+
+function renderLinkedUrlSegment(url: string, trailing = "") {
+  const href = buildPrivacyRedirectHref(url);
+  return `<a class="wox-line-link" href="${escapeAttr(href)}">${escapeHtml(url)}</a>${escapeHtml(trailing)}`;
+}
+
+function renderLineHtml(line: string, grammar: string, linkifyUrls: boolean): string {
+  if (!linkifyUrls) {
+    return highlightLine(line, grammar);
+  }
+
+  let lastIndex = 0;
+  let html = "";
+
+  for (const match of line.matchAll(URL_RE)) {
+    const raw = match[0];
+    const index = match.index ?? 0;
+    const { url, trailing } = trimTrailingUrlPunctuation(raw);
+    html += highlightLine(line.slice(lastIndex, index), grammar);
+    html += renderLinkedUrlSegment(url, trailing);
+    lastIndex = index + raw.length;
+  }
+
+  if (lastIndex === 0) {
+    return highlightLine(line, grammar);
+  }
+
+  html += highlightLine(line.slice(lastIndex), grammar);
+  return html;
 }
 
 type Props = {
@@ -31,6 +86,8 @@ type Props = {
   showLineNumbers?: boolean;
   /** Default true. When false, removes horizontal rules between lines. */
   showLineSeparators?: boolean;
+  /** Public paste source view: convert visible URLs into clickable links. */
+  linkifyUrls?: boolean;
 };
 
 /** Numbered lines with per-line Prism (jump links #line-N). */
@@ -38,7 +95,8 @@ export function PrismLineMap({
   content,
   language,
   showLineNumbers = true,
-  showLineSeparators = true
+  showLineSeparators = true,
+  linkifyUrls = false
 }: Props) {
   /**
    * Markdown is rendered line-by-line; Prism’s markdown grammar on each row looks like random
@@ -65,13 +123,13 @@ export function PrismLineMap({
       if (grammar === "plain" || !Prism.languages[grammar]) {
         el.className =
           "block whitespace-pre-wrap break-words font-mono text-sm leading-7 [tab-size:2] text-muted-foreground";
-        el.textContent = line;
+        el.innerHTML = renderLineHtml(line, "plain", linkifyUrls);
         return;
       }
       el.className = `language-${grammar} block whitespace-pre-wrap break-words font-mono text-sm leading-7 [tab-size:2]`;
-      el.innerHTML = highlightLine(line, grammar);
+      el.innerHTML = renderLineHtml(line, grammar, linkifyUrls);
     });
-  }, [content, language, display, grammar]);
+  }, [content, language, display, grammar, linkifyUrls]);
 
   return (
     <div className="rounded-[1.25rem] border border-border bg-muted/50 p-4 dark:bg-black/30">

@@ -1,9 +1,10 @@
 import { cookies } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { PublicPasteShell } from "@/components/public-paste-shell";
-import { getPasteAccessCookieName } from "@/lib/paste-access";
+import { getPasteAccessCookieName, getPasteCaptchaCookieName } from "@/lib/paste-access";
+import { getPasteSharePath } from "@/lib/paste-links";
 import { getPasteForViewer, listCommentsForPaste } from "@/lib/paste-service";
 import { viewerFromSession } from "@/lib/session";
 
@@ -19,27 +20,48 @@ export default async function PublicPastePage({ params }: PageProps) {
   const viewer = viewerFromSession(session);
   const cookieStore = await cookies();
   const accessGrant = cookieStore.get(getPasteAccessCookieName(slug))?.value ?? null;
+  const captchaGrant = cookieStore.get(getPasteCaptchaCookieName(slug))?.value ?? null;
 
   const result = await getPasteForViewer({
     slug,
     viewer,
     accessGrant,
-    trackView: true
+    captchaGrant,
+    trackView: false
   });
 
   if (!result.paste) {
     notFound();
   }
 
-  const comments = result.locked
+  if (result.paste.secretMode) {
+    redirect(getPasteSharePath(slug, true));
+  }
+
+  const trackedResult = result.locked
+    ? result
+    : await getPasteForViewer({
+        slug,
+        viewer,
+        accessGrant,
+        captchaGrant,
+        trackView: true
+      });
+
+  if (!trackedResult.paste) {
+    notFound();
+  }
+
+  const comments = trackedResult.locked
     ? []
-    : await listCommentsForPaste(slug, viewer, accessGrant);
+    : await listCommentsForPaste(slug, viewer, accessGrant, captchaGrant);
 
   return (
     <PublicPasteShell
       initialComments={comments}
-      initialLocked={result.locked}
-      initialPaste={result.paste}
+      initialAccessRequirement={trackedResult.lockReason}
+      initialLocked={trackedResult.locked}
+      initialPaste={trackedResult.paste}
       signedIn={Boolean(session?.user?.id)}
     />
   );

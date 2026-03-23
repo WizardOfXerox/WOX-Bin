@@ -2,6 +2,7 @@ import { marked, type Tokens } from "marked";
 
 import { extractHeadings as extractHeadingsForIds, preprocessRentryMarkdown } from "@/lib/markdown/rentry-preprocess";
 import { sanitizeUserMarkdownHtml } from "@/lib/markdown/markdown-sanitize";
+import { rewriteSanitizedHtmlAnchors } from "@/lib/outbound-links";
 import { highlightToHtmlFragment } from "@/lib/prism-html-string";
 import { fenceLanguageToWoxId } from "@/lib/prism-language";
 
@@ -62,5 +63,5 @@ export function parseUserMarkdown(markdown: string, options?: ParseUserMarkdownO
     breaks: options?.breaks ?? true
   }) as string;
   const withIds = injectHeadingIds(raw, headings);
-  return sanitizeUserMarkdownHtml(withIds);
+  return rewriteSanitizedHtmlAnchors(sanitizeUserMarkdownHtml(withIds));
 }

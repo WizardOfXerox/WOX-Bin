@@ -37,6 +37,7 @@ export const supportTicketCategoryEnum = pgEnum("support_ticket_category", [
   "bug",
   "other"
 ]);
+export const publicDropKindEnum = pgEnum("public_drop_kind", ["text", "file"]);
 
 /** Server-side conversion jobs (hybrid converter / worker queue). @see docs/CONVERSION-PLATFORM.md */
 export const conversionJobStatusEnum = pgEnum("conversion_job_status", [
@@ -276,6 +277,8 @@ export const pastes = pgTable(
     visibility: visibilityEnum("visibility").notNull().default("private"),
     status: moderationStatusEnum("status").notNull().default("active"),
     passwordHash: text("password_hash"),
+    secretMode: boolean("secret_mode").notNull().default(false),
+    captchaRequired: boolean("captcha_required").notNull().default(false),
     anonymousClaimHash: text("anonymous_claim_hash"),
     burnAfterRead: boolean("burn_after_read").notNull().default(false),
     burnAfterViews: integer("burn_after_views").notNull().default(0),
@@ -331,6 +334,34 @@ export const pasteVersions = pgTable("paste_versions", {
     .default(sql`'[]'::jsonb`),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow()
 });
+
+export const publicDrops = pgTable(
+  "public_drops",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    slug: text("slug").notNull(),
+    kind: publicDropKindEnum("kind").notNull(),
+    filename: text("filename"),
+    mimeType: text("mime_type").notNull(),
+    contentText: text("content_text"),
+    contentBase64: text("content_base64"),
+    sizeBytes: integer("size_bytes").notNull().default(0),
+    deleteTokenHash: text("delete_token_hash"),
+    burnAfterRead: boolean("burn_after_read").notNull().default(false),
+    viewCount: integer("view_count").notNull().default(0),
+    status: moderationStatusEnum("status").notNull().default("active"),
+    expiresAt: timestamp("expires_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { mode: "date" })
+  },
+  (table) => ({
+    slugUnique: uniqueIndex("public_drops_slug_unique").on(table.slug),
+    activeExpiresIdx: index("public_drops_active_expires_idx").on(table.status, table.expiresAt)
+  })
+);
 
 export const comments = pgTable("comments", {
   id: serial("id").primaryKey(),
