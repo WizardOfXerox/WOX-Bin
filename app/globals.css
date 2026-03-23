@@ -270,9 +270,8 @@ html.theme-light .glass-panel {
   box-sizing: border-box;
   overflow: auto;
   scrollbar-gutter: stable;
-  /* Only visible scrollbar in the workspace chrome: keep other panels on workspace-scrollbar-hide */
-  scrollbar-width: thin;
-  scrollbar-color: hsl(var(--muted-foreground) / 0.45) hsl(var(--muted) / 0.3);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   border: 0;
   font-family: var(--font-mono), ui-monospace, monospace !important;
   font-size: var(--wox-editor-fs);
@@ -289,29 +288,10 @@ html.theme-light .glass-panel {
   -moz-osx-font-smoothing: grayscale;
 }
 
-.dark .wox-prism-editor textarea.wox-prism-ta {
-  scrollbar-color: hsl(var(--muted-foreground) / 0.5) hsl(var(--muted) / 0.22);
-}
-
 .wox-prism-editor textarea.wox-prism-ta::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-.wox-prism-editor textarea.wox-prism-ta::-webkit-scrollbar-track {
-  border-radius: 999px;
-  background: hsl(var(--muted) / 0.28);
-}
-
-.wox-prism-editor textarea.wox-prism-ta::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-  background-color: hsl(var(--muted-foreground) / 0.38);
-}
-
-.wox-prism-editor textarea.wox-prism-ta::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--muted-foreground) / 0.55);
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 /* Beat prism theme `code[class*="language-"]` (Consolas, tab-size 4, line-height 1.5) */
