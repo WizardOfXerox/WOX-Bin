@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { Analytics } from "@vercel/analytics/next";
 import { AuthSessionProvider } from "@/components/providers/session-provider";
 import { ThemeRootProvider } from "@/components/providers/theme-root-provider";
 import { INLINE_UI_THEME_SCRIPT } from "@/lib/ui-theme";
@@ -37,6 +38,7 @@ export default async function RootLayout({
         <ThemeRootProvider>
           <AuthSessionProvider session={null}>{children}</AuthSessionProvider>
         </ThemeRootProvider>
+        <Analytics />
       </body>
     </html>
   );
