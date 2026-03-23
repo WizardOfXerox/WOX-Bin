@@ -3,6 +3,15 @@ import { z } from "zod";
 import { BURN_VIEW_OPTIONS, CATEGORIES, LANGUAGES } from "@/lib/constants";
 import { PLAN_IDS } from "@/lib/plans";
 import { isAllowedPasteMediaMime, normalizeAttachmentMimeType } from "@/lib/paste-file-media";
+import {
+  isAllowedSupportImageMime,
+  SUPPORT_ATTACHMENT_MAX_BASE64,
+  SUPPORT_ATTACHMENT_MAX_BYTES,
+  SUPPORT_ATTACHMENT_MAX_COUNT,
+  SUPPORT_TICKET_CATEGORIES,
+  SUPPORT_TICKET_PRIORITIES,
+  SUPPORT_TICKET_STATUSES
+} from "@/lib/support";
 
 export const credentialsIdentifierSchema = z.string().trim().min(2).max(64);
 
@@ -163,6 +172,61 @@ export const commentInputSchema = z.object({
   content: z.string().trim().min(1).max(1000),
   parentId: z.number().int().positive().nullable().optional()
 });
+
+export const supportAttachmentSchema = z
+  .object({
+    filename: z.string().trim().min(1).max(255),
+    mimeType: z.string().trim().max(120),
+    content: z.string().max(SUPPORT_ATTACHMENT_MAX_BASE64),
+    sizeBytes: z.number().int().positive().max(SUPPORT_ATTACHMENT_MAX_BYTES)
+  })
+  .superRefine((data, ctx) => {
+    const mime = normalizeAttachmentMimeType(data.mimeType);
+    if (!mime || !mime.startsWith("image/") || !isAllowedSupportImageMime(mime)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Only common image attachments are allowed.",
+        path: ["mimeType"]
+      });
+    }
+    const compact = data.content.replace(/\s/g, "");
+    if (!/^[A-Za-z0-9+/=_-]*$/.test(compact) || compact.length < 8) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid base64 content for image attachment.",
+        path: ["content"]
+      });
+    }
+  });
+
+export const supportTicketCreateSchema = z.object({
+  subject: z.string().trim().min(4).max(140),
+  category: z.enum(SUPPORT_TICKET_CATEGORIES),
+  relatedPasteSlug: z.string().trim().max(128).optional().nullable(),
+  content: z.string().trim().min(8).max(4000),
+  attachments: z.array(supportAttachmentSchema).max(SUPPORT_ATTACHMENT_MAX_COUNT).default([])
+});
+
+export const supportTicketReplySchema = z.object({
+  content: z.string().trim().min(1).max(4000),
+  attachments: z.array(supportAttachmentSchema).max(SUPPORT_ATTACHMENT_MAX_COUNT).default([]),
+  internalNote: z.boolean().optional().default(false),
+  status: z.enum(SUPPORT_TICKET_STATUSES).optional()
+});
+
+export const supportTicketOwnerActionSchema = z.object({
+  action: z.enum(["close", "reopen"])
+});
+
+export const supportTicketStaffUpdateSchema = z
+  .object({
+    status: z.enum(SUPPORT_TICKET_STATUSES).optional(),
+    priority: z.enum(SUPPORT_TICKET_PRIORITIES).optional(),
+    assignedToUserId: z.union([z.string().trim().min(1).max(128), z.literal(""), z.null()]).optional()
+  })
+  .refine((data) => data.status !== undefined || data.priority !== undefined || data.assignedToUserId !== undefined, {
+    message: "Provide at least one support ticket update."
+  });
 
 export const reportInputSchema = z.object({
   pasteSlug: z.string().trim().max(128).optional(),

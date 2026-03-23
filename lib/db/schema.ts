@@ -21,6 +21,22 @@ export const teamRoleEnum = pgEnum("team_role", ["owner", "admin", "editor", "vi
 export const visibilityEnum = pgEnum("paste_visibility", ["public", "unlisted", "private"]);
 export const moderationStatusEnum = pgEnum("moderation_status", ["active", "hidden", "deleted"]);
 export const reportStatusEnum = pgEnum("report_status", ["open", "reviewed", "resolved"]);
+export const supportTicketStatusEnum = pgEnum("support_ticket_status", [
+  "open",
+  "in_progress",
+  "waiting_on_user",
+  "resolved",
+  "closed"
+]);
+export const supportTicketPriorityEnum = pgEnum("support_ticket_priority", ["low", "normal", "high", "urgent"]);
+export const supportTicketCategoryEnum = pgEnum("support_ticket_category", [
+  "account",
+  "paste",
+  "billing",
+  "moderation",
+  "bug",
+  "other"
+]);
 
 /** Server-side conversion jobs (hybrid converter / worker queue). @see docs/CONVERSION-PLATFORM.md */
 export const conversionJobStatusEnum = pgEnum("conversion_job_status", [
@@ -360,6 +376,66 @@ export const reports = pgTable("reports", {
   status: reportStatusEnum("status").notNull().default("open"),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow()
 });
+
+export const supportTickets = pgTable(
+  "support_tickets",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    subject: text("subject").notNull(),
+    category: supportTicketCategoryEnum("category").notNull().default("other"),
+    priority: supportTicketPriorityEnum("priority").notNull().default("normal"),
+    status: supportTicketStatusEnum("status").notNull().default("open"),
+    relatedPasteSlug: text("related_paste_slug"),
+    assignedToUserId: text("assigned_to_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+    lastMessageAt: timestamp("last_message_at", { mode: "date" }).notNull().defaultNow(),
+    resolvedAt: timestamp("resolved_at", { mode: "date" }),
+    closedAt: timestamp("closed_at", { mode: "date" })
+  },
+  (table) => ({
+    userStatusIdx: index("support_tickets_user_status_idx").on(table.userId, table.status, table.lastMessageAt),
+    statusLastMessageIdx: index("support_tickets_status_last_message_idx").on(table.status, table.lastMessageAt),
+    assignedLastMessageIdx: index("support_tickets_assigned_last_message_idx").on(table.assignedToUserId, table.lastMessageAt)
+  })
+);
+
+export const supportMessages = pgTable(
+  "support_messages",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    ticketId: text("ticket_id")
+      .notNull()
+      .references(() => supportTickets.id, { onDelete: "cascade" }),
+    authorUserId: text("author_user_id").references(() => users.id, { onDelete: "set null" }),
+    authorRole: userRoleEnum("author_role").notNull().default("user"),
+    content: text("content").notNull(),
+    internalNote: boolean("internal_note").notNull().default(false),
+    attachments: jsonb("attachments")
+      .$type<
+        {
+          filename: string;
+          mimeType: string;
+          content: string;
+          sizeBytes: number;
+        }[]
+      >()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow()
+  },
+  (table) => ({
+    ticketCreatedIdx: index("support_messages_ticket_created_idx").on(table.ticketId, table.createdAt),
+    authorCreatedIdx: index("support_messages_author_created_idx").on(table.authorUserId, table.createdAt)
+  })
+);
 
 export const apiKeys = pgTable(
   "api_keys",

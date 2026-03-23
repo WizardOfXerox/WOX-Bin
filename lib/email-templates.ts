@@ -1,4 +1,5 @@
 import { getConfiguredAppOrigin } from "@/lib/request";
+import type { SupportTicketStatus } from "@/lib/support";
 
 type EmailAction = {
   label: string;
@@ -34,6 +35,15 @@ type PasteModerationEmailInput = {
   slug: string;
   status: "active" | "hidden" | "deleted";
   reason?: string | null;
+};
+
+type SupportTicketEmailInput = {
+  ticketId: string;
+  subject: string;
+  status: SupportTicketStatus;
+  previewLine?: string;
+  intro: string;
+  details?: string[];
 };
 
 function escapeHtml(value: string) {
@@ -404,4 +414,52 @@ export function buildPasteModerationEmail(input: PasteModerationEmailInput): Ren
           : "Your WOX-Bin paste was deleted",
     ...rendered
   };
+}
+
+function buildSupportTicketEmail(input: SupportTicketEmailInput): RenderedEmail {
+  const supportUrl = appHomeUrl() ? `${appHomeUrl()}/support?ticket=${encodeURIComponent(input.ticketId)}` : null;
+  const rendered = renderTransactionalEmail({
+    preview: input.previewLine ?? `Support update for ticket ${input.ticketId}`,
+    eyebrow: "Support",
+    title: `Support ticket ${input.ticketId.slice(0, 8).toUpperCase()}`,
+    intro: input.intro,
+    details: compactLines([
+      `Subject: ${input.subject}`,
+      `Current status: ${input.status.replace(/_/g, " ")}`,
+      ...(input.details ?? [])
+    ]),
+    action: supportUrl
+      ? {
+          label: "Open support ticket",
+          url: supportUrl
+        }
+      : undefined,
+    footerNote: "Replies and ticket history are tracked inside WOX-Bin support."
+  });
+
+  return {
+    subject: `WOX-Bin support: ${input.subject}`,
+    ...rendered
+  };
+}
+
+export function buildSupportTicketCreatedEmail(input: Omit<SupportTicketEmailInput, "intro">): RenderedEmail {
+  return buildSupportTicketEmail({
+    ...input,
+    intro: "Your support request was received. Staff will respond inside WOX-Bin support as soon as it is reviewed."
+  });
+}
+
+export function buildSupportTicketReplyEmail(input: Omit<SupportTicketEmailInput, "intro">): RenderedEmail {
+  return buildSupportTicketEmail({
+    ...input,
+    intro: "There is a new staff reply on your support ticket."
+  });
+}
+
+export function buildSupportTicketStatusEmail(input: Omit<SupportTicketEmailInput, "intro">): RenderedEmail {
+  return buildSupportTicketEmail({
+    ...input,
+    intro: "The status of your support ticket changed."
+  });
 }

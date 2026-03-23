@@ -5,6 +5,9 @@ import {
   buildMagicLinkEmail,
   buildPasswordResetEmail,
   buildPasteModerationEmail,
+  buildSupportTicketCreatedEmail,
+  buildSupportTicketReplyEmail,
+  buildSupportTicketStatusEmail,
   buildSignupVerificationEmail,
   buildSmtpTestEmail
 } from "@/lib/email-templates";
@@ -66,5 +69,31 @@ describe("email templates", () => {
     expect(email.subject).toBe("Your WOX-Bin paste was hidden");
     expect(email.text).toContain("example-paste");
     expect(email.html).toContain("Your paste was hidden");
+  });
+
+  it("renders support ticket confirmation and reply emails", () => {
+    const created = buildSupportTicketCreatedEmail({
+      ticketId: "12345678-aaaa-bbbb-cccc-1234567890ab",
+      subject: "Paste cannot be opened",
+      status: "open",
+      details: ["Related paste: demo-paste"]
+    });
+    const replied = buildSupportTicketReplyEmail({
+      ticketId: "12345678-aaaa-bbbb-cccc-1234567890ab",
+      subject: "Paste cannot be opened",
+      status: "waiting_on_user",
+      details: ["Staff attached 1 image."]
+    });
+    const status = buildSupportTicketStatusEmail({
+      ticketId: "12345678-aaaa-bbbb-cccc-1234567890ab",
+      subject: "Paste cannot be opened",
+      status: "resolved",
+      details: ["Status changed from open to resolved."]
+    });
+
+    expect(created.subject).toContain("Paste cannot be opened");
+    expect(created.html).toContain("Support ticket");
+    expect(replied.text).toContain("waiting on user");
+    expect(status.html).toContain("resolved");
   });
 });
