@@ -1,30 +1,16 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 
 import { auth } from "@/auth";
 import { logAudit } from "@/lib/audit";
 import { jsonError } from "@/lib/http";
 import { migratePastesForUser } from "@/lib/pastebin-migrate";
+import { pastebinMigrateBodySchema } from "@/lib/pastebin-migrate-schema";
 import { rateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
 /** Large imports may need time on Vercel */
 export const maxDuration = 120;
-
-const bodySchema = z.object({
-  username: z.string().trim().min(1).max(64),
-  password: z.string().min(1).max(256),
-  limit: z.number().int().min(1).max(500).optional().default(100),
-  folderName: z
-    .string()
-    .max(64)
-    .optional()
-    .transform((s) => {
-      const t = (s ?? "").trim();
-      return t.length > 0 ? t : null;
-    })
-});
 
 export async function GET() {
   const session = await auth();
@@ -67,7 +53,7 @@ export async function POST(req: Request) {
     return jsonError("Invalid JSON body.", 400);
   }
 
-  const parsed = bodySchema.safeParse(body);
+  const parsed = pastebinMigrateBodySchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }

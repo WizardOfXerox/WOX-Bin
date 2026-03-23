@@ -65,6 +65,7 @@ export function PastebinMigrateSettingsClient() {
     setLoading(true);
     setResult(null);
     setFetchError(null);
+    const trimmedFolderName = folderName.trim();
 
     const res = await fetch("/api/migrate/pastebin", {
       method: "POST",
@@ -73,7 +74,7 @@ export function PastebinMigrateSettingsClient() {
         username: username.trim(),
         password,
         limit: Math.min(500, Math.max(1, Math.floor(limit))),
-        folderName: folderName.trim() || null
+        ...(trimmedFolderName ? { folderName: trimmedFolderName } : {})
       })
     });
 
