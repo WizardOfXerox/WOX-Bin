@@ -16,7 +16,8 @@ type Props = {
 
 export function LandingDesktopAuthNav({ initialSession = null }: Props) {
   const { data: session, status } = useSession();
-  const effectiveSession = status === "loading" ? initialSession : session;
+  const effectiveSession = session?.user ? session : initialSession;
+  const showLoadingSkeleton = status === "loading" && !effectiveSession?.user;
 
   return (
     <div className="hidden items-center gap-2 sm:gap-3 md:flex">
@@ -38,7 +39,7 @@ export function LandingDesktopAuthNav({ initialSession = null }: Props) {
       <Button asChild variant="ghost">
         <Link href="/changelog">Changelog</Link>
       </Button>
-      {status === "loading" && !initialSession?.user ? (
+      {showLoadingSkeleton ? (
         <div
           aria-hidden
           className="h-9 w-[7.5rem] animate-pulse rounded-full bg-muted/40"

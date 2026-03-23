@@ -29,7 +29,8 @@ type Props = {
 export function LandingMobileNav({ initialSession = null }: Props) {
   const [open, setOpen] = useState(false);
   const { data: session, status } = useSession();
-  const effectiveSession = status === "loading" ? initialSession : session;
+  const effectiveSession = session?.user ? session : initialSession;
+  const showLoadingSkeleton = status === "loading" && !effectiveSession?.user;
 
   return (
     <Dialog onOpenChange={setOpen} open={open}>
@@ -96,7 +97,7 @@ export function LandingMobileNav({ initialSession = null }: Props) {
               </Button>
             </DialogClose>
           </div>
-          {status === "loading" && !initialSession?.user ? (
+          {showLoadingSkeleton ? (
             <div aria-hidden className="h-12 w-full animate-pulse rounded-full bg-muted/40" />
           ) : effectiveSession?.user ? (
             <>
