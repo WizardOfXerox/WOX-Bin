@@ -116,7 +116,7 @@ import {
   type RangeEdit
 } from "@/lib/ribbon-text-ops";
 import { WorkspacePasteComments } from "@/components/workspace/workspace-paste-comments";
-import { TurnstileField } from "@/components/turnstile-field";
+import { readTurnstileToken, resetTurnstileFields, TurnstileField } from "@/components/turnstile-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -2833,42 +2833,40 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
       return;
     }
 
-    const turnstileToken = (
-      document.querySelector('input[name="cf-turnstile-response"]') as HTMLInputElement | null
-    )?.value;
-
     setPublishing(true);
     setError(null);
+    try {
+      const response = await fetch("/api/public/pastes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          ...buildPastePayload(selectedPaste),
+          visibility: selectedPaste.visibility === "private" ? "unlisted" : selectedPaste.visibility,
+          turnstileToken: readTurnstileToken()
+        })
+      });
 
-    const response = await fetch("/api/public/pastes", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        ...buildPastePayload(selectedPaste),
-        visibility: selectedPaste.visibility === "private" ? "unlisted" : selectedPaste.visibility,
-        turnstileToken: turnstileToken || ""
-      })
-    });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ?? "Anonymous publish failed.");
+        return;
+      }
 
-    if (!response.ok) {
-      const body = (await response.json().catch(() => null)) as { error?: string } | null;
-      setError(body?.error ?? "Anonymous publish failed.");
+      const body = (await response.json()) as {
+        paste: PublicPasteRecord;
+        claimToken: string;
+      };
+
+      await storeAnonymousClaim(body.paste.slug, body.claimToken);
+      const url = getPasteShareUrl(window.location.origin, body.paste.slug, body.paste.secretMode);
+      setPublishUrl(url);
+      setStatus("Published anonymously. Save the share link or sign in later to claim it.");
+    } finally {
+      resetTurnstileFields();
       setPublishing(false);
-      return;
     }
-
-    const body = (await response.json()) as {
-      paste: PublicPasteRecord;
-      claimToken: string;
-    };
-
-    await storeAnonymousClaim(body.paste.slug, body.claimToken);
-    const url = getPasteShareUrl(window.location.origin, body.paste.slug, body.paste.secretMode);
-    setPublishUrl(url);
-    setStatus("Published anonymously. Save the share link or sign in later to claim it.");
-    setPublishing(false);
   }
 
   async function handleCreateApiKey() {

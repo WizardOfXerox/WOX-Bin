@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { TurnstileField } from "@/components/turnstile-field";
+import { readTurnstileToken, resetTurnstileFields, TurnstileField } from "@/components/turnstile-field";
 
 export default function SignUpPage() {
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +22,7 @@ export default function SignUpPage() {
       username: String(form.get("username") ?? ""),
       email: String(form.get("email") ?? ""),
       password: String(form.get("password") ?? ""),
-      turnstileToken: String(form.get("cf-turnstile-response") ?? ""),
+      turnstileToken: readTurnstileToken(event.currentTarget),
       acceptTerms: form.get("acceptTerms") === "on"
     };
 
@@ -37,6 +37,7 @@ export default function SignUpPage() {
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as { error?: string } | null;
       setError(body?.error ?? "Registration failed.");
+      resetTurnstileFields(event.currentTarget);
       setLoading(false);
       return;
     }

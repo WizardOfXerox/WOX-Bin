@@ -26,7 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { PasteLineageBanner } from "@/components/paste-lineage-banner";
-import { TurnstileField } from "@/components/turnstile-field";
+import { readTurnstileToken, resetTurnstileFields, TurnstileField } from "@/components/turnstile-field";
 import { CodeImageDialog } from "@/components/workspace/code-image-dialog";
 import { PrismLineMap } from "@/components/workspace/prism-line-map";
 import { buildThreadedComments, commentAuthorLabel } from "@/lib/comment-thread";
@@ -322,48 +322,48 @@ export function PublicPasteShell({
     event.preventDefault();
     setPendingUnlock(true);
     setUnlockError(null);
+    try {
+      const response = await fetch(`/api/pastes/${paste.slug}/unlock`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          password: password.trim() || undefined,
+          turnstileToken: readTurnstileToken(event.currentTarget)
+        })
+      });
 
-    const response = await fetch(`/api/pastes/${paste.slug}/unlock`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        password: password.trim() || undefined,
-        turnstileToken:
-          (document.querySelector('input[name="cf-turnstile-response"]') as HTMLInputElement | null)?.value ?? ""
-      })
-    });
+      if (!response.ok) {
+        const body = await readJson<{
+          error?: string;
+          lockReason?: "password" | "captcha";
+          requiresPassword?: boolean;
+          requiresCaptcha?: boolean;
+        }>(response);
+        const nextRequirement =
+          body?.lockReason ?? (body?.requiresCaptcha ? "captcha" : body?.requiresPassword ? "password" : null);
 
-    if (!response.ok) {
-      const body = await readJson<{
-        error?: string;
-        lockReason?: "password" | "captcha";
-        requiresPassword?: boolean;
-        requiresCaptcha?: boolean;
-      }>(response);
-      const nextRequirement =
-        body?.lockReason ?? (body?.requiresCaptcha ? "captcha" : body?.requiresPassword ? "password" : null);
+        if (response.status === 423 && nextRequirement) {
+          setAccessRequirement(nextRequirement);
+          setUnlockError(
+            nextRequirement === "password"
+              ? "CAPTCHA complete. Enter the paste password to continue."
+              : body?.error ?? "Complete the CAPTCHA to continue."
+          );
+          return;
+        }
 
-      if (response.status === 423 && nextRequirement) {
-        setAccessRequirement(nextRequirement);
-        setUnlockError(
-          nextRequirement === "password"
-            ? "CAPTCHA complete. Enter the paste password to continue."
-            : body?.error ?? "Complete the CAPTCHA to continue."
-        );
-        setPendingUnlock(false);
+        setUnlockError(body?.error ?? "Could not unlock paste.");
         return;
       }
 
-      setUnlockError(body?.error ?? "Could not unlock paste.");
+      await refreshPaste();
+      setPassword("");
+    } finally {
+      resetTurnstileFields(event.currentTarget);
       setPendingUnlock(false);
-      return;
     }
-
-    await refreshPaste();
-    setPassword("");
-    setPendingUnlock(false);
   }
 
   async function handleStar() {

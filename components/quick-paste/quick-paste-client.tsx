@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Clipboard, Copy, ExternalLink, Flame, Link2, ShieldCheck, Sparkles } from "lucide-react";
 
-import { TurnstileField } from "@/components/turnstile-field";
+import { readTurnstileToken, resetTurnstileFields, TurnstileField } from "@/components/turnstile-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,43 +51,45 @@ export function QuickPasteClient() {
     setError(null);
     setPublishedUrl(null);
 
-    const turnstileToken =
-      (document.querySelector('input[name="cf-turnstile-response"]') as HTMLInputElement | null)?.value ?? "";
+    try {
+      const response = await fetch("/api/public/pastes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          title: title.trim() || "Quick paste",
+          content,
+          language,
+          visibility: secretMode ? "unlisted" : visibility,
+          password: password.trim() || null,
+          secretMode,
+          burnAfterRead,
+          captchaRequired,
+          slug: customSlug || undefined,
+          burnAfterViews: 0,
+          tags: [],
+          folderName: null,
+          category: null,
+          files: [],
+          turnstileToken: readTurnstileToken()
+        })
+      });
 
-    const response = await fetch("/api/public/pastes", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        title: title.trim() || "Quick paste",
-        content,
-        language,
-        visibility: secretMode ? "unlisted" : visibility,
-        password: password.trim() || null,
-        secretMode,
-        burnAfterRead,
-        captchaRequired,
-        slug: customSlug || undefined,
-        burnAfterViews: 0,
-        tags: [],
-        folderName: null,
-        category: null,
-        files: [],
-        turnstileToken
-      })
-    });
+      const body = (await response.json().catch(() => null)) as { error?: string } | PublishResponse | null;
+      if (!response.ok || !body || !("paste" in body)) {
+        setError(body && "error" in body ? body.error ?? "Could not publish the paste." : "Could not publish the paste.");
+        return;
+      }
 
-    const body = (await response.json().catch(() => null)) as { error?: string } | PublishResponse | null;
-    if (!response.ok || !body || !("paste" in body)) {
-      setError(body && "error" in body ? body.error ?? "Could not publish the paste." : "Could not publish the paste.");
+      const nextUrl = `${window.location.origin}/${body.paste.secretMode ? "s" : "p"}/${body.paste.slug}`;
+      setPublishedUrl(nextUrl);
+    } catch {
+      setError("Could not publish the paste.");
+    } finally {
+      resetTurnstileFields();
       setLoading(false);
-      return;
     }
-
-    const nextUrl = `${window.location.origin}/${body.paste.secretMode ? "s" : "p"}/${body.paste.slug}`;
-    setPublishedUrl(nextUrl);
-    setLoading(false);
   }
 
   async function copyPublishedUrl() {
