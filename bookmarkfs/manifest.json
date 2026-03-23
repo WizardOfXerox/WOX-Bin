@@ -24,6 +24,15 @@
         "title": "WOX-Bin Companion",
         "default_popup": "./dist/index.html"
     },
+    "content_scripts": [{
+        "matches": [
+            "https://*/*",
+            "http://localhost/*",
+            "http://127.0.0.1/*"
+        ],
+        "js": ["content-script.js"],
+        "run_at": "document_start"
+    }],
     "web_accessible_resources": [{
         "resources": ["dist/unrar.wasm"],
         "matches": ["<all_urls>"]

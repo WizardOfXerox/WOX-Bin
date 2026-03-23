@@ -110,13 +110,16 @@ export default function BookmarkFsPage() {
                     <ExternalLink className="h-4 w-4" />
                   </a>
                 </Button>
+                <Button asChild size="lg" variant="secondary">
+                  <Link href="/bookmarkfs/sync">Open sync page</Link>
+                </Button>
                 <Button asChild size="lg" variant="outline">
                   <Link href="/app">
                     Open workspace
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
-                <Button asChild size="lg" variant="secondary">
+                <Button asChild size="lg" variant="ghost">
                   <Link href="/doc">Read docs</Link>
                 </Button>
               </div>
@@ -131,6 +134,16 @@ export default function BookmarkFsPage() {
                 <p className="mt-3 text-sm leading-7 text-muted-foreground">
                   Save profiles for production, staging, or local WOX-Bin deployments, then manage cloud pastes from the
                   extension without giving up the main web app.
+                </p>
+              </div>
+              <div className="rounded-[1.75rem] border border-border/70 bg-background/70 p-5">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Workflow className="h-4 w-4 text-primary" />
+                  Hosted sync page
+                </div>
+                <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                  The dedicated <code className="rounded bg-background/80 px-1.5 py-0.5 text-[0.7rem]">/bookmarkfs/sync</code> page
+                  can talk to the extension, display the local vault inside the hosted app, and push selected files into the workspace.
                 </p>
               </div>
               <div className="rounded-[1.75rem] border border-border/70 bg-background/70 p-5">
