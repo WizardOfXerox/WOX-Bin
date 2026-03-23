@@ -1533,7 +1533,32 @@ body:not(.ext-app) .rwd-table td {
 }
 
 #woxbin-root .wb-attach-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-bottom: 8px;
+}
+
+#woxbin-root .wb-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+#woxbin-root .wb-attach-summary {
+  min-width: 0;
+  flex: 1 1 180px;
+  font-size: 12px;
+  color: hsl(var(--x-muted));
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 #woxbin-root .wb-attach-list {

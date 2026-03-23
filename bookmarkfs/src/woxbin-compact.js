@@ -364,7 +364,8 @@ export async function mountWoxBinCompact(rootEl) {
         <label>Attachments <span class="wb-muted">(optional · text/code or images)</span></label>
         <div class="wb-attach-toolbar">
           <button type="button" class="wb-btn wb-btn-secondary wb-btn-tiny" id="wb-attach-pick">Add files…</button>
-          <input type="file" id="wb-attach-input" multiple style="display:none" accept="text/*,.md,.json,.js,.ts,.mjs,.cjs,.css,.html,.htm,.xml,.yml,.yaml,image/*,video/mp4,video/webm" />
+          <input type="file" id="wb-attach-input" class="wb-file-input" hidden tabindex="-1" aria-hidden="true" multiple accept="text/*,.md,.json,.js,.ts,.mjs,.cjs,.css,.html,.htm,.xml,.yml,.yaml,image/*,video/mp4,video/webm" />
+          <span class="wb-attach-summary" id="wb-attach-summary">No files selected</span>
         </div>
         <ul class="wb-attach-list" id="wb-attach-list"></ul>
       </div>
@@ -416,6 +417,7 @@ export async function mountWoxBinCompact(rootEl) {
   const btnCreate = $("wb-create");
   const attachInput = $("wb-attach-input");
   const attachPick = $("wb-attach-pick");
+  const attachSummary = $("wb-attach-summary");
   const btnOpenSync = $("wb-shell-open-sync");
   const ephemeralApiKeyTokens = new Map();
 
@@ -453,6 +455,15 @@ export async function mountWoxBinCompact(rootEl) {
 
   function renderAttachList() {
     attachList.innerHTML = "";
+    if (attachSummary) {
+      if (composerAttachments.length === 0) {
+        attachSummary.textContent = "No files selected";
+      } else if (composerAttachments.length === 1) {
+        attachSummary.textContent = composerAttachments[0].filename;
+      } else {
+        attachSummary.textContent = `${composerAttachments.length} files ready`;
+      }
+    }
     composerAttachments.forEach((f, idx) => {
       const li = document.createElement("li");
       li.className = "wb-attach-item";

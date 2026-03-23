@@ -36,6 +36,8 @@ import {
   FolderInput,
   FolderPlus,
   FolderTree,
+  Eye,
+  EyeOff,
   GitCompare,
   Image as ImageIcon,
   Keyboard,
@@ -196,7 +198,7 @@ import {
   WORKSPACE_FILE_IMPORT_ACCEPT
 } from "@/lib/workspace-import";
 import type { AccountPlanSummary, PlanId, PlanStatus } from "@/lib/plans";
-import type { PasteDraft, PasteVersionDraft, PublicPasteRecord } from "@/lib/types";
+import type { LocalWorkspaceSnapshot, PasteDraft, PasteVersionDraft, PublicPasteRecord } from "@/lib/types";
 import { cn, formatDate, normalizeOptionalSlug, normalizeTagList, slugify } from "@/lib/utils";
 
 /** Sidebar folder sentinel: public feed (legacy “everyone’s public”). */
@@ -208,6 +210,7 @@ const MIN_WORKSPACE_ZOOM = 70;
 const MAX_WORKSPACE_ZOOM = 150;
 const WORKSPACE_ZOOM_STEP = 10;
 const DEFAULT_WORKSPACE_ZOOM = 100;
+const API_KEY_TOKEN_STORAGE_PREFIX = "woxbin_api_key_tokens";
 
 type ListQuickFilter = "all" | "favorites" | "recent" | "archived";
 
@@ -601,6 +604,64 @@ function tutorialStorageKey(userId: string) {
   return `${TUTORIAL_STORAGE_PREFIX}:${userId}`;
 }
 
+function apiKeyTokenStorageKey(userId: string) {
+  return `${API_KEY_TOKEN_STORAGE_PREFIX}:${userId}`;
+}
+
+function readRememberedApiKeyTokens(userId: string | null | undefined): Record<string, string> {
+  if (typeof window === "undefined" || !userId) {
+    return {};
+  }
+
+  try {
+    const raw = window.localStorage.getItem(apiKeyTokenStorageKey(userId));
+    if (!raw) {
+      return {};
+    }
+
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries(parsed).filter((entry): entry is [string, string] => typeof entry[0] === "string" && typeof entry[1] === "string" && entry[1].length > 0)
+    );
+  } catch {
+    return {};
+  }
+}
+
+function writeRememberedApiKeyTokens(userId: string | null | undefined, tokens: Record<string, string>) {
+  if (typeof window === "undefined" || !userId) {
+    return;
+  }
+
+  if (Object.keys(tokens).length === 0) {
+    window.localStorage.removeItem(apiKeyTokenStorageKey(userId));
+    return;
+  }
+
+  window.localStorage.setItem(apiKeyTokenStorageKey(userId), JSON.stringify(tokens));
+}
+
+function rememberApiKeyToken(userId: string | null | undefined, keyId: string, token: string) {
+  if (!userId || !keyId || !token) {
+    return;
+  }
+
+  writeRememberedApiKeyTokens(userId, {
+    ...readRememberedApiKeyTokens(userId),
+    [keyId]: token
+  });
+}
+
+function forgetRememberedApiKeyToken(userId: string | null | undefined, keyId: string) {
+  if (!userId || !keyId) {
+    return;
+  }
+
+  const next = { ...readRememberedApiKeyTokens(userId) };
+  delete next[keyId];
+  writeRememberedApiKeyTokens(userId, next);
+}
+
 function applySidebarSort(pastes: WorkspacePaste[], order: SortOrder): WorkspacePaste[] {
   if (order === "pinned_updated") {
     return sortPastes(pastes);
@@ -658,6 +719,22 @@ function sanitizeSnapshot(snapshot: WorkspaceSnapshot): WorkspaceSnapshot {
     ),
     pastes: sortPastes(snapshot.pastes)
   };
+}
+
+function buildAccountImportDrafts(snapshot: LocalWorkspaceSnapshot): WorkspacePaste[] {
+  return snapshot.pastes.map((paste) =>
+    markNewAccountDraft(
+      createEmptyPaste({
+        ...paste,
+        id: undefined,
+        slug: undefined,
+        viewCount: 0,
+        visibility: paste.secretMode ? "unlisted" : paste.visibility,
+        password: null
+      }) as WorkspacePaste,
+      "account"
+    )
+  );
 }
 
 function buildPastePayload(paste: WorkspacePaste) {
@@ -886,6 +963,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   const [search, setSearch] = useState("");
   const [localImportCount, setLocalImportCount] = useState(0);
   const [apiKeys, setApiKeys] = useState<ApiKeyRecord[]>([]);
+  const [revealedApiKeyIds, setRevealedApiKeyIds] = useState<Set<string>>(() => new Set());
   const [accountPlan, setAccountPlan] = useState<AccountPlanSummary | null>(null);
   const [apiKeyLabel, setApiKeyLabel] = useState("CLI Upload");
   const [viewHistory, setViewHistory] = useState<PasteViewHistoryEntry[]>([]);
@@ -1058,6 +1136,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
     const keysData = keysResponse.ok
       ? ((await keysResponse.json()) as { keys: ApiKeyRecord[] })
       : { keys: [] };
+    const rememberedApiKeyTokens = readRememberedApiKeyTokens(sessionUserId);
 
     if (localResult) {
       const lastMergedAt = localResult.meta.lastMergedAt ? new Date(localResult.meta.lastMergedAt).getTime() : 0;
@@ -1072,7 +1151,10 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
     setApiKeys((current) =>
       keysData.keys.map((entry) => ({
         ...entry,
-        token: current.find((currentEntry) => currentEntry.id === entry.id)?.token ?? null
+        token:
+          current.find((currentEntry) => currentEntry.id === entry.id)?.token ??
+          rememberedApiKeyTokens[entry.id] ??
+          null
       }))
     );
     setAccountPlan(workspaceData.plan);
@@ -2715,41 +2797,18 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
         const imported = parseLocalWorkspaceJson(text);
 
         if (mode === "account" && sessionUser) {
-          setSaving(true);
-
-          try {
-            let importedCount = 0;
-            let firstSavedId: string | null = null;
-
-            for (const draft of imported.pastes) {
-              const response = await fetch("/api/workspace/pastes", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json"
-                },
-                body: JSON.stringify(buildPastePayload(draft as WorkspacePaste))
-              });
-
-              if (!response.ok) {
-                const body = (await response.json().catch(() => null)) as { error?: string } | null;
-                throw new Error(body?.error ?? `Could not import "${draft.title}".`);
-              }
-
-              const body = (await response.json()) as SavePasteResponse;
-              setAccountPlan(body.plan);
-              if (!firstSavedId) {
-                firstSavedId = body.paste.id;
-              }
-              importedCount += 1;
-            }
-
-            await refreshWorkspace("account");
-            setSelectedId(firstSavedId);
-            leavePublicFeedForNewWorkspacePaste();
-            setStatus(`Imported ${importedCount} paste(s) into your account workspace.`);
-          } finally {
-            setSaving(false);
-          }
+          const drafts = buildAccountImportDrafts(imported);
+          setSnapshot((current) =>
+            sanitizeSnapshot({
+              folders: [...current.folders, ...imported.folders],
+              pastes: [...drafts, ...current.pastes]
+            })
+          );
+          setSelectedId(drafts[0]?.id ?? null);
+          leavePublicFeedForNewWorkspacePaste();
+          setStatus(
+            `Imported ${drafts.length} paste(s) as account drafts. Review them, then save each one to your hosted workspace.`
+          );
         } else {
           const localImported = await importLocalWorkspaceJson(text);
           setMode("local");
@@ -2977,6 +3036,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
 
     const body = (await response.json()) as ApiKeyCreateResponse;
     const key = body.key;
+    rememberApiKeyToken(sessionUserId, key.id, key.token);
     setAccountPlan(body.plan);
     setApiKeys((current) => [
       {
@@ -2988,8 +3048,9 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
       },
       ...current
     ]);
+    setRevealedApiKeyIds((current) => new Set(current).add(key.id));
     setApiKeyLabel("CLI Upload");
-    setStatus("Created a new API key. Copy it from its card now because it will only be shown once.");
+    setStatus("Created a new API key. This browser can now reveal and copy it again from the key card.");
   }
 
   async function handleRevokeApiKey(id: string) {
@@ -3004,8 +3065,26 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
 
     const body = (await response.json()) as MutationPlanResponse;
     setAccountPlan(body.plan);
+    forgetRememberedApiKeyToken(sessionUserId, id);
+    setRevealedApiKeyIds((current) => {
+      const next = new Set(current);
+      next.delete(id);
+      return next;
+    });
     setApiKeys((current) => current.filter((entry) => entry.id !== id));
     setStatus("Revoked the selected API key.");
+  }
+
+  function toggleApiKeyReveal(id: string) {
+    setRevealedApiKeyIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
   }
 
   async function handleCopyApiKeyToken(token: string) {
@@ -5711,21 +5790,54 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                           Revoke
                         </Button>
                       </div>
-                      {key.token ? (
-                        <div className="mt-3 rounded-[1rem] border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/5 dark:text-amber-100">
-                          <p className="font-medium">Copy this token now</p>
-                          <p className="mt-1 text-xs text-current/90">This value is only stored in this browser session after creation.</p>
-                          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-                            <div className="min-w-0 flex-1 break-all rounded-xl border border-amber-500/20 bg-background/70 px-3 py-2 font-mono text-xs text-foreground dark:border-amber-400/20 dark:bg-black/20">
-                              {key.token}
+                      <div className="mt-3 rounded-[1rem] border border-border/80 bg-background/55 p-3">
+                        {key.token ? (
+                          <>
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="text-sm font-medium text-foreground">Stored on this browser</p>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Button
+                                  onClick={() => toggleApiKeyReveal(key.id)}
+                                  size="sm"
+                                  type="button"
+                                  variant="ghost"
+                                >
+                                  {revealedApiKeyIds.has(key.id) ? (
+                                    <EyeOff className="h-4 w-4" />
+                                  ) : (
+                                    <Eye className="h-4 w-4" />
+                                  )}
+                                  {revealedApiKeyIds.has(key.id) ? "Hide" : "Show"}
+                                </Button>
+                                <Button
+                                  onClick={() => void handleCopyApiKeyToken(key.token ?? "")}
+                                  size="sm"
+                                  type="button"
+                                  variant="secondary"
+                                >
+                                  <Copy className="h-4 w-4" />
+                                  Copy
+                                </Button>
+                              </div>
                             </div>
-                            <Button onClick={() => void handleCopyApiKeyToken(key.token ?? "")} size="sm" type="button" variant="secondary">
-                              <Copy className="h-4 w-4" />
-                              Copy
-                            </Button>
-                          </div>
-                        </div>
-                      ) : null}
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              This browser has a saved copy of the plaintext token for this key.
+                            </p>
+                            <div className="mt-3 min-w-0 break-all rounded-xl border border-border bg-muted/60 px-3 py-2 font-mono text-xs text-foreground">
+                              {revealedApiKeyIds.has(key.id) ? key.token : "\u2022".repeat(24)}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-medium text-foreground">Token unavailable here</p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              WOX-Bin stores API keys as hashes on the server, so this browser cannot reveal older
+                              plaintext tokens it never created or saved. Create a replacement key if you need to copy
+                              it again.
+                            </p>
+                          </>
+                        )}
+                      </div>
                     </div>
                   ))
                 )}
