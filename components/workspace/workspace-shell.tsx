@@ -953,6 +953,20 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   const deferredSearch = useDeferredValue(search);
   const effectiveEditorFontPx = narrowEditorViewport ? Math.max(editorFontSize, 16) : editorFontSize;
   const workspaceZoomFactor = pageZoom / 100;
+  const workspaceViewportStyle =
+    pageZoom === DEFAULT_WORKSPACE_ZOOM
+      ? undefined
+      : ({
+          zoom: workspaceZoomFactor,
+          ...(workspaceZoomFactor < 1
+            ? {
+                width: `${(100 / workspaceZoomFactor).toFixed(4)}%`,
+                height: `${(100 / workspaceZoomFactor).toFixed(4)}dvh`,
+                minHeight: `${(100 / workspaceZoomFactor).toFixed(4)}dvh`,
+                maxHeight: `${(100 / workspaceZoomFactor).toFixed(4)}dvh`
+              }
+            : undefined)
+        } as CSSProperties);
   const sessionUserId = sessionUser?.id;
   const lastForkImportKeyRef = useRef<string | null>(null);
   const forkImportInFlightRef = useRef<string | null>(null);
@@ -5662,7 +5676,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
         workspaceTone === "warm" && "workspace-tone-warm",
         workspaceTone === "forest" && "workspace-tone-forest"
       )}
-      style={pageZoom === DEFAULT_WORKSPACE_ZOOM ? undefined : ({ zoom: workspaceZoomFactor } as CSSProperties)}
+      style={workspaceViewportStyle}
     >
       <header className="glass-panel z-40 shrink-0 border-b border-border px-3 py-1.5 print:hidden sm:px-4 sm:py-2">
         <div className="flex items-center justify-between gap-2 md:hidden">
