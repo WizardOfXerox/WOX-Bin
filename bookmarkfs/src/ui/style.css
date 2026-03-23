@@ -61,6 +61,13 @@ body.ext-app {
     hsl(var(--x-bg));
 }
 
+body.ext-options-view {
+  background:
+    radial-gradient(120% 90% at 8% -10%, hsl(196 78% 20% / 0.34), transparent 54%),
+    radial-gradient(90% 70% at 100% 0%, hsl(250 44% 24% / 0.16), transparent 48%),
+    linear-gradient(180deg, hsl(224 30% 8%), hsl(var(--x-bg)));
+}
+
 body.dark-mode.ext-app {
   background: hsl(var(--x-bg));
 }
@@ -122,6 +129,14 @@ body::-webkit-scrollbar-thumb {
 
 body.dark-mode .ext-tabs__tab[aria-selected="true"] {
   box-shadow: 0 0 0 1px hsl(var(--x-border)), 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+body.ext-options-view .ext-tabs {
+  padding: 18px 24px 14px;
+}
+
+body.ext-options-view .ext-tabs__track {
+  max-width: min(1440px, calc(100vw - 48px));
 }
 
 #bookmarkfs-panel {
@@ -819,8 +834,9 @@ body:not(.ext-app) .rwd-table td {
 }
 
 #woxbin-root.wb-view-options {
-  max-width: 1120px;
-  padding-top: 16px;
+  width: min(1480px, calc(100vw - 48px));
+  max-width: none;
+  padding-top: 18px;
 }
 
 #woxbin-root .wb-root--popup {
@@ -878,14 +894,23 @@ body:not(.ext-app) .rwd-table td {
 
 #woxbin-root .wb-root--options {
   display: grid;
-  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
-  gap: 18px;
+  grid-template-columns: minmax(320px, 390px) minmax(460px, 1.18fr) minmax(360px, 0.92fr);
+  grid-template-areas:
+    "head head head"
+    "onboard onboard onboard"
+    "profiles library composer"
+    "keys library composer";
+  gap: 20px;
   align-items: start;
 }
 
-#woxbin-root .wb-root--options .wb-shell-head,
+#woxbin-root .wb-root--options .wb-shell-head {
+  grid-area: head;
+  margin-bottom: 0;
+}
+
 #woxbin-root .wb-root--options .wb-onboard {
-  grid-column: 1 / -1;
+  grid-area: onboard;
   margin-bottom: 0;
 }
 
@@ -893,23 +918,34 @@ body:not(.ext-app) .rwd-table td {
   margin-bottom: 0;
 }
 
-#woxbin-root .wb-root--options .wb-panel--profiles,
-#woxbin-root .wb-root--options .wb-panel--keys {
-  grid-column: 1;
+#woxbin-root .wb-root--options .wb-panel--profiles {
+  grid-area: profiles;
 }
 
-#woxbin-root .wb-root--options .wb-panel--library,
+#woxbin-root .wb-root--options .wb-panel--keys {
+  grid-area: keys;
+}
+
+#woxbin-root .wb-root--options .wb-panel--library {
+  grid-area: library;
+}
+
 #woxbin-root .wb-root--options .wb-panel--composer {
-  grid-column: 2;
+  grid-area: composer;
 }
 
 #woxbin-root .wb-root--options .wb-panel--composer {
   position: sticky;
-  top: 16px;
+  top: 20px;
+  align-self: start;
 }
 
 #woxbin-root .wb-root--options .wb-panel--library {
-  min-height: 240px;
+  min-height: 620px;
+}
+
+#woxbin-root .wb-root--options .wb-panel--composer .wb-textarea {
+  min-height: clamp(320px, 42vh, 560px);
 }
 
 #woxbin-root .wb-root--options .wb-panel--profiles .wb-inline-row,
@@ -927,12 +963,52 @@ body:not(.ext-app) .rwd-table td {
 }
 
 #woxbin-root .wb-root--options .wb-shell-head {
-  align-items: center;
-  padding: 20px 22px;
+  align-items: stretch;
+  padding: 24px 26px;
+  min-height: 152px;
 }
 
 #woxbin-root .wb-root--options .wb-shell-head__title {
-  font-size: 1.5rem;
+  font-size: clamp(1.8rem, 2vw, 2.4rem);
+}
+
+#woxbin-root .wb-root--options .wb-shell-head__text {
+  max-width: 64ch;
+  font-size: 14px;
+}
+
+#woxbin-root .wb-root--options .wb-shell-head__actions {
+  align-self: flex-start;
+}
+
+#woxbin-root .wb-root--options .wb-panel {
+  padding: 20px 20px 22px;
+}
+
+#woxbin-root .wb-root--options .wb-panel--profiles,
+#woxbin-root .wb-root--options .wb-panel--keys {
+  background:
+    linear-gradient(180deg, hsl(var(--x-surface2) / 0.94), hsl(var(--x-surface)));
+}
+
+#woxbin-root .wb-root--options .wb-panel--library,
+#woxbin-root .wb-root--options .wb-panel--composer {
+  background:
+    radial-gradient(100% 120% at 0% 0%, hsl(var(--x-accent) / 0.06), transparent 48%),
+    linear-gradient(180deg, hsl(var(--x-surface2) / 0.9), hsl(var(--x-surface)));
+}
+
+#woxbin-root .wb-root--options .wb-list-head {
+  margin-bottom: 14px;
+}
+
+#woxbin-root .wb-root--options .wb-stack-card,
+#woxbin-root .wb-root--options .wb-paste-card {
+  padding: 16px 18px;
+}
+
+#woxbin-root .wb-root--options .wb-paste-title {
+  font-size: 16px;
 }
 
 #woxbin-root .wb-font-mono {
@@ -1078,18 +1154,18 @@ body:not(.ext-app) .rwd-table td {
 
 @media (max-width: 980px) {
   #woxbin-root.wb-view-options {
-    max-width: 760px;
+    width: min(980px, calc(100vw - 24px));
   }
 
   #woxbin-root .wb-root--options {
     grid-template-columns: 1fr;
-  }
-
-  #woxbin-root .wb-root--options .wb-panel--profiles,
-  #woxbin-root .wb-root--options .wb-panel--keys,
-  #woxbin-root .wb-root--options .wb-panel--library,
-  #woxbin-root .wb-root--options .wb-panel--composer {
-    grid-column: 1;
+    grid-template-areas:
+      "head"
+      "onboard"
+      "profiles"
+      "keys"
+      "library"
+      "composer";
   }
 
   #woxbin-root .wb-root--options .wb-panel--composer {
@@ -1098,6 +1174,18 @@ body:not(.ext-app) .rwd-table td {
 }
 
 @media (max-width: 640px) {
+  body.ext-options-view .ext-tabs {
+    padding: 14px 12px 12px;
+  }
+
+  body.ext-options-view .ext-tabs__track {
+    max-width: 100%;
+  }
+
+  #woxbin-root.wb-view-options {
+    width: calc(100vw - 16px);
+  }
+
   #woxbin-root .wb-shell-head {
     flex-direction: column;
     align-items: stretch;
