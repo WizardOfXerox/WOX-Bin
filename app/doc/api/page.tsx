@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { DocShell } from "@/components/doc/doc-shell";
 
 export const metadata: Metadata = {
-  title: "Developers API — WOX-Bin",
+  title: "Developers API",
   description: "WOX-Bin REST API: API keys, v1 pastes, workspace routes, anonymous publish."
 };
 

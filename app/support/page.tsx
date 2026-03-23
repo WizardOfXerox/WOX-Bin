@@ -15,7 +15,7 @@ type SupportPageProps = {
 };
 
 export const metadata: Metadata = {
-  title: "Support — WOX-Bin",
+  title: "Support",
   description: "Support tickets, replies, and screenshots for WOX-Bin users."
 };
 

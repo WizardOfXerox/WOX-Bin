@@ -5,7 +5,7 @@ import { TOOLS_PAGE_MAIN } from "@/lib/tools/tools-layout";
 import { ConvertDynamic } from "./convert-loader";
 
 export const metadata: Metadata = {
-  title: "File converter hub | WOX-Bin",
+  title: "File converter hub",
   description:
     "Hybrid conversion tools: browser-first utilities and planned worker-backed formats. Part of WOX-Bin tools."
 };

@@ -6,7 +6,7 @@ import { TOOLS_PAGE_MAIN } from "@/lib/tools/tools-layout";
 import { PdfExtractDynamic } from "./pdf-extract-loader";
 
 export const metadata: Metadata = {
-  title: "PDF page extractor | WOX-Bin",
+  title: "PDF page extractor",
   description:
     "Extract PDF pages as PNG or JPEG images in your browser. Optional per-page text. No server upload — works on Vercel."
 };

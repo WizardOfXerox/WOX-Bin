@@ -5,7 +5,7 @@ import { DocShell } from "@/components/doc/doc-shell";
 import { TOOLS_DISABLED_COPY, TOOLS_ENABLED } from "@/lib/tools/availability";
 
 export const metadata: Metadata = {
-  title: "Tools — WOX-Bin",
+  title: "Tools",
   description: "Browser tools and conversion platform entry points."
 };
 

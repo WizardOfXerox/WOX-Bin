@@ -81,7 +81,7 @@ const FAQ_GROUPS = [
 ] as const;
 
 export const metadata: Metadata = {
-  title: "Help — WOX-Bin",
+  title: "Help",
   description: "User help and troubleshooting answers for WOX-Bin accounts, sharing, security, and workspace issues."
 };
 

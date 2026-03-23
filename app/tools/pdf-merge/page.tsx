@@ -4,7 +4,7 @@ import PdfMergeClient from "@/components/tools/pdf-merge-client";
 import { TOOLS_PAGE_MAIN_SIMPLE } from "@/lib/tools/tools-layout";
 
 export const metadata: Metadata = {
-  title: "PDF merge | WOX-Bin",
+  title: "PDF merge",
   description: "Merge multiple PDFs in the browser with pdf-lib."
 };
 

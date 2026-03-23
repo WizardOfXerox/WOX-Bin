@@ -32,7 +32,7 @@ export function LandingPage({ session }: Props) {
   const signedIn = Boolean(session?.user);
   const tagline = TOOLS_ENABLED
     ? APP_COPY.tagline
-    : "A local-first paste workspace with a real editor, account sync, multi-file drafts, built-in templates, internal support, and admin-ready operations.";
+    : "A local-first paste workspace with quick-share routes, secret links, built-in templates, internal support, and admin-ready operations.";
   const recentChanges = CHANGELOG_ENTRIES.slice(0, 3);
 
   return (
@@ -48,13 +48,15 @@ export function LandingPage({ session }: Props) {
             </div>
           </div>
           <h1 className="max-w-none text-balance font-sans text-[1.7rem] font-semibold leading-[1.15] tracking-tight text-foreground min-[400px]:text-[1.9rem] sm:text-3xl sm:leading-tight md:text-5xl md:leading-[1.1] lg:text-6xl lg:leading-[1.08]">
-            A paste workspace with real editing, real account controls, and fewer dead ends.
+            A paste workspace, quick-share hub, and operator-ready control surface.
           </h1>
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Write locally first, then move into account mode when you want hosted pastes, API access, staff support,
-            moderation, and admin controls. The main workspace lives at <span className="font-mono text-xs">/app</span>,
-            the browser companion lives at <span className="font-mono text-xs">/bookmarkfs</span>, and the running
-            product history lives at <span className="font-mono text-xs">/changelog</span>.{" "}
+            Start in the ribbon workspace at <span className="font-mono text-xs">/app</span>, use the built-in tutorial
+            to learn the layout, then branch into quick routes for secret links, clipboard buckets, and fragment-only
+            sharing when you need lower-friction handoff. The browser companion lives at{" "}
+            <span className="font-mono text-xs">/bookmarkfs</span>, support lives at{" "}
+            <span className="font-mono text-xs">/support</span>, and the running product history lives at{" "}
+            <span className="font-mono text-xs">/changelog</span>.{" "}
             {TOOLS_ENABLED ? (
               <>
                 Browser utilities are also available at <span className="font-mono text-xs">/tools</span>. See{" "}
@@ -81,7 +83,10 @@ export function LandingPage({ session }: Props) {
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Ribbon editor &amp; Prism</Badge>
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Templates for every language</Badge>
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Multi-file pastes</Badge>
+              <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Secret links &amp; custom URLs</Badge>
+              <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Quick paste &amp; clipboard buckets</Badge>
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Local + cloud sync</Badge>
+              <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Guided workspace tutorial</Badge>
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Internal support tickets</Badge>
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Admin &amp; moderation</Badge>
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">BookmarkFS companion</Badge>
@@ -215,7 +220,8 @@ export function LandingPage({ session }: Props) {
                   <h2 className="font-semibold text-foreground">Files &amp; sharing</h2>
                   <p className="text-sm leading-relaxed text-muted-foreground">
                     Attach multiple files per paste with per-file languages, Markdown preview, export code as an image,
-                    and share links with optional line-range anchors.
+                    and ship public, unlisted, secret, or custom-URL links with optional line-range anchors and privacy
+                    redirect support.
                   </p>
                 </CardContent>
               </Card>
@@ -225,7 +231,7 @@ export function LandingPage({ session }: Props) {
                   <h2 className="font-semibold text-foreground">Modes &amp; polish</h2>
                   <p className="text-sm leading-relaxed text-muted-foreground">
                     IndexedDB local drafts or signed-in sync, folders and pins, quick open, import URL, API uploads,
-                    and a first-run megademo paste for new accounts.
+                    a first-run megademo paste, and a reopenable tutorial that maps the actual workspace controls.
                   </p>
                 </CardContent>
               </Card>
@@ -234,8 +240,8 @@ export function LandingPage({ session }: Props) {
                   <MessageSquare className="h-5 w-5 text-primary" />
                   <h2 className="font-semibold text-foreground">Social &amp; public</h2>
                   <p className="text-sm leading-relaxed text-muted-foreground">
-                    Comments and stars on shared pastes, public feed and archive, raw and read-only hints, anonymous
-                    publish flow, and moderation-aware visibility.
+                    Comments and stars on shared pastes, public feed and archive, visible view counts, raw and
+                    read-only hints, anonymous publish flow, and moderation-aware visibility.
                   </p>
                 </CardContent>
               </Card>
@@ -245,7 +251,20 @@ export function LandingPage({ session }: Props) {
                   <h2 className="font-semibold text-foreground">Trust &amp; accounts</h2>
                   <p className="text-sm leading-relaxed text-muted-foreground">
                     Turnstile, rate limits, email verification, Google sign-in, password reset, session controls, and
-                    admin and moderator operations when you need hosted governance.
+                    admin and moderator operations when you need hosted governance and staff-side support handling.
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="overflow-hidden">
+                <CardContent className="space-y-3 p-4 sm:p-6">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <h2 className="font-semibold text-foreground">Quick-share surfaces</h2>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    Use <span className="font-mono text-xs">/quick</span> for fast creation,{" "}
+                    <span className="font-mono text-xs">/clipboard</span> for short-lived buckets,{" "}
+                    <span className="font-mono text-xs">/fragment</span> for browser-only shares, and{" "}
+                    <span className="font-mono text-xs">/s/[slug]</span> for secret links that stay off community
+                    surfaces.
                   </p>
                 </CardContent>
               </Card>
@@ -410,11 +429,13 @@ export function LandingPage({ session }: Props) {
               <div className="rounded-[1.25rem] border border-border bg-muted/50 p-3.5 dark:border-white/10 dark:bg-black/20 sm:p-4">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-primary" />
-                  <p className="text-sm font-medium text-foreground">Tip</p>
+                  <p className="text-sm font-medium text-foreground">Start here</p>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Open the workspace and press <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs dark:border-white/15 dark:bg-white/5">?</kbd>{" "}
-                  (when the editor is focused) for shortcuts—quick open, new paste, save, find, replace, and more.
+                  Open the workspace and use the <span className="font-medium text-foreground">Tutorial</span> button
+                  in the header for a guided pass over the live controls. After that, press{" "}
+                  <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs dark:border-white/15 dark:bg-white/5">?</kbd>{" "}
+                  in the editor for shortcuts—quick open, new paste, save, find, replace, and more.
                 </p>
               </div>
             </CardContent>

@@ -68,6 +68,7 @@ type Props = {
   replaceOpen: boolean;
   onToggleReplace: () => void;
   mdPreviewOpen: boolean;
+  isMarkdown: boolean;
   onToggleMdPreview: () => void;
   onOpenTemplates: () => void;
   onOpenImportUrl: () => void;
@@ -215,6 +216,7 @@ export function WorkspaceEditorRibbon({
   replaceOpen,
   onToggleReplace,
   mdPreviewOpen,
+  isMarkdown,
   onToggleMdPreview,
   onOpenTemplates,
   onOpenImportUrl,
@@ -427,6 +429,20 @@ export function WorkspaceEditorRibbon({
               <HelpCircle className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Help</span>
             </Rb>
+            {isMarkdown ? (
+              <Button
+                className={cn(compact ? "h-7 gap-0.5 px-1.5 text-[9px]" : "h-8 gap-1 px-1.5 text-[10px] sm:px-2")}
+                disabled={dis}
+                onClick={onToggleMdPreview}
+                size="sm"
+                title={mdPreviewOpen ? "Hide Markdown preview" : "Show Markdown preview"}
+                type="button"
+                variant={mdPreviewOpen ? "default" : "outline"}
+              >
+                <PanelRight className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Preview</span>
+              </Button>
+            ) : null}
           </RibbonGroup>
         </div>
       ) : null}

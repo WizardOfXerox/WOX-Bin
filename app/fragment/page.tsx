@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { FragmentShareClient } from "@/components/quick-paste/fragment-share-client";
 
 export const metadata: Metadata = {
-  title: "Fragment share — WOX-Bin",
+  title: "Fragment share",
   description: "Client-side text sharing with no server storage. Content lives in the URL fragment."
 };
 

@@ -4,7 +4,7 @@ import ZipLabClient from "@/components/tools/zip-lab-client";
 import { TOOLS_PAGE_MAIN_SIMPLE } from "@/lib/tools/tools-layout";
 
 export const metadata: Metadata = {
-  title: "ZIP tools | WOX-Bin",
+  title: "ZIP tools",
   description: "Create ZIP archives or extract files in the browser with fflate."
 };
 

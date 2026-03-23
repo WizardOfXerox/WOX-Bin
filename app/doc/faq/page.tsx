@@ -4,7 +4,7 @@ import Link from "next/link";
 import { DocShell } from "@/components/doc/doc-shell";
 
 export const metadata: Metadata = {
-  title: "FAQ — WOX-Bin",
+  title: "FAQ",
   description: "Frequently asked questions about WOX-Bin APIs and public pages."
 };
 

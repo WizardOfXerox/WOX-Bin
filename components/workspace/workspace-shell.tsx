@@ -78,7 +78,8 @@ import {
 import {
   findVisibleTutorialTarget,
   WorkspaceTutorial,
-  type WorkspaceTutorialStep
+  type WorkspaceTutorialStep,
+  type WorkspaceTutorialTour
 } from "@/components/workspace/workspace-tutorial";
 import { applyShiftTab, applyTab } from "@/lib/editor-indent";
 import {
@@ -335,7 +336,26 @@ type SortOrder = "pinned_updated" | "newest" | "oldest" | "title" | "updated";
 
 const TUTORIAL_STORAGE_PREFIX = "woxbin_workspace_tutorial_seen";
 
+type TutorialTourBlueprint = {
+  id: string;
+  label: string;
+  description: string;
+  stepIds: string[];
+};
+
 const DESKTOP_TUTORIAL_STEPS: WorkspaceTutorialStep[] = [
+  {
+    id: "nav",
+    targetId: "workspace-nav",
+    title: "Workspace shell and site navigation",
+    description: "This header keeps the workspace connected to the rest of the product instead of trapping you inside one editor view.",
+    bullets: [
+      "Use Home, Feed, Archive, Help, Support, and Settings without losing your current place in the workspace.",
+      "This is also the fastest way to jump between authoring, public browsing, and account/support surfaces.",
+      "The Tutorial button can reopen any tour later, so onboarding does not have to be one-and-done."
+    ],
+    emphasis: "Treat the header as the route map for the product. The editor is central, but it is not the whole app."
+  },
   {
     id: "library",
     targetId: "library-sidebar",
@@ -388,13 +408,13 @@ const DESKTOP_TUTORIAL_STEPS: WorkspaceTutorialStep[] = [
     id: "details",
     targetId: "details-panel",
     title: "Sharing, privacy, and advanced settings",
-    description: "The details panel is where a draft becomes a managed asset.",
+    description: "The details panel is where a draft becomes a managed share with URL, privacy, and lifecycle controls.",
     bullets: [
-      "Visibility, category, tags, password, burn rules, versioning, and template status all live here.",
-      "This is also where you configure share behavior and copy public links after a save.",
+      "Visibility, custom URL, category, tags, password, burn rules, Turnstile-before-view, versioning, and template status all live here.",
+      "This is also where you switch between normal sharing and secret-link behavior, then copy the resulting URL after save.",
       "Folder assignment and metadata stay separate from the editor so the writing surface stays clean."
     ],
-    emphasis: "If a paste needs to be private, public, protected, pinned, or reusable, this panel is where you do it."
+    emphasis: "If a paste needs to be private, public, secret, protected, pinned, or reusable, this panel is where you do it."
   },
   {
     id: "comments",
@@ -403,12 +423,53 @@ const DESKTOP_TUTORIAL_STEPS: WorkspaceTutorialStep[] = [
     description: "WOX-Bin supports threaded comment discussion on saved pastes, and support/help live in the same product surface rather than outside it.",
     bullets: [
       "Saved hosted pastes can receive comments and comment replies from signed-in users.",
-      "Use Help for documented answers and Support when you need a real ticket with staff follow-up.",
+      "Use Help for documented answers, Support for real tickets with screenshots, and the quick-share routes when the full workspace is unnecessary.",
       "If you are publishing something public-facing, this is the collaboration layer that sits below the content."
     ],
     emphasis: "You can reopen this tutorial later from the Tutorial button in the workspace header."
   }
 ];
+
+function buildTutorialTours(steps: WorkspaceTutorialStep[], blueprints: TutorialTourBlueprint[]): WorkspaceTutorialTour[] {
+  const stepMap = new Map(steps.map((step) => [step.id, step] as const));
+  return blueprints
+    .map((tour) => ({
+      id: tour.id,
+      label: tour.label,
+      description: tour.description,
+      steps: tour.stepIds
+        .map((stepId) => stepMap.get(stepId))
+        .filter((step): step is WorkspaceTutorialStep => Boolean(step))
+    }))
+    .filter((tour) => tour.steps.length > 0);
+}
+
+const DESKTOP_TUTORIAL_TOURS = buildTutorialTours(DESKTOP_TUTORIAL_STEPS, [
+  {
+    id: "basics",
+    label: "Basics",
+    description: "Start here for the workspace shell, library, and editor surface.",
+    stepIds: ["nav", "library", "editor"]
+  },
+  {
+    id: "authoring",
+    label: "Authoring",
+    description: "Templates, ribbon-driven writing, and multi-file paste structure.",
+    stepIds: ["templates", "files"]
+  },
+  {
+    id: "sharing",
+    label: "Sharing",
+    description: "Privacy, custom URLs, secret links, and publish-time controls.",
+    stepIds: ["details"]
+  },
+  {
+    id: "collaboration",
+    label: "Collaboration",
+    description: "Comments, support surfaces, and the handoff layer around a saved paste.",
+    stepIds: ["comments"]
+  }
+]);
 
 const MOBILE_TUTORIAL_STEPS: WorkspaceTutorialStep[] = [
   {
@@ -443,7 +504,7 @@ const MOBILE_TUTORIAL_STEPS: WorkspaceTutorialStep[] = [
     bullets: [
       "Use built-in language starters or the WOX-Bin megademo when you need a structured starting point.",
       "Your own saved templates appear in the same dialog as built-ins.",
-      "This is the fastest path when you know the kind of paste you are about to create."
+      "This is the fastest path when you know the kind of paste you are about to create and do not want to start from a blank draft."
     ],
     emphasis: "The tutorial keeps the target focused so you can learn the mobile control layout without losing context."
   },
@@ -465,7 +526,7 @@ const MOBILE_TUTORIAL_STEPS: WorkspaceTutorialStep[] = [
     title: "Advanced settings on demand",
     description: "On mobile, advanced settings open from this Details button instead of staying docked on screen.",
     bullets: [
-      "Tap it for visibility, password, tags, folder, versions, and sharing controls.",
+      "Tap it for visibility, custom URL, password, tags, folder, versions, secret-link mode, and sharing controls.",
       "This keeps the core editor clean while still exposing the full hosted feature set.",
       "The same privacy and publishing controls are available here as on desktop."
     ],
@@ -484,6 +545,33 @@ const MOBILE_TUTORIAL_STEPS: WorkspaceTutorialStep[] = [
     emphasis: "That is the full working loop: navigate, edit, attach, configure, publish, then discuss or request help."
   }
 ];
+
+const MOBILE_TUTORIAL_TOURS = buildTutorialTours(MOBILE_TUTORIAL_STEPS, [
+  {
+    id: "basics",
+    label: "Basics",
+    description: "Phone-first workspace layout: library access plus the editor as the primary surface.",
+    stepIds: ["library-mobile", "editor-mobile"]
+  },
+  {
+    id: "authoring",
+    label: "Authoring",
+    description: "Templates and attachments without leaving the editor-first mobile layout.",
+    stepIds: ["templates-mobile", "files-mobile"]
+  },
+  {
+    id: "sharing",
+    label: "Sharing",
+    description: "Where publishing, secret links, and advanced settings live on mobile.",
+    stepIds: ["details-mobile"]
+  },
+  {
+    id: "collaboration",
+    label: "Collaboration",
+    description: "Comments, help, and support after a paste is saved and shared.",
+    stepIds: ["comments-mobile"]
+  }
+]);
 
 function tutorialStorageKey(userId: string) {
   return `${TUTORIAL_STORAGE_PREFIX}:${userId}`;
@@ -850,13 +938,39 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   const lastForkImportKeyRef = useRef<string | null>(null);
   const forkImportInFlightRef = useRef<string | null>(null);
   const tutorialAutoOpenHandledRef = useRef(false);
-  const tutorialSteps = useMemo(() => (phoneViewport ? MOBILE_TUTORIAL_STEPS : DESKTOP_TUTORIAL_STEPS), [phoneViewport]);
+  const tutorialTours = useMemo(() => (phoneViewport ? MOBILE_TUTORIAL_TOURS : DESKTOP_TUTORIAL_TOURS), [phoneViewport]);
+  const [tutorialTourId, setTutorialTourId] = useState<string>(tutorialTours[0]?.id ?? "basics");
+  const activeTutorialTour = useMemo(
+    () => tutorialTours.find((tour) => tour.id === tutorialTourId) ?? tutorialTours[0] ?? null,
+    [tutorialTourId, tutorialTours]
+  );
+  const tutorialSteps = useMemo(() => activeTutorialTour?.steps ?? [], [activeTutorialTour]);
 
-  const openTutorial = useCallback((step = 0) => {
+  useEffect(() => {
+    if (!tutorialTours.length) {
+      return;
+    }
+    if (!tutorialTours.some((tour) => tour.id === tutorialTourId)) {
+      setTutorialTourId(tutorialTours[0]!.id);
+      setTutorialStepIndex(0);
+    }
+  }, [tutorialTourId, tutorialTours]);
+
+  const changeTutorialTour = useCallback((tourId: string) => {
+    setTutorialTourId(tourId);
+    setTutorialStepIndex(0);
+  }, []);
+
+  const openTutorial = useCallback((tourOrStep: string | number = tutorialTours[0]?.id ?? "basics", maybeStep = 0) => {
+    const nextTourId = typeof tourOrStep === "string" ? tourOrStep : tutorialTours[0]?.id ?? "basics";
+    const nextStep = typeof tourOrStep === "number" ? tourOrStep : maybeStep;
     setWorkspaceMobileMenuOpen(false);
-    setTutorialStepIndex(Math.max(0, Math.min(step, tutorialSteps.length - 1)));
+    setTutorialTourId(nextTourId);
+    const targetTour = tutorialTours.find((tour) => tour.id === nextTourId) ?? tutorialTours[0] ?? null;
+    const maxIndex = Math.max((targetTour?.steps.length ?? 1) - 1, 0);
+    setTutorialStepIndex(Math.max(0, Math.min(nextStep, maxIndex)));
     setTutorialOpen(true);
-  }, [tutorialSteps.length]);
+  }, [tutorialTours]);
 
   const markTutorialSeen = useCallback(() => {
     if (typeof window === "undefined" || !sessionUserId) {
@@ -3876,6 +3990,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 fontSize={editorFontSize}
                 formatJsonDisabled={!selectedPaste}
                 importUrlDisabled={!sessionUser}
+                isMarkdown={selectedPaste?.language === "markdown"}
                 lineNumbers={editorLineNumbers}
                 mdPreviewOpen={mdPreviewOpen}
                 onBold={() => editorApplyRangeEdit((v, s, e) => wrapSelection(v, s, e, "**", "**"))}
@@ -4034,62 +4149,6 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   <Button onClick={() => replaceInPasteAll()} size="sm" type="button" variant="destructive">
                     Replace all
                   </Button>
-                </div>
-              ) : null}
-
-              {selectedPaste.language === "markdown" ? (
-                <div className="rounded-[1.1rem] border border-border bg-muted/35 p-3 print:hidden">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-                        Markdown helpers
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Inserts Markdown syntax into the current selection.
-                      </p>
-                    </div>
-                    <Button onClick={toggleMdPreviewRibbon} size="sm" type="button" variant="outline">
-                      {mdPreviewOpen ? "Hide preview" : "Show preview"}
-                    </Button>
-                  </div>
-                  <div className="mt-3 flex flex-nowrap gap-2 overflow-x-auto pb-1">
-                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit((v, s, e) => wrapSelection(v, s, e, "**", "**"))} size="sm" type="button" variant="outline">
-                      Bold
-                    </Button>
-                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit((v, s, e) => wrapSelection(v, s, e, "*", "*"))} size="sm" type="button" variant="outline">
-                      Italic
-                    </Button>
-                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit((v, s, e) => wrapSelection(v, s, e, "<u>", "</u>"))} size="sm" type="button" variant="outline">
-                      Underline
-                    </Button>
-                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit((v, s, e) => wrapSelection(v, s, e, "~~", "~~"))} size="sm" type="button" variant="outline">
-                      Strike
-                    </Button>
-                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit((v, s, e) => insertAtSelection(v, s, e, "# "))} size="sm" type="button" variant="outline">
-                      H1
-                    </Button>
-                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit((v, s, e) => insertAtSelection(v, s, e, "[Link text](https://example.com)"))} size="sm" type="button" variant="outline">
-                      Link
-                    </Button>
-                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit(bulletBlock)} size="sm" type="button" variant="outline">
-                      Bullets
-                    </Button>
-                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit(numberBlock)} size="sm" type="button" variant="outline">
-                      Numbered
-                    </Button>
-                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit(quoteBlock)} size="sm" type="button" variant="outline">
-                      Quote
-                    </Button>
-                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit((v, s, e) => insertCodeFence(v, s, e, ""))} size="sm" type="button" variant="outline">
-                      Code block
-                    </Button>
-                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit(insertMarkdownTable)} size="sm" type="button" variant="outline">
-                      Table
-                    </Button>
-                    <Button disabled={!selectedPasteInWorkspace} onClick={() => editorApplyRangeEdit(insertHorizontalRule)} size="sm" type="button" variant="outline">
-                      Divider
-                    </Button>
-                  </div>
                 </div>
               ) : null}
 
@@ -5787,7 +5846,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
           </div>
 
           <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-2">
-            <nav aria-label="Site" className="flex flex-wrap items-center gap-0.5 sm:gap-1">
+            <nav aria-label="Site" className="flex flex-wrap items-center gap-0.5 sm:gap-1" data-tutorial="workspace-nav">
               <Link className={workspaceHeaderNavClass(pathname === "/")} href="/">
                 Home
               </Link>
@@ -6137,9 +6196,11 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
       <WorkspaceTutorial
         onClose={closeTutorial}
         onStepIndexChange={setTutorialStepIndex}
+        onTourChange={changeTutorialTour}
         open={tutorialOpen}
         stepIndex={tutorialStepIndex}
-        steps={tutorialSteps}
+        tourId={activeTutorialTour?.id ?? tutorialTourId}
+        tours={tutorialTours}
       />
 
       <Dialog onOpenChange={setMobileLibraryOpen} open={phoneViewport && mobileLibraryOpen}>

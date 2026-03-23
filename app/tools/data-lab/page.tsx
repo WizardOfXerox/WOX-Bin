@@ -4,7 +4,7 @@ import DataLabClient from "@/components/tools/data-lab-client";
 import { TOOLS_PAGE_MAIN_SIMPLE } from "@/lib/tools/tools-layout";
 
 export const metadata: Metadata = {
-  title: "Data lab | WOX-Bin",
+  title: "Data lab",
   description: "CSV/JSON/TSV, JSON format, Base64, and SHA-256 — client-side tools."
 };
 

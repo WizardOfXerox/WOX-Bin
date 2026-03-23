@@ -12,7 +12,7 @@ import { getTeamSettingsSnapshot, listTeamPublishedPastesForViewer } from "@/lib
 import { getUserPlanSummary } from "@/lib/usage-service";
 
 export const metadata: Metadata = {
-  title: "Team published pastes | WOX-Bin",
+  title: "Team published pastes",
   description: "Public and unlisted pastes from members of your team workspaces."
 };
 

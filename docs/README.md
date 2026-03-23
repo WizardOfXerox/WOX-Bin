@@ -19,6 +19,7 @@ These Markdown files live **in the repository**. They are **not** automatically 
 | **[ADMIN.md](./ADMIN.md)** | Admin bootstrap |
 | **[BILLING.md](./BILLING.md)** | Pro/Team upgrade URLs (`NEXT_PUBLIC_*`), PayMongo-first billing setup, alternate providers |
 | **[PAYMONGO.md](./PAYMONGO.md)** | PayMongo-specific setup for WOX-Bin |
+| **[SHARING-MODES.md](./SHARING-MODES.md)** | What `/app`, `/quick`, `/clipboard`, `/fragment`, `/s/[slug]`, `/out`, and CLI drops are for |
 | **[CLI-DROPS.md](./CLI-DROPS.md)** | Termbin-style text uploads and 0x0-style file uploads for CLI use |
 | **[SECRET-LINK-MODE.md](./SECRET-LINK-MODE.md)** | Secret-link sharing mode, current behavior, and future roadmap |
 | **[FEATURE-INTEGRATION-ROADMAP.md](./FEATURE-INTEGRATION-ROADMAP.md)** | External product ideas mapped to WOX-Bin: what fits Vercel now, what needs object storage, what needs separate infra |

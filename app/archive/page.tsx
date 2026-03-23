@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Public pastes archive | WOX-Bin",
+  title: "Public pastes archive",
   description:
     "Recently created public pastes on WOX-Bin. Browse titles, syntax, and age—similar to a classic paste archive. No sign-in required."
 };

@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { PrivacyPolicyContent } from "@/components/legal/privacy-policy";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — WOX-Bin",
+  title: "Privacy Policy",
   description: "Privacy Policy for using WOX-Bin."
 };
 

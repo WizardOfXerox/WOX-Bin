@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { TermsOfServiceContent } from "@/components/legal/terms-of-service";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — WOX-Bin",
+  title: "Terms of Service",
   description: "Terms of Service for using WOX-Bin."
 };
 

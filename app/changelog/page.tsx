@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { CHANGELOG_ENTRIES } from "@/lib/changelog";
 
 export const metadata: Metadata = {
-  title: "Changelog — WOX-Bin",
+  title: "Changelog",
   description: "Recent WOX-Bin product changes, shipped features, and operational updates."
 };
 

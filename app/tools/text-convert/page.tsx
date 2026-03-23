@@ -4,7 +4,7 @@ import Link from "next/link";
 import { TOOLS_PAGE_MAIN_NARROW } from "@/lib/tools/tools-layout";
 
 export const metadata: Metadata = {
-  title: "Text ↔ HTML | WOX-Bin",
+  title: "Text ↔ HTML",
   description: "Plain text to HTML or HTML to plain text — client-side."
 };
 

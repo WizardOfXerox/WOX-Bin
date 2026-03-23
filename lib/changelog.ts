@@ -8,6 +8,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    slug: "2026-03-23-quick-share-and-audit-fixes",
+    date: "2026-03-23",
+    title: "Quick-share routes, secret-link polish, and audit-driven UI fixes",
+    summary: "WOX-Bin now includes dedicated fast-share routes, privacy-aware outbound links, and a mobile/admin cleanup pass based on real browser QA.",
+    bullets: [
+      "Added Quick paste, Clipboard buckets, Fragment share, Secret-link routes, and privacy redirect support.",
+      "Added CLI-friendly public text and file drop endpoints for curl and script workflows.",
+      "Made shared source/code hyperlinks clickable in rendered shared views.",
+      "Fixed the mobile workspace title field so long titles no longer clip.",
+      "Fixed admin and moderation surfaces so secret-mode pastes use canonical /s/ links."
+    ]
+  },
+  {
     slug: "2026-03-23-support-templates-and-onboarding",
     date: "2026-03-23",
     title: "Support center, full starter templates, and first-run megademo",

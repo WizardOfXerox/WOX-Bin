@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, Sparkles, X } from "lucide-react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -16,10 +16,19 @@ export type WorkspaceTutorialStep = {
   preferredSide?: "top" | "right" | "bottom" | "left";
 };
 
+export type WorkspaceTutorialTour = {
+  id: string;
+  label: string;
+  description: string;
+  steps: WorkspaceTutorialStep[];
+};
+
 type Props = {
   open: boolean;
+  tourId: string;
+  tours: WorkspaceTutorialTour[];
   stepIndex: number;
-  steps: WorkspaceTutorialStep[];
+  onTourChange: (tourId: string) => void;
   onStepIndexChange: (index: number) => void;
   onClose: (completed: boolean) => void;
 };
@@ -179,8 +188,9 @@ function computeLayout(targetRect: Box, panelHeight: number, preferredSide?: Pan
   };
 }
 
-export function WorkspaceTutorial({ open, stepIndex, steps, onStepIndexChange, onClose }: Props) {
-  const activeStep = steps[stepIndex] ?? null;
+export function WorkspaceTutorial({ open, tourId, tours, stepIndex, onTourChange, onStepIndexChange, onClose }: Props) {
+  const activeTour = useMemo(() => tours.find((tour) => tour.id === tourId) ?? tours[0] ?? null, [tourId, tours]);
+  const activeStep = activeTour?.steps[stepIndex] ?? null;
   const panelRef = useRef<HTMLDivElement>(null);
   const [layout, setLayout] = useState<LayoutState>({
     target: null,
@@ -188,6 +198,7 @@ export function WorkspaceTutorial({ open, stepIndex, steps, onStepIndexChange, o
     side: "bottom",
     path: null
   });
+  const [stepDirection, setStepDirection] = useState<"forward" | "backward">("forward");
 
   useLayoutEffect(() => {
     if (!open || !activeStep) {
@@ -224,11 +235,17 @@ export function WorkspaceTutorial({ open, stepIndex, steps, onStepIndexChange, o
   }, [activeStep, open]);
 
   const progress = useMemo(() => {
-    if (!steps.length) {
+    const stepCount = activeTour?.steps.length ?? 0;
+    if (!stepCount) {
       return 0;
     }
-    return ((stepIndex + 1) / steps.length) * 100;
-  }, [stepIndex, steps.length]);
+    return ((stepIndex + 1) / stepCount) * 100;
+  }, [activeTour?.steps.length, stepIndex]);
+
+  const goToStep = useCallback((nextIndex: number) => {
+    setStepDirection(nextIndex >= stepIndex ? "forward" : "backward");
+    onStepIndexChange(nextIndex);
+  }, [onStepIndexChange, stepIndex]);
 
   useEffect(() => {
     if (!open) {
@@ -243,34 +260,69 @@ export function WorkspaceTutorial({ open, stepIndex, steps, onStepIndexChange, o
       }
       if (event.key === "ArrowRight") {
         event.preventDefault();
-        if (stepIndex < steps.length - 1) {
-          onStepIndexChange(stepIndex + 1);
+        if (stepIndex < (activeTour?.steps.length ?? 0) - 1) {
+          goToStep(stepIndex + 1);
         } else {
           onClose(true);
         }
       }
       if (event.key === "ArrowLeft" && stepIndex > 0) {
         event.preventDefault();
-        onStepIndexChange(stepIndex - 1);
+        goToStep(stepIndex - 1);
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, onStepIndexChange, open, stepIndex, steps.length]);
+  }, [activeTour?.steps.length, goToStep, onClose, open, stepIndex]);
 
-  if (!open || !activeStep) {
+  if (!open || !activeStep || !activeTour) {
     return null;
   }
 
   return (
-    <div aria-modal="true" className="fixed inset-0 z-[120]" role="dialog">
-      <div className="absolute inset-0 bg-slate-950/78 backdrop-blur-[2px]" />
+    <div aria-modal="true" className="fixed inset-0 z-[120] isolate" role="dialog">
+      {layout.target ? (
+        <>
+          <div
+            className="absolute z-0 bg-slate-950/78 backdrop-blur-[3px]"
+            style={{ left: 0, top: 0, width: "100%", height: layout.target.top }}
+          />
+          <div
+            className="absolute z-0 bg-slate-950/78 backdrop-blur-[3px]"
+            style={{ left: 0, top: layout.target.top, width: layout.target.left, height: layout.target.height }}
+          />
+          <div
+            className="absolute z-0 bg-slate-950/78 backdrop-blur-[3px]"
+            style={{
+              left: layout.target.right,
+              top: layout.target.top,
+              width: `calc(100% - ${layout.target.right}px)`,
+              height: layout.target.height
+            }}
+          />
+          <div
+            className="absolute z-0 bg-slate-950/78 backdrop-blur-[3px]"
+            style={{ left: 0, top: layout.target.bottom, width: "100%", height: `calc(100% - ${layout.target.bottom}px)` }}
+          />
+          <div
+            className="absolute z-[1] bg-transparent"
+            style={{
+              left: layout.target.left,
+              top: layout.target.top,
+              width: layout.target.width,
+              height: layout.target.height
+            }}
+          />
+        </>
+      ) : (
+        <div className="absolute inset-0 z-0 bg-slate-950/78 backdrop-blur-[3px]" />
+      )}
 
       {layout.target ? (
         <>
           <div
-            className="pointer-events-none absolute rounded-[1.5rem] border border-sky-300/70 bg-sky-400/8 shadow-[0_0_0_1px_rgba(125,211,252,0.16),0_0_36px_rgba(56,189,248,0.24)]"
+            className="pointer-events-none absolute z-10 rounded-[1.5rem] border border-sky-300/70 bg-sky-400/8 shadow-[0_0_0_1px_rgba(125,211,252,0.16),0_0_36px_rgba(56,189,248,0.24)] transition-[left,top,width,height] duration-300 ease-out"
             style={{
               left: layout.target.left,
               top: layout.target.top,
@@ -279,7 +331,7 @@ export function WorkspaceTutorial({ open, stepIndex, steps, onStepIndexChange, o
             }}
           />
           <div
-            className="pointer-events-none absolute rounded-[1.7rem] border border-sky-300/35 wox-tutorial-target-ring"
+            className="pointer-events-none absolute z-10 rounded-[1.7rem] border border-sky-300/35 wox-tutorial-target-ring transition-[left,top,width,height] duration-300 ease-out"
             style={{
               left: layout.target.left - 6,
               top: layout.target.top - 6,
@@ -288,7 +340,7 @@ export function WorkspaceTutorial({ open, stepIndex, steps, onStepIndexChange, o
             }}
           />
           {layout.path ? (
-            <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" fill="none">
+            <svg className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible" fill="none">
               <defs>
                 <marker
                   id="wox-tutorial-arrow"
@@ -325,7 +377,7 @@ export function WorkspaceTutorial({ open, stepIndex, steps, onStepIndexChange, o
 
       <div
         className={cn(
-          "absolute rounded-[1.6rem] border border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(15,23,42,0.94))] p-5 text-slate-50 shadow-[0_24px_90px_rgba(2,6,23,0.5)] sm:p-6"
+          "absolute z-20 rounded-[1.6rem] border border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(15,23,42,0.94))] p-5 text-slate-50 shadow-[0_24px_90px_rgba(2,6,23,0.5)] transition-[left,top,width] duration-300 ease-out sm:p-6"
         )}
         ref={panelRef}
         style={
@@ -343,74 +395,101 @@ export function WorkspaceTutorial({ open, stepIndex, steps, onStepIndexChange, o
               }
         }
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-sky-300/20 bg-sky-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-sky-200">
-              <Sparkles className="h-3.5 w-3.5" />
-              Workspace tutorial
+        <div
+          className={cn(
+            "wox-tutorial-panel-content",
+            stepDirection === "forward" ? "wox-tutorial-panel-forward" : "wox-tutorial-panel-backward"
+          )}
+          key={`${activeStep.id}-${stepIndex}`}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-sky-300/20 bg-sky-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-sky-200">
+                <Sparkles className="h-3.5 w-3.5" />
+                Workspace tutorial
+              </div>
+              <p className="text-xs font-medium uppercase tracking-[0.24em] text-slate-400">
+                {activeTour.label} tour · Step {stepIndex + 1} of {activeTour.steps.length}
+              </p>
+              <h2 className="mt-2 text-xl font-semibold tracking-tight text-white">{activeStep.title}</h2>
+              <p className="mt-2 max-w-[34rem] text-xs leading-6 text-slate-400">{activeTour.description}</p>
             </div>
-            <p className="text-xs font-medium uppercase tracking-[0.24em] text-slate-400">
-              Step {stepIndex + 1} of {steps.length}
-            </p>
-            <h2 className="mt-2 text-xl font-semibold tracking-tight text-white">{activeStep.title}</h2>
+            <Button
+              className="h-9 w-9 shrink-0 rounded-full border-white/10 text-slate-300 hover:bg-white/5 hover:text-white"
+              onClick={() => onClose(false)}
+              size="icon"
+              type="button"
+              variant="outline"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-          <Button
-            className="h-9 w-9 shrink-0 rounded-full border-white/10 text-slate-300 hover:bg-white/5 hover:text-white"
-            onClick={() => onClose(false)}
-            size="icon"
-            type="button"
-            variant="outline"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
 
-        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/8">
-          <div
-            className="h-full rounded-full bg-[linear-gradient(90deg,#38bdf8_0%,#60a5fa_55%,#a78bfa_100%)] transition-[width] duration-500 ease-out"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-
-        <div className="mt-5 space-y-4">
-          <p className="text-sm leading-7 text-slate-200">{activeStep.description}</p>
-          <ul className="space-y-2">
-            {activeStep.bullets.map((bullet) => (
-              <li className="flex items-start gap-3 text-sm leading-6 text-slate-300" key={bullet}>
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-300" />
-                <span>{bullet}</span>
-              </li>
-            ))}
-          </ul>
-          {activeStep.emphasis ? (
-            <div className="rounded-[1.15rem] border border-sky-300/16 bg-sky-400/8 px-4 py-3 text-sm leading-6 text-sky-100">
-              {activeStep.emphasis}
+          {tours.length > 1 ? (
+            <div className="mt-4 flex flex-nowrap gap-2 overflow-x-auto pb-1">
+              {tours.map((tour) => (
+                <Button
+                  className="shrink-0"
+                  key={tour.id}
+                  onClick={() => onTourChange(tour.id)}
+                  size="sm"
+                  type="button"
+                  variant={tour.id === activeTour.id ? "default" : "outline"}
+                >
+                  {tour.label}
+                  <span className="ml-1.5 text-[10px] opacity-75">{tour.steps.length}</span>
+                </Button>
+              ))}
             </div>
           ) : null}
-        </div>
 
-        <div className="mt-6 flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-xs leading-5 text-slate-400">
-            Use <span className="font-semibold text-slate-200">Left/Right</span> arrow keys to move through the guide.
+          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/8">
+            <div
+              className="h-full rounded-full bg-[linear-gradient(90deg,#38bdf8_0%,#60a5fa_55%,#a78bfa_100%)] transition-[width] duration-500 ease-out"
+              style={{ width: `${progress}%` }}
+            />
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button onClick={() => onClose(false)} type="button" variant="ghost">
-              Skip for now
-            </Button>
-            <Button disabled={stepIndex === 0} onClick={() => onStepIndexChange(stepIndex - 1)} type="button" variant="outline">
-              <ChevronLeft className="h-4 w-4" />
-              Back
-            </Button>
-            {stepIndex < steps.length - 1 ? (
-              <Button onClick={() => onStepIndexChange(stepIndex + 1)} type="button">
-                Next
-                <ChevronRight className="h-4 w-4" />
+
+          <div className="mt-5 space-y-4">
+            <p className="text-sm leading-7 text-slate-200">{activeStep.description}</p>
+            <ul className="space-y-2">
+              {activeStep.bullets.map((bullet) => (
+                <li className="flex items-start gap-3 text-sm leading-6 text-slate-300" key={bullet}>
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-300" />
+                  <span>{bullet}</span>
+                </li>
+              ))}
+            </ul>
+            {activeStep.emphasis ? (
+              <div className="rounded-[1.15rem] border border-sky-300/16 bg-sky-400/8 px-4 py-3 text-sm leading-6 text-sky-100">
+                {activeStep.emphasis}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-6 flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-xs leading-5 text-slate-400">
+              Use <span className="font-semibold text-slate-200">Left/Right</span> arrow keys to move through the guide.
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Button onClick={() => onClose(false)} type="button" variant="ghost">
+                Skip for now
               </Button>
-            ) : (
-              <Button onClick={() => onClose(true)} type="button">
-                Finish tutorial
+              <Button disabled={stepIndex === 0} onClick={() => goToStep(stepIndex - 1)} type="button" variant="outline">
+                <ChevronLeft className="h-4 w-4" />
+                Back
               </Button>
-            )}
+              {stepIndex < activeTour.steps.length - 1 ? (
+                <Button onClick={() => goToStep(stepIndex + 1)} type="button">
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button onClick={() => onClose(true)} type="button">
+                  Finish tutorial
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -425,6 +504,12 @@ export function WorkspaceTutorial({ open, stepIndex, steps, onStepIndexChange, o
         .wox-tutorial-line-glow {
           filter: blur(2px);
           opacity: 0.9;
+        }
+        .wox-tutorial-panel-forward {
+          animation: woxTutorialPanelForward 320ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .wox-tutorial-panel-backward {
+          animation: woxTutorialPanelBackward 320ms cubic-bezier(0.22, 1, 0.36, 1);
         }
         @keyframes woxTutorialDash {
           from {
@@ -443,6 +528,34 @@ export function WorkspaceTutorial({ open, stepIndex, steps, onStepIndexChange, o
           50% {
             transform: scale(1.02);
             opacity: 0.95;
+          }
+        }
+        @keyframes woxTutorialPanelForward {
+          from {
+            opacity: 0;
+            transform: translate3d(18px, 0, 0) scale(0.985);
+          }
+          to {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+        }
+        @keyframes woxTutorialPanelBackward {
+          from {
+            opacity: 0;
+            transform: translate3d(-18px, 0, 0) scale(0.985);
+          }
+          to {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .wox-tutorial-line,
+          .wox-tutorial-target-ring,
+          .wox-tutorial-panel-forward,
+          .wox-tutorial-panel-backward {
+            animation: none;
           }
         }
       `}</style>

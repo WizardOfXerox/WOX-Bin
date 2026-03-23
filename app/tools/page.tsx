@@ -7,7 +7,7 @@ import { CONVERT_TOOLS } from "@/lib/tools/convert-registry";
 import { TOOLS_PAGE_MAIN } from "@/lib/tools/tools-layout";
 
 export const metadata: Metadata = {
-  title: "Tools | WOX-Bin",
+  title: "Tools",
   description: "Browser utilities: PDF extraction, file conversion hub, and more — many run locally without uploading files."
 };
 

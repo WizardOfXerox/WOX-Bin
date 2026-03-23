@@ -5,7 +5,7 @@ import { DocShell } from "@/components/doc/doc-shell";
 import { TOOLS_ENABLED } from "@/lib/tools/availability";
 
 export const metadata: Metadata = {
-  title: "Documentation — WOX-Bin",
+  title: "Documentation",
   description: "WOX-Bin API, public data, tools, and FAQ."
 };
 

@@ -4,7 +4,7 @@ import MarkdownHtmlClient from "@/components/tools/markdown-html-client";
 import { TOOLS_PAGE_MAIN_SIMPLE } from "@/lib/tools/tools-layout";
 
 export const metadata: Metadata = {
-  title: "Markdown → HTML | WOX-Bin",
+  title: "Markdown → HTML",
   description: "Render Markdown to sanitized HTML in your browser and download."
 };
 

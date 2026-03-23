@@ -70,7 +70,7 @@ const GUARDS = [
 ] as const;
 
 export const metadata: Metadata = {
-  title: "BookmarkFS — WOX-Bin",
+  title: "BookmarkFS",
   description:
     "BookmarkFS is the WOX-Bin browser companion: hosted paste profiles, API-key workflows, offline cache, and an experimental local vault."
 };

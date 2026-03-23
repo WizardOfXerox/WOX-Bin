@@ -15,10 +15,11 @@ The legacy static frontend and Express app have been moved under `legacy/` so th
 
 ## Product surfaces
 
-The active codebase now has two intentionally separate surfaces:
+The active codebase now has three intentionally separate surfaces:
 
 - **WOX-Bin workspace** — the paste product (`/app`, `/p/[slug]`, `/raw/[slug]`, archive/feed, settings, admin)
-- **WOX Tools** — the utilities hub (`/tools/*`, conversion helpers, PDF/image/data tools)
+- **WOX quick-share** — fast-share routes (`/quick`, `/clipboard`, `/fragment`, `/s/[slug]`, `/out`, CLI drops)
+- **WOX Tools** — the utilities hub (`/tools/*`, conversion helpers, PDF/image/data tools), currently **disabled by default** until `WOX_ENABLE_TOOLS=1`
 
 They share auth, deployment, and parts of the UI system, but they should be treated as separate areas when planning features, audits, and operator runbooks. See **[docs/PRODUCT-SURFACES.md](docs/PRODUCT-SURFACES.md)** and **[docs/VERCEL-READINESS-AUDIT.md](docs/VERCEL-READINESS-AUDIT.md)**.
 
@@ -26,22 +27,33 @@ They share auth, deployment, and parts of the UI system, but they should be trea
 
 **Every `npm run` script (DB, codegen, tests, worker, …):** **[docs/NPM-SCRIPTS.md](docs/NPM-SCRIPTS.md)**.
 
+**Sharing modes (`/app`, `/quick`, `/clipboard`, `/fragment`, `/s/[slug]`, CLI drops):** **[docs/SHARING-MODES.md](docs/SHARING-MODES.md)**.
+
 ## What the rebuild includes
 
 - `/` marketing landing page (footer links **API & docs** at `/doc` and **Terms** at `/terms`)
 - `/sign-in`, `/sign-up`, **`/forgot-password`**, **`/reset-password`** (password reset requires SMTP — see **[docs/SMTP.md](docs/SMTP.md)**)
 - `/doc`, `/doc/api`, `/doc/scraping`, `/doc/tools`, `/doc/faq` — developer documentation (redirects: `/doc_api`, `/doc_scraping_api`)
+- `/help`, `/support`, `/support/manage`, `/changelog` — user help, support tickets, staff queue, and shipped-change history
 - `/app` workspace with:
   - local drafts in IndexedDB
   - account-backed sync
   - import/export JSON
+  - first-run guided tutorial with a persistent Tutorial button
   - **drag & drop** — library sidebar (JSON backup or text/code), paste **Files** section (images/videos), code editors (append first file as text), plus `/tools/pdf-extract` (PDFs); see `components/ui/file-drop-surface.tsx`
   - anonymous publish flow
   - API key management
+  - built-in starter templates for every supported language plus the bundled WOX-Bin megademo
 - `/p/[slug]` public paste pages
+- `/s/[slug]` secret-link paste pages
 - `/raw/[slug]` raw paste output
 - `/feed` and `/feed.xml` for the public feed (card layout)
 - `/archive` for a Pastebin-style table of recent public pastes (no sign-in)
+- `/quick` — fast publish route for text/code without opening the full workspace
+- `/clipboard` and `/c/[slug]` — short-lived clipboard buckets with human-friendly keys
+- `/fragment` — client-side fragment-only sharing with no server storage
+- `/out` — privacy redirect used for external shared links
+- **CLI drops** — `/api/public/termbin`, `/api/public/upload`, `/t/[slug]`, `/x/[slug]/[[...filename]]`; see **[docs/CLI-DROPS.md](docs/CLI-DROPS.md)**
 - **`/tools`** — tools index
 - **`/tools/convert`** — converter hub (registry + Convertio index / pairs)
 - **`/tools/c/{pair}`** — per-pair conversion routes (browser where implemented; worker placeholder otherwise)
@@ -49,7 +61,7 @@ They share auth, deployment, and parts of the UI system, but they should be trea
 - **`/tools/pdf-split`** — split one PDF into one file per page (ZIP) in the browser
 - **`/tools/image-convert`**, **`/tools/data-lab`**, **`/tools/zip-lab`** — more client-side converters
 - **Docs (in repo, not a public URL on Vercel by default):** **[docs/README.md](docs/README.md)** (index) · **[docs/TOOLS.md](docs/TOOLS.md)** · **[docs/CONVERSION-PLATFORM.md](docs/CONVERSION-PLATFORM.md)** · **[docs/VERCEL-CONVERSIONS.md](docs/VERCEL-CONVERSIONS.md)** (Vercel + FFmpeg/S3) · **[docs/CONVERSION-WORKER.md](docs/CONVERSION-WORKER.md)**
-- Password-protected pastes, burn-after-read, burn-after-views, comments, stars, reports, and moderation hooks
+- Password-protected pastes, burn-after-read, burn-after-views, secret links, comments, stars, reports, moderation hooks, clickable shared hyperlinks, and visible view counts
 - `/settings` → `/settings/account` (profile), plus `/settings/billing`, `/settings/usage`, `/settings/sessions`, `/settings/webhooks`, `/settings/team`, and `/settings/team/pastes` (teammates’ public/unlisted pastes)
 - `/admin` with overview, deployment readiness, user management, paste moderation, audit export, and SMTP test hooks
 

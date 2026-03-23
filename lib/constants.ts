@@ -109,12 +109,13 @@ export const BURN_VIEW_OPTIONS = [0, 1, 3, 5, 10] as const;
 export const APP_COPY = {
   name: "WOX-Bin",
   tagline:
-    "A local-first paste workspace with a real editor, account sync, multi-file drafts, built-in templates, internal support, and admin-ready operations.",
+    "A local-first paste workspace with quick-share routes, secret links, built-in templates, internal support, and admin-ready operations.",
   marketingBullets: [
     "Ribbon workspace with formatting tools, find/replace, JSON helpers, print, and built-in templates for every supported language",
-    "Prism syntax themes, line numbers, Markdown preview, code-image export, and multi-file pastes with per-file languages",
+    "Prism syntax themes, line numbers, Markdown preview, clickable shared links, code-image export, and multi-file pastes with per-file languages",
+    "Quick paste, clipboard buckets, fragment-only sharing, custom URLs, and secret links all run on the same hosted surface",
     "Local drafts or signed-in sync with folders, versions, stars, comments, public archive pages, API keys, and BookmarkFS companion flows",
-    "First-run onboarding now starts with the bundled megademo paste so new accounts can inspect features immediately",
+    "First-run onboarding starts with the bundled megademo paste and a reopenable guided tutorial inside the workspace",
     "Turnstile, rate limits, email verification, Google sign-in, internal support tickets, moderation controls, and admin operations"
   ]
 };

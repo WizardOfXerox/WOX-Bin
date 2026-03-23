@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { ClipboardLauncherClient } from "@/components/quick-paste/clipboard-launcher-client";
 
 export const metadata: Metadata = {
-  title: "Clipboard buckets — WOX-Bin",
+  title: "Clipboard buckets",
   description: "Short-lived text buckets with human-friendly keys, management tokens, and simple cross-device handoff."
 };
 
