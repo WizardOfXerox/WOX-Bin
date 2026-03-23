@@ -90,6 +90,16 @@ export function BillingSettingsClient({ initial, isAdmin }: Props) {
                   </div>
                   <p className="mt-3 text-sm text-foreground">{plan.headline}</p>
                   <p className="mt-2 text-sm leading-7 text-muted-foreground">{plan.description}</p>
+                  {plan.purchaseOptions.length > 0 ? (
+                    <div className="mt-4 rounded-[1rem] border border-border/80 bg-muted/30 p-3">
+                      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Billing options</p>
+                      <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
+                        {plan.purchaseOptions.map((option) => (
+                          <li key={option}>{option}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                   <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
                     {plan.highlights.map((highlight) => (
                       <li key={highlight}>{highlight}</li>
@@ -99,7 +109,7 @@ export function BillingSettingsClient({ initial, isAdmin }: Props) {
                     upgradeUrl ? (
                       <Button asChild className="mt-4 w-full" variant={plan.id === "team" ? "secondary" : "default"}>
                         <a href={upgradeUrl} rel="noreferrer" target="_blank">
-                          {plan.id === snapshot.plan.plan ? "Renew or manage access" : `Buy ${plan.name} pass`}
+                          {plan.id === snapshot.plan.plan ? "Renew or manage billing" : `Open ${plan.name} billing options`}
                         </a>
                       </Button>
                     ) : (

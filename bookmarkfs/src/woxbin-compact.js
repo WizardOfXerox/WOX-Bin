@@ -187,10 +187,28 @@ export async function mountWoxBinCompact(rootEl) {
   const langOpts = WOXBIN_LANGUAGES.map(
     ([v, l]) => `<option value="${v}">${l}</option>`
   ).join("");
+  const viewTitle = viewMode === "popup" ? "WOX-Bin quick cloud" : "WOX-Bin cloud control center";
+  const viewDescription =
+    viewMode === "popup"
+      ? "Compact popup for fast publishing, recent activity, and quick library lookup."
+      : "Full-page workspace for profile management, API key operations, cloud library browsing, and a wider composer.";
+  const viewBadge = viewMode === "popup" ? "Popup" : "Options";
 
   const main = document.createElement("div");
   main.className = `wb-root wb-root--${viewMode}`;
   main.innerHTML = `
+    <header class="wb-shell-head wb-shell-head--${viewMode}">
+      <div class="wb-shell-head__copy">
+        <div class="wb-shell-head__eyebrow">WOX-Bin extension</div>
+        <h1 class="wb-shell-head__title">${viewTitle}</h1>
+        <p class="wb-shell-head__text">${viewDescription}</p>
+      </div>
+      <div class="wb-shell-head__actions">
+        <span class="wb-shell-head__badge">${viewBadge}</span>
+        <button type="button" class="wb-btn wb-btn-secondary wb-btn-tiny" id="wb-shell-open-sync">Hosted sync ↗</button>
+      </div>
+    </header>
+
     <div class="wb-onboard" id="wb-onboard" hidden>
       <div class="wb-onboard__inner">
         <strong>WOX-Bin companion</strong>
@@ -398,6 +416,17 @@ export async function mountWoxBinCompact(rootEl) {
   const btnCreate = $("wb-create");
   const attachInput = $("wb-attach-input");
   const attachPick = $("wb-attach-pick");
+  const btnOpenSync = $("wb-shell-open-sync");
+  const ephemeralApiKeyTokens = new Map();
+
+  btnOpenSync?.addEventListener("click", async () => {
+    try {
+      const { baseUrl } = await getCreds();
+      window.open(joinUrl(baseUrl, "/bookmarkfs/sync"), "_blank", "noopener,noreferrer");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error), "err");
+    }
+  });
   const attachList = $("wb-attach-list");
 
   let listOffset = 0;
@@ -1026,6 +1055,7 @@ export async function mountWoxBinCompact(rootEl) {
       keys.forEach((key) => {
         const item = document.createElement("div");
         item.className = "wb-stack-card";
+        const ephemeralToken = ephemeralApiKeyTokens.get(key.id) || "";
         item.innerHTML = `
           <div class="wb-paste-title">${escapeHtml(key.label || "API key")}</div>
           <div class="wb-paste-meta">
@@ -1034,15 +1064,46 @@ export async function mountWoxBinCompact(rootEl) {
             <span>· Last used ${escapeHtml(key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleString() : "never")}</span>
           </div>
         `;
+        if (ephemeralToken) {
+          const tokenBlock = document.createElement("div");
+          tokenBlock.className = "wb-secret-block";
+          tokenBlock.innerHTML = `
+            <div class="wb-secret-block__label">New token</div>
+            <div class="wb-secret-block__copy">Shown once in this browser session. Copy it now.</div>
+            <code class="wb-secret-block__code">${escapeHtml(ephemeralToken)}</code>
+          `;
+          item.appendChild(tokenBlock);
+        }
         const actions = document.createElement("div");
         actions.className = "wb-paste-actions";
+
+        if (ephemeralToken) {
+          const copyBtn = document.createElement("button");
+          copyBtn.type = "button";
+          copyBtn.className = "wb-btn wb-btn-secondary wb-btn-tiny";
+          copyBtn.textContent = "Copy token";
+          copyBtn.addEventListener("click", async () => {
+            try {
+              await navigator.clipboard.writeText(ephemeralToken);
+              setStatus(`Copied API key token for "${key.label}".`, "ok");
+            } catch {
+              setStatus("Could not copy the API key token.", "err");
+            }
+          });
+          actions.appendChild(copyBtn);
+        }
 
         if (key.id !== currentKeyId) {
           const useBtn = document.createElement("button");
           useBtn.type = "button";
           useBtn.className = "wb-btn wb-btn-secondary wb-btn-tiny";
-          useBtn.textContent = "Use in profile";
+          useBtn.textContent = ephemeralToken ? "Use in profile" : "How to switch";
           useBtn.addEventListener("click", () => {
+            if (ephemeralToken) {
+              apiKeyInput.value = ephemeralToken;
+              setStatus(`Loaded "${key.label}" into the profile field. Save the profile to make it active.`, "ok");
+              return;
+            }
             setStatus("Create a replacement key first if you need to switch active credentials safely. Newly created keys are shown only once.", "ok");
           });
           actions.appendChild(useBtn);
@@ -1057,6 +1118,7 @@ export async function mountWoxBinCompact(rootEl) {
             return;
           }
           const result = await apiFetch(`/api/v1/me/keys/${encodeURIComponent(key.id)}`, { method: "DELETE" });
+          ephemeralApiKeyTokens.delete(key.id);
           await renderApiKeys();
           if (result?.revokedCurrent) {
             apiKeyInput.value = "";
@@ -1090,6 +1152,7 @@ export async function mountWoxBinCompact(rootEl) {
       });
       newKeyLabelInput.value = "";
       if (data?.key?.token) {
+        ephemeralApiKeyTokens.set(data.key.id, data.key.token);
         apiKeyInput.value = data.key.token;
         const shouldReplace = confirm("A new API key was created. Replace the active profile key with this new token?");
         if (shouldReplace) {
@@ -1105,7 +1168,7 @@ export async function mountWoxBinCompact(rootEl) {
         }
       }
       await renderApiKeys();
-      setStatus("New API key created. The token is shown once in the field above.", "ok");
+      setStatus("New API key created. The token is shown inside its card and in the profile field above.", "ok");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : String(error), "err");
     }

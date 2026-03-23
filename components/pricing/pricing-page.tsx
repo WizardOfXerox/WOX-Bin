@@ -33,8 +33,9 @@ export function PricingPage({ cards, links, signedIn }: Props) {
             <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">WOX-Bin</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Plans &amp; billing</h1>
             <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
-              Start free with a full local workspace and generous hosted limits. When you need more capacity, buy a Pro
-              or Team pass for the period you actually need instead of forcing a recurring subscription.
+              Start free with a full local workspace and generous hosted limits. When you need more capacity, offer
+              recurring billing, fixed-term one-time access, or lifetime upgrades without forcing every user into the
+              same purchase shape.
             </p>
           </div>
           <Link className="text-sm text-primary underline-offset-4 hover:underline" href="/">
@@ -59,7 +60,7 @@ export function PricingPage({ cards, links, signedIn }: Props) {
                 </li>
                 <li>
                   <span className="font-medium text-foreground">Team is shared infrastructure:</span> pooled storage,
-                  shared workspaces, roles, audit-friendly controls, and a renewable access pass for groups.
+                  shared workspaces, roles, audit-friendly controls, and recurring or one-time access for groups.
                 </li>
               </ul>
             </div>
@@ -95,6 +96,16 @@ export function PricingPage({ cards, links, signedIn }: Props) {
                     </li>
                   ))}
                 </ul>
+                {plan.purchaseOptions.length > 0 ? (
+                  <div className="mt-5 rounded-2xl border border-border/70 bg-muted/25 p-4">
+                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Billing options</p>
+                    <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                      {plan.purchaseOptions.map((option) => (
+                        <li key={option}>{option}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
                 <div className="mt-6 space-y-3">
                   {plan.id === "free" ? (
                     <Button asChild className="w-full" variant="outline">
@@ -105,7 +116,7 @@ export function PricingPage({ cards, links, signedIn }: Props) {
                     links.proUpgradeUrl ? (
                       <Button asChild className="w-full">
                         <a href={links.proUpgradeUrl} rel="noreferrer" target="_blank">
-                          Buy Pro pass
+                          Open Pro billing options
                           <ArrowRight className="h-4 w-4" />
                         </a>
                       </Button>
@@ -120,7 +131,7 @@ export function PricingPage({ cards, links, signedIn }: Props) {
                     links.teamUpgradeUrl ? (
                       <Button asChild className="w-full" variant="secondary">
                         <a href={links.teamUpgradeUrl} rel="noreferrer" target="_blank">
-                          Buy Team pass
+                          Open Team billing options
                           <ArrowRight className="h-4 w-4" />
                         </a>
                       </Button>
@@ -204,7 +215,8 @@ export function PricingPage({ cards, links, signedIn }: Props) {
           <div>
             <p className="text-sm font-medium text-foreground">Already have an account?</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Manage access windows, receipts, and renewal links in settings when billing links are enabled.
+              Manage recurring subscriptions, fixed-duration access windows, receipts, and renewal links in settings
+              when billing links are enabled.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">

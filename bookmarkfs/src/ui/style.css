@@ -746,6 +746,70 @@ body:not(.ext-app) .rwd-table td {
   color: hsl(var(--x-fg));
 }
 
+#woxbin-root .wb-shell-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid hsl(var(--x-border));
+  background:
+    radial-gradient(100% 140% at 0% 0%, hsl(var(--x-accent) / 0.14), transparent 52%),
+    linear-gradient(180deg, hsl(var(--x-surface2) / 0.9), hsl(var(--x-surface)));
+  box-shadow: var(--x-shadow);
+}
+
+#woxbin-root .wb-shell-head__copy {
+  min-width: 0;
+}
+
+#woxbin-root .wb-shell-head__eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: hsl(var(--x-dim));
+}
+
+#woxbin-root .wb-shell-head__title {
+  margin: 6px 0 0;
+  font-size: 1.25rem;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+#woxbin-root .wb-shell-head__text {
+  margin: 8px 0 0;
+  max-width: 56ch;
+  font-size: 13px;
+  line-height: 1.55;
+  color: hsl(var(--x-muted));
+}
+
+#woxbin-root .wb-shell-head__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+#woxbin-root .wb-shell-head__badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid hsl(var(--x-accent) / 0.26);
+  background: hsl(var(--x-accent) / 0.12);
+  color: hsl(var(--x-accent));
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 #woxbin-root [hidden] {
   display: none !important;
 }
@@ -763,6 +827,19 @@ body:not(.ext-app) .rwd-table td {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+#woxbin-root .wb-root--popup .wb-shell-head {
+  padding: 14px 16px;
+}
+
+#woxbin-root .wb-root--popup .wb-shell-head__title {
+  font-size: 1.05rem;
+}
+
+#woxbin-root .wb-root--popup .wb-shell-head__text {
+  font-size: 12px;
+  max-width: none;
 }
 
 #woxbin-root .wb-root--popup .wb-panel {
@@ -806,6 +883,7 @@ body:not(.ext-app) .rwd-table td {
   align-items: start;
 }
 
+#woxbin-root .wb-root--options .wb-shell-head,
 #woxbin-root .wb-root--options .wb-onboard {
   grid-column: 1 / -1;
   margin-bottom: 0;
@@ -846,6 +924,15 @@ body:not(.ext-app) .rwd-table td {
 
 #woxbin-root .wb-root--options .wb-lead {
   max-width: 60ch;
+}
+
+#woxbin-root .wb-root--options .wb-shell-head {
+  align-items: center;
+  padding: 20px 22px;
+}
+
+#woxbin-root .wb-root--options .wb-shell-head__title {
+  font-size: 1.5rem;
 }
 
 #woxbin-root .wb-font-mono {
@@ -1010,6 +1097,17 @@ body:not(.ext-app) .rwd-table td {
   }
 }
 
+@media (max-width: 640px) {
+  #woxbin-root .wb-shell-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #woxbin-root .wb-shell-head__actions {
+    justify-content: flex-start;
+  }
+}
+
 #woxbin-root .wb-btns {
   display: flex;
   flex-wrap: wrap;
@@ -1127,6 +1225,44 @@ body:not(.ext-app) .rwd-table td {
   border-radius: var(--x-radius-sm);
   border: 1px solid hsl(var(--x-border));
   background: hsl(var(--x-bg));
+}
+
+#woxbin-root .wb-secret-block {
+  margin-bottom: 10px;
+  padding: 12px 13px;
+  border-radius: 12px;
+  border: 1px solid hsl(var(--x-accent) / 0.24);
+  background: hsl(var(--x-accent) / 0.08);
+}
+
+#woxbin-root .wb-secret-block__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: hsl(var(--x-accent));
+}
+
+#woxbin-root .wb-secret-block__copy {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: hsl(var(--x-muted));
+}
+
+#woxbin-root .wb-secret-block__code {
+  display: block;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid hsl(var(--x-border));
+  background: hsl(var(--x-bg));
+  color: hsl(var(--x-fg));
+  font-family: var(--x-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 #woxbin-root .wb-paste-title {

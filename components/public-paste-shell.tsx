@@ -32,6 +32,7 @@ import { PrismLineMap } from "@/components/workspace/prism-line-map";
 import { buildThreadedComments, commentAuthorLabel } from "@/lib/comment-thread";
 import { parseUserMarkdown } from "@/lib/markdown/parse-user-markdown";
 import { getPasteShareUrl } from "@/lib/paste-links";
+import { rememberViewedPaste } from "@/lib/paste-view-history";
 import {
   readHtmlViewPref,
   readLineGuidesPref,
@@ -259,6 +260,13 @@ export function PublicPasteShell({
     }
     writeLineGuidesPref(showLineSeparators);
   }, [showLineSeparators, viewerPrefsReady]);
+
+  useEffect(() => {
+    if (locked) {
+      return;
+    }
+    rememberViewedPaste(paste);
+  }, [locked, paste]);
 
   useEffect(() => {
     if (!viewerPrefsReady) {

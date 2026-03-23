@@ -13,6 +13,7 @@ export type BillingPlanCard = {
   headline: string;
   description: string;
   highlights: string[];
+  purchaseOptions: string[];
 };
 
 export type BillingOverview = {
@@ -30,21 +31,26 @@ export const BILLING_PLAN_CARDS: BillingPlanCard[] = [
     name: "Free",
     headline: "Local-first plus a generous hosted starter",
     description: "Best for personal snippets, basic sharing, and account-backed sync.",
-    highlights: ["250 hosted pastes", "250 MB storage", "1 API key", "10 saved versions per paste"]
+    highlights: ["250 hosted pastes", "250 MB storage", "1 API key", "10 saved versions per paste"],
+    purchaseOptions: []
   },
   {
     id: "pro",
     name: "Pro",
-    headline: "Time-boxed access for heavier publishing and automation",
-    description: "Buy a 30-day or yearly pass when you need custom URLs, larger uploads, more API keys, and deeper version retention.",
-    highlights: ["5,000 hosted pastes", "10 GB storage", "10 API keys + custom URLs", "Webhooks + 200 versions"]
+    headline: "Flexible access for heavier publishing and automation",
+    description:
+      "Offer recurring billing or one-time access windows for users who only need paid features when they are actively publishing, automating, or reserving custom URLs.",
+    highlights: ["5,000 hosted pastes", "10 GB storage", "10 API keys + custom URLs", "Webhooks + 200 versions"],
+    purchaseOptions: ["Recurring: monthly, annual, or yearly", "One-time: 1 / 3 / 6 / 12 months", "Extended: yearly window or lifetime access"]
   },
   {
     id: "team",
     name: "Team",
-    headline: "Shared administration with a renewable team pass",
-    description: "Use a monthly or annual team pass for pooled storage, shared workspaces, custom URLs, and collaboration controls.",
-    highlights: ["100 GB pooled storage", "50 pooled API keys", "Member roles + custom URLs", "Team administration"]
+    headline: "Shared administration with recurring or one-time team access",
+    description:
+      "Support steady recurring billing for active groups while still offering fixed-term or lifetime team access when organizations prefer one-time purchasing.",
+    highlights: ["100 GB pooled storage", "50 pooled API keys", "Member roles + custom URLs", "Team administration"],
+    purchaseOptions: ["Recurring: monthly, annual, or yearly", "One-time: 1 / 3 / 6 / 12 months", "Long-term: fixed annual window or lifetime team access"]
   }
 ];
 

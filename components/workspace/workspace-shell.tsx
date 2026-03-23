@@ -172,6 +172,12 @@ import {
   storeAnonymousClaim
 } from "@/lib/local-workspace";
 import { getPasteSharePath, getPasteShareUrl } from "@/lib/paste-links";
+import {
+  clearPasteViewHistory,
+  PASTE_VIEW_HISTORY_UPDATED_EVENT,
+  readPasteViewHistory,
+  type PasteViewHistoryEntry
+} from "@/lib/paste-view-history";
 import { findBracketPairAtCursor } from "@/lib/bracket-match";
 import { normalizeRawPasteFetchUrl } from "@/lib/import-paste-url";
 import {
@@ -307,6 +313,7 @@ type ApiKeyRecord = {
   label: string;
   createdAt: string;
   lastUsedAt: string | null;
+  token?: string | null;
 };
 
 type ApiKeyCreateResponse = {
@@ -870,7 +877,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   const [apiKeys, setApiKeys] = useState<ApiKeyRecord[]>([]);
   const [accountPlan, setAccountPlan] = useState<AccountPlanSummary | null>(null);
   const [apiKeyLabel, setApiKeyLabel] = useState("CLI Upload");
-  const [newApiKey, setNewApiKey] = useState<string | null>(null);
+  const [viewHistory, setViewHistory] = useState<PasteViewHistoryEntry[]>([]);
   const [publishing, setPublishing] = useState(false);
   const [publishUrl, setPublishUrl] = useState<string | null>(null);
   const [sidebarFolder, setSidebarFolder] = useState<string>("all");
@@ -1037,7 +1044,12 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
       setLocalImportCount(draftCount);
     }
 
-    setApiKeys(keysData.keys);
+    setApiKeys((current) =>
+      keysData.keys.map((entry) => ({
+        ...entry,
+        token: current.find((currentEntry) => currentEntry.id === entry.id)?.token ?? null
+      }))
+    );
     setAccountPlan(workspaceData.plan);
     setSnapshot((current) => {
       const serverPastes = workspaceData.pastes.map(normalizeRemotePaste);
@@ -1118,6 +1130,21 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   useEffect(() => {
     void loadInitialWorkspace();
   }, [sessionUserId]);
+
+  useEffect(() => {
+    const syncHistory = () => {
+      setViewHistory(readPasteViewHistory());
+    };
+
+    syncHistory();
+    window.addEventListener("storage", syncHistory);
+    window.addEventListener(PASTE_VIEW_HISTORY_UPDATED_EVENT, syncHistory);
+
+    return () => {
+      window.removeEventListener("storage", syncHistory);
+      window.removeEventListener(PASTE_VIEW_HISTORY_UPDATED_EVENT, syncHistory);
+    };
+  }, []);
 
   useEffect(() => {
     setWorkspaceMobileMenuOpen(false);
@@ -2921,13 +2948,13 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
         id: key.id,
         label: key.label,
         createdAt: key.createdAt,
-        lastUsedAt: null
+        lastUsedAt: null,
+        token: key.token
       },
       ...current
     ]);
-    setNewApiKey(key.token);
     setApiKeyLabel("CLI Upload");
-    setStatus("Created a new API key. Copy it now because it will only be shown once.");
+    setStatus("Created a new API key. Copy it from its card now because it will only be shown once.");
   }
 
   async function handleRevokeApiKey(id: string) {
@@ -2944,6 +2971,15 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
     setAccountPlan(body.plan);
     setApiKeys((current) => current.filter((entry) => entry.id !== id));
     setStatus("Revoked the selected API key.");
+  }
+
+  async function handleCopyApiKeyToken(token: string) {
+    try {
+      await navigator.clipboard.writeText(token);
+      setStatus("Copied the API key token.");
+    } catch {
+      setError("Could not copy the API key token.");
+    }
   }
 
   async function copyPublicLink() {
@@ -5485,6 +5521,65 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
           </CardContent>
         </Card>
 
+        <Card>
+          <CardContent className="space-y-5">
+            <div>
+              <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">History</p>
+              <h2 className="mt-2 text-xl font-semibold">Recently viewed</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Shared pastes you open are stored in this browser, so signed-in and anonymous visits can pick up where
+                they left off.
+              </p>
+            </div>
+            {viewHistory.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No viewed pastes yet. Open any shared paste and it will appear here.</p>
+            ) : (
+              <div className="space-y-3">
+                {viewHistory.slice(0, 8).map((entry) => (
+                  <div key={entry.slug} className="rounded-[1rem] border border-border bg-muted/40 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-foreground">{entry.title}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Viewed {formatDate(entry.viewedAt)}
+                          {entry.authorLabel ? ` • ${entry.authorLabel}` : ""}
+                        </p>
+                      </div>
+                      <Badge className="shrink-0 border-border bg-transparent text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                        {entry.secretMode ? "Secret" : entry.visibility}
+                      </Badge>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button asChild size="sm" type="button" variant="outline">
+                        <Link href={entry.path}>
+                          <ExternalLink className="h-4 w-4" />
+                          Open paste
+                        </Link>
+                      </Button>
+                      <span className="inline-flex items-center rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground">
+                        {entry.language || "none"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {viewHistory.length > 0 ? (
+              <Button
+                onClick={() => {
+                  clearPasteViewHistory();
+                  setStatus("Cleared local paste history.");
+                }}
+                type="button"
+                variant="ghost"
+              >
+                <Eraser className="h-4 w-4" />
+                Clear local history
+              </Button>
+            ) : null}
+          </CardContent>
+        </Card>
+
         {sessionUser && mode === "account" ? (
           <Card>
             <CardContent className="space-y-5">
@@ -5493,7 +5588,9 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 <h2 className="mt-2 text-xl font-semibold">API keys</h2>
                 {accountPlan ? (
                   <p className="mt-2 text-sm text-muted-foreground">
-                    {formatCount(accountPlan.usage.apiKeys)} of {formatCount(accountPlan.limits.apiKeys)} keys in use (quota: {formatPlanName(accountPlan.quotaPlan)}).
+                    {formatCount(accountPlan.usage.apiKeys)} of {formatCount(accountPlan.limits.apiKeys)} keys in use
+                    (quota: {formatPlanName(accountPlan.quotaPlan)}). You can keep multiple keys active at once within
+                    your plan limit.
                   </p>
                 ) : null}
               </div>
@@ -5513,20 +5610,14 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   Create API key
                 </Button>
               </div>
-              {newApiKey ? (
-                <div className="rounded-[1rem] border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/5 dark:text-amber-100">
-                  <p className="font-medium">Copy this token now</p>
-                  <p className="mt-2 break-all font-mono text-xs">{newApiKey}</p>
-                </div>
-              ) : null}
               <div className="space-y-3">
                 {apiKeys.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No API keys yet.</p>
                 ) : (
                   apiKeys.map((key) => (
                     <div key={key.id} className="rounded-[1rem] border border-border bg-muted/40 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
                           <p className="font-medium text-foreground">{key.label}</p>
                           <p className="mt-1 text-xs text-muted-foreground">
                             Created {formatDate(key.createdAt)}
@@ -5537,6 +5628,21 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                           Revoke
                         </Button>
                       </div>
+                      {key.token ? (
+                        <div className="mt-3 rounded-[1rem] border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/5 dark:text-amber-100">
+                          <p className="font-medium">Copy this token now</p>
+                          <p className="mt-1 text-xs text-current/90">This value is only stored in this browser session after creation.</p>
+                          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <div className="min-w-0 flex-1 break-all rounded-xl border border-amber-500/20 bg-background/70 px-3 py-2 font-mono text-xs text-foreground dark:border-amber-400/20 dark:bg-black/20">
+                              {key.token}
+                            </div>
+                            <Button onClick={() => void handleCopyApiKeyToken(key.token ?? "")} size="sm" type="button" variant="secondary">
+                              <Copy className="h-4 w-4" />
+                              Copy
+                            </Button>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   ))
                 )}
