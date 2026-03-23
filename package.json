@@ -43,6 +43,7 @@
     "@radix-ui/react-tabs": "latest",
     "@upstash/ratelimit": "latest",
     "@upstash/redis": "latest",
+    "@vercel/analytics": "^2.0.1",
     "bcryptjs": "latest",
     "class-variance-authority": "latest",
     "clsx": "latest",
