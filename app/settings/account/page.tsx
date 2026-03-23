@@ -1,9 +1,11 @@
 import { and, eq } from "drizzle-orm";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { AccountSettingsClient } from "@/components/settings/account-settings-client";
 import { SettingsNav } from "@/components/settings/settings-nav";
+import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import { accounts, users } from "@/lib/db/schema";
 import { env } from "@/lib/env";
@@ -55,6 +57,13 @@ export default async function AccountSettingsPage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-6">
       <SettingsNav currentPath="/settings/account" plan={session.user.plan} />
+      {row.username ? (
+        <div className="flex justify-end">
+          <Button asChild variant="outline">
+            <Link href={`/u/${encodeURIComponent(row.username)}`}>View public profile</Link>
+          </Button>
+        </div>
+      ) : null}
       <AccountSettingsClient initial={initial} />
     </main>
   );

@@ -24,6 +24,8 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const showVercelAnalytics = process.env.VERCEL === "1";
+
   return (
     <html
       data-scroll-behavior="smooth"
@@ -38,7 +40,7 @@ export default async function RootLayout({
         <ThemeRootProvider>
           <AuthSessionProvider session={null}>{children}</AuthSessionProvider>
         </ThemeRootProvider>
-        <Analytics />
+        {showVercelAnalytics ? <Analytics /> : null}
       </body>
     </html>
   );

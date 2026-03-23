@@ -62,7 +62,18 @@ export default async function FeedPage() {
                     <Link href={`/p/${paste.slug}`}>{paste.title}</Link>
                   </h2>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    By {paste.author.displayName || paste.author.username || "Anonymous"} on {formatDate(paste.updatedAt)}
+                    By{" "}
+                    {paste.author.username ? (
+                      <Link
+                        className="text-foreground underline-offset-4 hover:text-primary hover:underline"
+                        href={`/u/${encodeURIComponent(paste.author.username)}`}
+                      >
+                        {paste.author.displayName || paste.author.username}
+                      </Link>
+                    ) : (
+                      <span className="text-foreground">{paste.author.displayName || "Anonymous"}</span>
+                    )}{" "}
+                    on {formatDate(paste.updatedAt)}
                   </p>
                 </div>
                 <div className="text-right text-sm text-muted-foreground">

@@ -465,6 +465,7 @@ export function PublicPasteShell({
   }
 
   const authorName = paste.author.displayName || paste.author.username || "Anonymous";
+  const authorProfileHref = paste.author.username ? `/u/${encodeURIComponent(paste.author.username)}` : null;
   const forkHref = `/app?fork=${encodeURIComponent(paste.slug)}`;
   const secretMode = paste.secretMode;
 
@@ -498,13 +499,29 @@ export function PublicPasteShell({
               <p className="mt-4 text-sm leading-7 text-muted-foreground">
                 {secretMode ? (
                   <>
-                    Shared by <span className="text-foreground">{authorName}</span> on {formatDate(paste.createdAt)}.
+                    Shared by{" "}
+                    {authorProfileHref ? (
+                      <Link className="text-foreground underline-offset-4 hover:text-primary hover:underline" href={authorProfileHref}>
+                        {authorName}
+                      </Link>
+                    ) : (
+                      <span className="text-foreground">{authorName}</span>
+                    )}{" "}
+                    on {formatDate(paste.createdAt)}.
                     Updated {formatDate(paste.updatedAt)}. {paste.viewCount.toLocaleString()} view{paste.viewCount === 1 ? "" : "s"}.
                     This link stays out of the public archive and disables comments and stars.
                   </>
                 ) : (
                   <>
-                    Posted by <span className="text-foreground">{authorName}</span> on {formatDate(paste.createdAt)}.
+                    Posted by{" "}
+                    {authorProfileHref ? (
+                      <Link className="text-foreground underline-offset-4 hover:text-primary hover:underline" href={authorProfileHref}>
+                        {authorName}
+                      </Link>
+                    ) : (
+                      <span className="text-foreground">{authorName}</span>
+                    )}{" "}
+                    on {formatDate(paste.createdAt)}.
                     Updated {formatDate(paste.updatedAt)}. {paste.viewCount.toLocaleString()} view{paste.viewCount === 1 ? "" : "s"}.
                   </>
                 )}
