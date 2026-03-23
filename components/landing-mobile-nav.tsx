@@ -85,6 +85,11 @@ export function LandingMobileNav({ initialSession = null }: Props) {
                 <Link href="/support">Support</Link>
               </Button>
             </DialogClose>
+            <DialogClose asChild>
+              <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
+                <Link href="/changelog">Changelog</Link>
+              </Button>
+            </DialogClose>
           </div>
           {status === "loading" && !initialSession?.user ? (
             <div aria-hidden className="h-12 w-full animate-pulse rounded-full bg-muted/40" />

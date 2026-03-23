@@ -19,6 +19,7 @@ import { getStoredBytesForPasteInput, getUserPlanSummary } from "@/lib/usage-ser
 import { normalizeTagList, slugify } from "@/lib/utils";
 import type { PasteFileDraft, PasteFileMediaKind, PublicPasteRecord } from "@/lib/types";
 import { dispatchUserWebhook } from "@/lib/webhooks";
+import { buildStarterAccountPasteSeed } from "@/lib/example-data";
 
 type Viewer = {
   id?: string | null;
@@ -407,6 +408,23 @@ export async function listWorkspaceSnapshot(userId: string, options?: { versionL
     folders: folderRows.map((folder) => folder.name),
     pastes: hydrated
   };
+}
+
+export async function seedWorkspaceForNewUser(userId: string) {
+  await ensureDefaultFolders(userId);
+
+  const [existing] = await db
+    .select({ id: pastes.id })
+    .from(pastes)
+    .where(and(eq(pastes.userId, userId), ne(pastes.status, "deleted"), isNull(pastes.deletedAt)))
+    .limit(1);
+
+  if (existing) {
+    return false;
+  }
+
+  await savePasteForUser(userId, buildStarterAccountPasteSeed());
+  return true;
 }
 
 /** Removes the folder row and clears `folder_name` on all user pastes in that folder. */

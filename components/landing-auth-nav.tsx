@@ -26,6 +26,15 @@ export function LandingDesktopAuthNav({ initialSession = null }: Props) {
       <Button asChild variant="ghost">
         <Link href="/pricing">Pricing</Link>
       </Button>
+      <Button asChild variant="ghost">
+        <Link href="/help">Help</Link>
+      </Button>
+      <Button asChild variant="ghost">
+        <Link href="/support">Support</Link>
+      </Button>
+      <Button asChild variant="ghost">
+        <Link href="/changelog">Changelog</Link>
+      </Button>
       {status === "loading" && !initialSession?.user ? (
         <div
           aria-hidden

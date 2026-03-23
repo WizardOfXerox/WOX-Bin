@@ -27,6 +27,13 @@ const GROUPS: { title: string; items: { href: string; label: string }[] }[] = [
     items: [{ href: "/settings/sessions", label: "Sessions" }]
   },
   {
+    title: "Help",
+    items: [
+      { href: "/help", label: "Help" },
+      { href: "/support", label: "Support" }
+    ]
+  },
+  {
     title: "Integrations",
     items: [
       { href: "/settings/webhooks", label: "Webhooks" },
@@ -65,13 +72,19 @@ export function SettingsNav({ plan, currentPath }: Props) {
             <Badge className={plan === "free" ? undefined : "border-amber-400/30 bg-amber-400/10 text-amber-100"}>
               {formatPlanName(plan)} plan
             </Badge>
+            <Button asChild variant="ghost">
+              <Link href="/help">Help</Link>
+            </Button>
+            <Button asChild variant="ghost">
+              <Link href="/support">Support</Link>
+            </Button>
             <Button asChild variant="outline">
               <Link href="/app">Back to workspace</Link>
             </Button>
           </div>
         </div>
 
-        <div className="grid gap-4 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="grid gap-4 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {GROUPS.map((group) => (
             <div key={group.title}>
               <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{group.title}</p>

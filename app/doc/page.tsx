@@ -61,6 +61,12 @@ export default function DocIndexPage() {
           — browser extension positioning, local vault model, and how it fits with hosted WOX-Bin.
         </li>
         <li>
+          <Link href="/changelog">
+            <strong className="text-foreground">Changelog</strong>
+          </Link>{" "}
+          — shipped product changes and recent platform updates.
+        </li>
+        <li>
           <Link href="/doc/faq">
             <strong className="text-foreground">FAQ</strong>
           </Link>{" "}

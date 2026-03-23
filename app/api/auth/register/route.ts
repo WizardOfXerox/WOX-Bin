@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { eq, or } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { folders, pastes, users } from "@/lib/db/schema";
 import { hashPassword } from "@/lib/crypto";
 import { jsonError } from "@/lib/http";
 import { getRequestIp } from "@/lib/request";
@@ -12,6 +12,7 @@ import { registerSchema } from "@/lib/validators";
 import { logAudit } from "@/lib/audit";
 import { sendSignupVerificationEmail } from "@/lib/email-verification";
 import { isSmtpConfigured } from "@/lib/mail";
+import { seedWorkspaceForNewUser } from "@/lib/paste-service";
 
 export async function POST(request: Request) {
   const ip = getRequestIp(request) ?? "unknown";
@@ -71,6 +72,16 @@ export async function POST(request: Request) {
       username: users.username,
       email: users.email
     });
+
+  try {
+    await seedWorkspaceForNewUser(user.id);
+  } catch (error) {
+    console.error("[register] starter workspace seed failed", error);
+    await db.delete(pastes).where(eq(pastes.userId, user.id));
+    await db.delete(folders).where(eq(folders.userId, user.id));
+    await db.delete(users).where(eq(users.id, user.id));
+    return jsonError("Could not create the starter workspace for this account. Please try again.", 500);
+  }
 
   await logAudit({
     actorUserId: user.id,

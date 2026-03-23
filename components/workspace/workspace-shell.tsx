@@ -1528,13 +1528,17 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
   }
 
   function applyBuiltinTemplate(t: (typeof BUILTIN_TEMPLATES)[number]) {
+    const templateFiles = t.files?.map((file) => ({ ...file })) ?? [];
     if (!selectedPaste) {
       const fresh = markNewAccountDraft(
         createEmptyPaste({
           title: `${t.title} (from template)`,
-          folder: snapshot.folders[0] || DEFAULT_FOLDERS[0] || null,
+          folder: t.folder ?? snapshot.folders[0] ?? DEFAULT_FOLDERS[0] ?? null,
           content: t.content,
-          language: t.language
+          language: t.language,
+          category: t.category ?? null,
+          tags: t.tags ?? [],
+          files: templateFiles
         }) as WorkspacePaste,
         mode
       );
@@ -1551,6 +1555,9 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
         content: t.content,
         language: t.language,
         title: `${t.title} (from template)`,
+        category: t.category ?? null,
+        tags: t.tags ?? [],
+        files: templateFiles,
         updatedAt: new Date().toISOString()
       }));
     }
@@ -5086,6 +5093,20 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
             >
               Workspace
             </Link>
+            <Link
+              className={workspaceMobileNavClass(pathname === "/help")}
+              href="/help"
+              onClick={() => setWorkspaceMobileMenuOpen(false)}
+            >
+              Help
+            </Link>
+            <Link
+              className={workspaceMobileNavClass(Boolean(pathname?.startsWith("/support")))}
+              href="/support"
+              onClick={() => setWorkspaceMobileMenuOpen(false)}
+            >
+              Support
+            </Link>
             {sessionUser ? (
               <Link
                 className={workspaceMobileNavClass(Boolean(pathname?.startsWith("/settings")))}
@@ -5291,6 +5312,15 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
                 href="/app"
               >
                 Workspace
+              </Link>
+              <Link className={workspaceHeaderNavClass(pathname === "/help")} href="/help">
+                Help
+              </Link>
+              <Link
+                className={workspaceHeaderNavClass(Boolean(pathname?.startsWith("/support")))}
+                href="/support"
+              >
+                Support
               </Link>
               {sessionUser ? (
                 <Link
@@ -5760,8 +5790,11 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
               <p className="mb-2 font-medium text-foreground">Built-in</p>
               <ul className="space-y-2">
                 {BUILTIN_TEMPLATES.map((t) => (
-                  <li className="flex items-center justify-between gap-2" key={t.id}>
-                    <span>{t.title}</span>
+                  <li className="flex items-start justify-between gap-3" key={t.id}>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">{t.title}</p>
+                      {t.description ? <p className="text-xs text-muted-foreground">{t.description}</p> : null}
+                    </div>
                     <Button onClick={() => applyBuiltinTemplate(t)} size="sm" type="button">
                       Use
                     </Button>

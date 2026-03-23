@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Braces,
   Cloud,
+  Clock3,
   KeyRound,
   LayoutTemplate,
   MessageSquare,
@@ -16,6 +17,7 @@ import {
 
 import { LandingDesktopAuthNav } from "@/components/landing-auth-nav";
 import { LandingMobileNav } from "@/components/landing-mobile-nav";
+import { CHANGELOG_ENTRIES } from "@/lib/changelog";
 import { APP_COPY } from "@/lib/constants";
 import { TOOLS_ENABLED } from "@/lib/tools/availability";
 import { Badge } from "@/components/ui/badge";
@@ -28,12 +30,10 @@ type Props = {
 
 export function LandingPage({ session }: Props) {
   const signedIn = Boolean(session?.user);
-  const heroTail = TOOLS_ENABLED
-    ? "browser utilities live at "
-    : "The tools surface is temporarily disabled while it is being finished. See ";
   const tagline = TOOLS_ENABLED
     ? APP_COPY.tagline
-    : "A paste workspace with a real editor—ribbon tools, Prism and Markdown, multi-file pastes, local IndexedDB drafts, and account sync. Compare Free, Pro, and Team on the pricing page.";
+    : "A local-first paste workspace with a real editor, account sync, multi-file drafts, built-in templates, internal support, and admin-ready operations.";
+  const recentChanges = CHANGELOG_ENTRIES.slice(0, 3);
 
   return (
     <main className="relative min-h-[100dvh] overflow-hidden bg-background">
@@ -48,16 +48,16 @@ export function LandingPage({ session }: Props) {
             </div>
           </div>
           <h1 className="max-w-none text-balance font-sans text-[1.7rem] font-semibold leading-[1.15] tracking-tight text-foreground min-[400px]:text-[1.9rem] sm:text-3xl sm:leading-tight md:text-5xl md:leading-[1.1] lg:text-6xl lg:leading-[1.08]">
-            Local-first pasting, shareable links, and a workspace that scales with you.
+            A paste workspace with real editing, real account controls, and fewer dead ends.
           </h1>
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Write in the browser, stay offline-friendly, then sync to your account when you want hosted pastes, API
-            access, and team options. The paste workspace lives at <span className="font-mono text-xs">/app</span>,
-            and the browser companion lives at <span className="font-mono text-xs">/bookmarkfs</span>.{" "}
+            Write locally first, then move into account mode when you want hosted pastes, API access, staff support,
+            moderation, and admin controls. The main workspace lives at <span className="font-mono text-xs">/app</span>,
+            the browser companion lives at <span className="font-mono text-xs">/bookmarkfs</span>, and the running
+            product history lives at <span className="font-mono text-xs">/changelog</span>.{" "}
             {TOOLS_ENABLED ? (
               <>
-                {heroTail}
-                <span className="font-mono text-xs">/tools</span>. See{" "}
+                Browser utilities are also available at <span className="font-mono text-xs">/tools</span>. See{" "}
                 <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/pricing">
                   plans &amp; pricing
                 </Link>
@@ -79,9 +79,11 @@ export function LandingPage({ session }: Props) {
           <div className="flex min-w-0 flex-col justify-center gap-6 sm:gap-8">
             <div className="flex flex-wrap gap-2 sm:gap-3">
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Ribbon editor &amp; Prism</Badge>
-              <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Markdown preview</Badge>
+              <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Templates for every language</Badge>
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Multi-file pastes</Badge>
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Local + cloud sync</Badge>
+              <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Internal support tickets</Badge>
+              <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Admin &amp; moderation</Badge>
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">BookmarkFS companion</Badge>
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Free · Pro · Team</Badge>
               {TOOLS_ENABLED ? <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Browser tools hub</Badge> : null}
@@ -117,6 +119,9 @@ export function LandingPage({ session }: Props) {
               )}
               <Button asChild className="h-12 w-full min-h-12 touch-manipulation sm:h-auto sm:w-auto sm:min-h-0" size="lg" variant="secondary">
                 <Link href="/pricing">Compare plans</Link>
+              </Button>
+              <Button asChild className="h-12 w-full min-h-12 touch-manipulation sm:h-auto sm:w-auto sm:min-h-0" size="lg" variant="ghost">
+                <Link href="/changelog">View changelog</Link>
               </Button>
             </div>
             <div className="grid gap-2 text-sm text-muted-foreground sm:flex sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1">
@@ -163,6 +168,12 @@ export function LandingPage({ session }: Props) {
               <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/bookmarkfs">
                 BookmarkFS
               </Link>
+              <span aria-hidden className="hidden text-border sm:inline">
+                ·
+              </span>
+              <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/changelog">
+                Changelog
+              </Link>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:gap-5 xl:grid-cols-3">
               <Card className="overflow-hidden">
@@ -170,8 +181,8 @@ export function LandingPage({ session }: Props) {
                   <LayoutTemplate className="h-5 w-5 text-primary" />
                   <h2 className="font-semibold text-foreground">Ribbon workspace</h2>
                   <p className="text-sm leading-relaxed text-muted-foreground">
-                    Home, Insert, Layout, and View tabs—formatting helpers, lists, indent, find/replace, timestamps, fenced
-                    code, tables, JSON tools, print, and templates in one strip.
+                    Home, Insert, Layout, and View tabs with formatting helpers, lists, indent, find/replace, timestamps,
+                    fenced code, tables, JSON tools, print, and template application in one strip.
                   </p>
                 </CardContent>
               </Card>
@@ -201,8 +212,8 @@ export function LandingPage({ session }: Props) {
                   <Cloud className="h-5 w-5 text-primary" />
                   <h2 className="font-semibold text-foreground">Modes &amp; polish</h2>
                   <p className="text-sm leading-relaxed text-muted-foreground">
-                    IndexedDB local drafts or signed-in sync, folders and pins, light UI shell, workspace tone, quick
-                    open, keyboard help, import URL, and API uploads with keys.
+                    IndexedDB local drafts or signed-in sync, folders and pins, quick open, import URL, API uploads,
+                    and a first-run megademo paste for new accounts.
                   </p>
                 </CardContent>
               </Card>
@@ -221,9 +232,8 @@ export function LandingPage({ session }: Props) {
                   <ShieldCheck className="h-5 w-5 text-primary" />
                   <h2 className="font-semibold text-foreground">Trust &amp; accounts</h2>
                   <p className="text-sm leading-relaxed text-muted-foreground">
-                    Cloudflare Turnstile, rate limits, and moderation-ready public pages. Session management, optional
-                    Google sign-in, email-based password reset when your host configures SMTP, and pricing / billing
-                    entry points for Pro and Team.
+                    Turnstile, rate limits, email verification, Google sign-in, password reset, session controls, and
+                    admin and moderator operations when you need hosted governance.
                   </p>
                 </CardContent>
               </Card>
@@ -259,7 +269,11 @@ export function LandingPage({ session }: Props) {
                     <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/forgot-password">
                       forgot password
                     </Link>{" "}
-                    if you registered with an email; operators enable outbound SMTP to deliver reset links.
+                    if you registered with an email, and use{" "}
+                    <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/changelog">
+                      changelog
+                    </Link>{" "}
+                    to track product changes over time.
                   </p>
                 </CardContent>
               </Card>
@@ -270,9 +284,9 @@ export function LandingPage({ session }: Props) {
             <CardContent className="space-y-5 p-4 sm:space-y-6 sm:p-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div className="min-w-0">
-                  <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground sm:text-sm">Why WOX-Bin</p>
+                  <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground sm:text-sm">Current surface</p>
                   <h2 className="mt-1.5 text-xl font-semibold leading-snug text-foreground sm:mt-2 sm:text-2xl">
-                    Built for daily use
+                    Built for actual operator use
                   </h2>
                 </div>
                 <Badge className="w-fit shrink-0 border-primary/30 bg-primary/10 text-foreground">Shipping now</Badge>
@@ -315,6 +329,11 @@ export function LandingPage({ session }: Props) {
                       Support
                     </Link>
                   </li>
+                  <li>
+                    <Link className="text-primary underline-offset-4 hover:underline" href="/changelog">
+                      Changelog
+                    </Link>
+                  </li>
                   {TOOLS_ENABLED ? (
                     <li>
                       <Link className="text-primary underline-offset-4 hover:underline" href="/tools">
@@ -333,6 +352,23 @@ export function LandingPage({ session }: Props) {
                     </Link>
                   </li>
                 </ul>
+              </div>
+              <div className="rounded-[1.25rem] border border-border bg-muted/50 p-3.5 dark:border-white/10 dark:bg-black/20 sm:p-4">
+                <div className="flex items-center gap-2">
+                  <Clock3 className="h-4 w-4 text-primary" />
+                  <p className="text-sm font-medium text-foreground">Recent changes</p>
+                </div>
+                <div className="mt-3 space-y-3 text-sm text-muted-foreground">
+                  {recentChanges.map((entry) => (
+                    <div key={entry.slug}>
+                      <p className="font-medium text-foreground">{entry.title}</p>
+                      <p className="mt-1 leading-6">{entry.summary}</p>
+                    </div>
+                  ))}
+                  <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/changelog">
+                    Read the full changelog
+                  </Link>
+                </div>
               </div>
               <div className="rounded-[1.25rem] border border-border bg-muted/50 p-3.5 dark:border-white/10 dark:bg-black/20 sm:p-4">
                 <div className="flex items-center gap-2">
@@ -395,6 +431,12 @@ export function LandingPage({ session }: Props) {
           </span>
           <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/bookmarkfs">
             BookmarkFS
+          </Link>
+          <span aria-hidden className="hidden text-border sm:inline">
+            ·
+          </span>
+          <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/changelog">
+            Changelog
           </Link>
           <span aria-hidden className="hidden text-border sm:inline">
             ·

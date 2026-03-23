@@ -109,12 +109,12 @@ export const BURN_VIEW_OPTIONS = [0, 1, 3, 5, 10] as const;
 export const APP_COPY = {
   name: "WOX-Bin",
   tagline:
-    "A paste workspace with a real editor—ribbon tools, Prism and Markdown, multi-file pastes, local IndexedDB drafts, and account sync. Compare Free, Pro, and Team on the pricing page; use built-in browser tools for PDFs, images, and more.",
+    "A local-first paste workspace with a real editor, account sync, multi-file drafts, built-in templates, internal support, and admin-ready operations.",
   marketingBullets: [
-    "Ribbon toolbar: clipboard, Markdown-style formatting, lists & indent, find/replace, insert snippets, JSON format/minify, print, and templates",
-    "Prism syntax themes, line numbers, word wrap, bracket matching, autosave, and optional light app shell + Coy-style code colors",
-    "Multi-file pastes (per-file languages), Markdown side preview, code-as-image export, and share links with line anchors",
-    "Local mode or signed-in sync—folders, versions, comments & stars, public feed & archive, raw views, API keys, and optional webhooks on higher tiers",
-    "Turnstile + rate limits, session controls, billing & pricing links, forgot-password email reset (with SMTP), Google sign-in, and admin tools when you need them"
+    "Ribbon workspace with formatting tools, find/replace, JSON helpers, print, and built-in templates for every supported language",
+    "Prism syntax themes, line numbers, Markdown preview, code-image export, and multi-file pastes with per-file languages",
+    "Local drafts or signed-in sync with folders, versions, stars, comments, public archive pages, API keys, and BookmarkFS companion flows",
+    "First-run onboarding now starts with the bundled megademo paste so new accounts can inspect features immediately",
+    "Turnstile, rate limits, email verification, Google sign-in, internal support tickets, moderation controls, and admin operations"
   ]
 };
