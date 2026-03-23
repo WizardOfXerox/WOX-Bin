@@ -591,8 +591,11 @@ export function PublicPasteShell({
                   </Link>
                 </Button>
               )}
-              <Button asChild className="w-full sm:w-auto" type="button" variant="ghost">
-                <Link href={`/raw/${paste.slug}`}>Raw</Link>
+              <Button asChild className="w-full sm:w-auto" type="button" variant="outline">
+                <Link href={`/raw/${paste.slug}`} prefetch={false}>
+                  <Code2 className="h-4 w-4" />
+                  Raw
+                </Link>
               </Button>
               {!secretMode ? (
                 <Button

@@ -45,6 +45,7 @@ import {
   ListOrdered,
   LogOut,
   Menu,
+  MoreHorizontal,
   Pencil,
   PanelLeft,
   PanelRight,
@@ -203,8 +204,9 @@ const PUBLIC_FEED_FOLDER = "__wox_public_feed__";
 
 const STATUS_MESSAGE_AUTO_DISMISS_MS = 8000;
 const ERROR_MESSAGE_AUTO_DISMISS_MS = 12000;
-const MIN_WORKSPACE_ZOOM = 85;
-const MAX_WORKSPACE_ZOOM = 120;
+const MIN_WORKSPACE_ZOOM = 70;
+const MAX_WORKSPACE_ZOOM = 150;
+const WORKSPACE_ZOOM_STEP = 10;
 const DEFAULT_WORKSPACE_ZOOM = 100;
 
 type ListQuickFilter = "all" | "favorites" | "recent" | "archived";
@@ -287,6 +289,15 @@ type FolderModalState =
   | { open: false }
   | { open: true; mode: "new" }
   | { open: true; mode: "rename"; from: string };
+
+type MobileFolderActionsState =
+  | { open: false }
+  | { open: true; kind: "all" }
+  | { open: true; kind: "folder"; folderName: string };
+
+type MobilePasteActionsState =
+  | { open: false }
+  | { open: true; pasteId: string };
 
 function buildPasteFingerprint(paste: WorkspacePaste) {
   return `${paste.id}|${paste.slug ?? ""}|${paste.content}|${paste.title}|${paste.visibility}|${paste.folder ?? ""}|${paste.pinned}|${paste.favorite}|${paste.archived}|${paste.template}|${paste.secretMode}|${paste.captchaRequired}|${JSON.stringify(paste.files)}`;
@@ -942,6 +953,8 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   const [phoneViewport, setPhoneViewport] = useState(false);
   const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
+  const [mobileFolderActions, setMobileFolderActions] = useState<MobileFolderActionsState>({ open: false });
+  const [mobilePasteActions, setMobilePasteActions] = useState<MobilePasteActionsState>({ open: false });
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
   /** Mobile: editor uses transparent text over Prism — need ≥16px to avoid iOS zoom and keep overlay aligned. */
@@ -1705,6 +1718,16 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   );
 
   const sidebarShowsPublicFeed = sidebarFolder === PUBLIC_FEED_FOLDER;
+  const mobilePasteActionTarget = useMemo(() => {
+    if (!mobilePasteActions.open) {
+      return null;
+    }
+    return (
+      snapshot.pastes.find((paste) => paste.id === mobilePasteActions.pasteId) ??
+      publicFeedPastes.find((paste) => paste.id === mobilePasteActions.pasteId) ??
+      null
+    );
+  }, [mobilePasteActions, publicFeedPastes, snapshot.pastes]);
 
   selectedPasteRef.current = selectedPaste;
 
@@ -3332,31 +3355,45 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   aria-label="Folders — right-click empty area for new folder"
                   className="mt-1.5 flex min-h-[2.75rem] flex-nowrap gap-2 overflow-x-auto overflow-y-visible rounded-xl border border-transparent p-1.5 -m-1.5 pb-2 transition-colors [-webkit-overflow-scrolling:touch] hover:border-border/35 data-[state=open]:border-border/50 data-[state=open]:bg-muted/25 sm:flex-wrap sm:overflow-x-visible sm:pb-1.5"
                 >
-              <ContextMenu>
-                <ContextMenuTrigger asChild>
+              <div className="flex shrink-0 items-center gap-1">
+                <ContextMenu>
+                  <ContextMenuTrigger asChild>
+                    <Button
+                      className="h-9 shrink-0 touch-manipulation text-xs sm:h-8"
+                      onClick={() => setSidebarFolder("all")}
+                      size="sm"
+                      type="button"
+                      variant={sidebarFolder === "all" ? "default" : "outline"}
+                    >
+                      All
+                    </Button>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent className="w-52">
+                    <ContextMenuLabel>All pastes</ContextMenuLabel>
+                    <ContextMenuItem onSelect={() => setSidebarFolder("all")}>
+                      <FolderInput className="mr-2 h-4 w-4" />
+                      Show all pastes
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem onSelect={openNewFolderModal}>
+                      <FolderPlus className="mr-2 h-4 w-4" />
+                      New folder…
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
+                {phoneViewport ? (
                   <Button
-                    className="h-9 shrink-0 touch-manipulation text-xs sm:h-8"
-                    onClick={() => setSidebarFolder("all")}
+                    aria-label="All paste actions"
+                    className="h-9 w-9 shrink-0 touch-manipulation rounded-full p-0"
+                    onClick={() => setMobileFolderActions({ open: true, kind: "all" })}
                     size="sm"
                     type="button"
-                    variant={sidebarFolder === "all" ? "default" : "outline"}
+                    variant="outline"
                   >
-                    All
+                    <MoreHorizontal className="h-4 w-4" />
                   </Button>
-                </ContextMenuTrigger>
-                <ContextMenuContent className="w-52">
-                  <ContextMenuLabel>All pastes</ContextMenuLabel>
-                  <ContextMenuItem onSelect={() => setSidebarFolder("all")}>
-                    <FolderInput className="mr-2 h-4 w-4" />
-                    Show all pastes
-                  </ContextMenuItem>
-                  <ContextMenuSeparator />
-                  <ContextMenuItem onSelect={openNewFolderModal}>
-                    <FolderPlus className="mr-2 h-4 w-4" />
-                    New folder…
-                  </ContextMenuItem>
-                </ContextMenuContent>
-              </ContextMenu>
+                ) : null}
+              </div>
               <Button
                 className="h-9 shrink-0 touch-manipulation text-xs sm:h-8"
                 onClick={() => {
@@ -3370,53 +3407,67 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 Public feed
               </Button>
               {snapshot.folders.map((folder) => (
-                <ContextMenu key={folder}>
-                  <ContextMenuTrigger asChild>
+                <div className="flex shrink-0 items-center gap-1" key={folder}>
+                  <ContextMenu>
+                    <ContextMenuTrigger asChild>
+                      <Button
+                        className="h-9 max-w-[10rem] shrink-0 touch-manipulation truncate text-xs sm:h-8 sm:max-w-[9.5rem]"
+                        onClick={() => setSidebarFolder(folder)}
+                        size="sm"
+                        title={folder}
+                        type="button"
+                        variant={sidebarFolder === folder ? "default" : "outline"}
+                      >
+                        {folder}
+                      </Button>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent className="w-56">
+                      <ContextMenuLabel className="max-w-[14rem] truncate">{folder}</ContextMenuLabel>
+                      <ContextMenuItem onSelect={() => setSidebarFolder(folder)}>
+                        <FolderInput className="mr-2 h-4 w-4" />
+                        Filter to this folder
+                      </ContextMenuItem>
+                      <ContextMenuItem
+                        onSelect={() => {
+                          void navigator.clipboard.writeText(folder);
+                          setStatus(`Copied folder name "${folder}".`);
+                        }}
+                      >
+                        <Copy className="mr-2 h-4 w-4" />
+                        Copy folder name
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem onSelect={() => openRenameFolderModal(folder)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Rename folder…
+                      </ContextMenuItem>
+                      <ContextMenuItem onSelect={openNewFolderModal}>
+                        <FolderPlus className="mr-2 h-4 w-4" />
+                        New folder…
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onSelect={() => void handleDeleteFolder(folder)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete folder…
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                  {phoneViewport ? (
                     <Button
-                      className="h-9 max-w-[10rem] shrink-0 touch-manipulation truncate text-xs sm:h-8 sm:max-w-[9.5rem]"
-                      onClick={() => setSidebarFolder(folder)}
+                      aria-label={`${folder} actions`}
+                      className="h-9 w-9 shrink-0 touch-manipulation rounded-full p-0"
+                      onClick={() => setMobileFolderActions({ open: true, kind: "folder", folderName: folder })}
                       size="sm"
-                      title={folder}
                       type="button"
-                      variant={sidebarFolder === folder ? "default" : "outline"}
+                      variant="outline"
                     >
-                      {folder}
+                      <MoreHorizontal className="h-4 w-4" />
                     </Button>
-                  </ContextMenuTrigger>
-                  <ContextMenuContent className="w-56">
-                    <ContextMenuLabel className="max-w-[14rem] truncate">{folder}</ContextMenuLabel>
-                    <ContextMenuItem onSelect={() => setSidebarFolder(folder)}>
-                      <FolderInput className="mr-2 h-4 w-4" />
-                      Filter to this folder
-                    </ContextMenuItem>
-                    <ContextMenuItem
-                      onSelect={() => {
-                        void navigator.clipboard.writeText(folder);
-                        setStatus(`Copied folder name "${folder}".`);
-                      }}
-                    >
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copy folder name
-                    </ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem onSelect={() => openRenameFolderModal(folder)}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Rename folder…
-                    </ContextMenuItem>
-                    <ContextMenuItem onSelect={openNewFolderModal}>
-                      <FolderPlus className="mr-2 h-4 w-4" />
-                      New folder…
-                    </ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onSelect={() => void handleDeleteFolder(folder)}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete folder…
-                    </ContextMenuItem>
-                  </ContextMenuContent>
-                </ContextMenu>
+                  ) : null}
+                </div>
               ))}
                 </div>
               </ContextMenuTrigger>
@@ -3586,39 +3637,58 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                           type="checkbox"
                         />
                       ) : null}
-                      <button
-                        className="min-w-0 flex-1 text-left"
-                        onClick={() => {
-                          setSelectedId(paste.id);
-                          if (phoneViewport) {
-                            setMobileLibraryOpen(false);
-                          }
-                        }}
-                        type="button"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="truncate font-medium text-foreground">{paste.title}</p>
-                          <div className="flex shrink-0 flex-wrap items-center gap-1">
-                            {paste.favorite ? (
-                              <Badge className="gap-0.5 border-amber-500/35 bg-amber-500/15 px-1.5 text-amber-950 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
-                                <Star className="h-3 w-3" />
-                              </Badge>
-                            ) : null}
-                            {paste.archived ? (
-                              <Badge className="border-border bg-transparent">Archived</Badge>
-                            ) : null}
-                            {paste.pinned ? <Badge>Pinned</Badge> : null}
-                          </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start gap-2">
+                          <button
+                            className="min-w-0 flex-1 text-left"
+                            onClick={() => {
+                              setSelectedId(paste.id);
+                              if (phoneViewport) {
+                                setMobileLibraryOpen(false);
+                              }
+                            }}
+                            type="button"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="truncate font-medium text-foreground">{paste.title}</p>
+                              <div className="flex shrink-0 flex-wrap items-center gap-1">
+                                {paste.favorite ? (
+                                  <Badge className="gap-0.5 border-amber-500/35 bg-amber-500/15 px-1.5 text-amber-950 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+                                    <Star className="h-3 w-3" />
+                                  </Badge>
+                                ) : null}
+                                {paste.archived ? (
+                                  <Badge className="border-border bg-transparent">Archived</Badge>
+                                ) : null}
+                                {paste.pinned ? <Badge>Pinned</Badge> : null}
+                              </div>
+                            </div>
+                            <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm text-muted-foreground">
+                              {paste.content || "Empty paste"}
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <Badge>{paste.language}</Badge>
+                              {paste.folder ? <Badge>{paste.folder}</Badge> : null}
+                              <Badge>{paste.visibility}</Badge>
+                            </div>
+                          </button>
+                          {phoneViewport ? (
+                            <Button
+                              aria-label={`${paste.title} actions`}
+                              className="mt-0.5 h-9 w-9 shrink-0 touch-manipulation rounded-full p-0"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setMobilePasteActions({ open: true, pasteId: paste.id });
+                              }}
+                              size="sm"
+                              type="button"
+                              variant="outline"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          ) : null}
                         </div>
-                        <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm text-muted-foreground">
-                          {paste.content || "Empty paste"}
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <Badge>{paste.language}</Badge>
-                          {paste.folder ? <Badge>{paste.folder}</Badge> : null}
-                          <Badge>{paste.visibility}</Badge>
-                        </div>
-                      </button>
+                      </div>
                     </div>
                   </ContextMenuTrigger>
                   <ContextMenuContent className="w-56">
@@ -3788,7 +3858,8 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden print:overflow-visible">
                 <div
                   className={cn(
-                    "shrink-0 z-20 -mx-3 isolate box-border flex flex-col justify-start border-b border-border bg-card/98 px-3 backdrop-blur-md supports-[backdrop-filter]:bg-card/95 [overflow-anchor:none] print:-mx-0 print:border-0 print:bg-transparent print:px-0 print:pb-2 print:shadow-none sm:-mx-4 sm:px-4 lg:-mx-6 lg:px-6",
+                    "shrink-0 z-20 -mx-3 isolate box-border flex flex-col justify-start border-b border-border px-3 [overflow-anchor:none] print:-mx-0 print:border-0 print:bg-transparent print:px-0 print:pb-2 print:shadow-none sm:-mx-4 sm:px-4 lg:-mx-6 lg:px-6",
+                    editorPaneCompact ? "bg-card shadow-md supports-[backdrop-filter]:bg-card" : "bg-card/98 backdrop-blur-md supports-[backdrop-filter]:bg-card/95",
                     editorPaneCompact ? "pb-2 shadow-md" : "pb-3 shadow-none max-lg:pb-2 sm:pb-4"
                   )}
                   style={{ transition: "box-shadow 180ms ease-out" }}
@@ -5814,7 +5885,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               <Button
                 className="h-9 w-9 shrink-0"
                 disabled={pageZoom <= MIN_WORKSPACE_ZOOM}
-                onClick={() => changePageZoom(-5)}
+                onClick={() => changePageZoom(-WORKSPACE_ZOOM_STEP)}
                 size="icon"
                 type="button"
                 variant="outline"
@@ -5827,7 +5898,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               <Button
                 className="h-9 w-9 shrink-0"
                 disabled={pageZoom >= MAX_WORKSPACE_ZOOM}
-                onClick={() => changePageZoom(5)}
+                onClick={() => changePageZoom(WORKSPACE_ZOOM_STEP)}
                 size="icon"
                 type="button"
                 variant="outline"
@@ -6123,7 +6194,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   <Button
                     className="h-8 w-8 rounded-full px-0"
                     disabled={pageZoom <= MIN_WORKSPACE_ZOOM}
-                    onClick={() => changePageZoom(-5)}
+                    onClick={() => changePageZoom(-WORKSPACE_ZOOM_STEP)}
                     size="icon"
                     title="Zoom out"
                     type="button"
@@ -6142,7 +6213,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   <Button
                     className="h-8 w-8 rounded-full px-0"
                     disabled={pageZoom >= MAX_WORKSPACE_ZOOM}
-                    onClick={() => changePageZoom(5)}
+                    onClick={() => changePageZoom(WORKSPACE_ZOOM_STEP)}
                     size="icon"
                     title="Zoom in"
                     type="button"
@@ -6175,7 +6246,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   <Button
                     className="h-8 w-8 rounded-full px-0"
                     disabled={pageZoom <= MIN_WORKSPACE_ZOOM}
-                    onClick={() => changePageZoom(-5)}
+                    onClick={() => changePageZoom(-WORKSPACE_ZOOM_STEP)}
                     size="icon"
                     title="Zoom out"
                     type="button"
@@ -6194,7 +6265,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   <Button
                     className="h-8 w-8 rounded-full px-0"
                     disabled={pageZoom >= MAX_WORKSPACE_ZOOM}
-                    onClick={() => changePageZoom(5)}
+                    onClick={() => changePageZoom(WORKSPACE_ZOOM_STEP)}
                     size="icon"
                     title="Zoom in"
                     type="button"
@@ -6480,6 +6551,260 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
             <DialogDescription>Manage language, folder, sharing, versions, and advanced settings for the current paste.</DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-hidden">{renderDetails()}</div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        onOpenChange={(open) => {
+          if (!open) {
+            setMobileFolderActions({ open: false });
+          }
+        }}
+        open={phoneViewport && mobileFolderActions.open}
+      >
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-sm rounded-[1.25rem] p-5">
+          <DialogHeader>
+            <DialogTitle>
+              {mobileFolderActions.open
+                ? mobileFolderActions.kind === "all"
+                  ? "All pastes"
+                  : mobileFolderActions.folderName
+                : "Folder actions"}
+            </DialogTitle>
+            <DialogDescription>
+              {mobileFolderActions.open && mobileFolderActions.kind === "all"
+                ? "Quick actions for your full workspace library."
+                : "Manage this folder without needing desktop right-click."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-2 flex flex-col gap-2">
+            <Button
+              className="justify-start"
+              onClick={() => {
+                if (!mobileFolderActions.open) {
+                  return;
+                }
+                setSidebarFolder("all");
+                setMobileFolderActions({ open: false });
+              }}
+              type="button"
+              variant="outline"
+            >
+              <FolderInput className="h-4 w-4" />
+              Show all pastes
+            </Button>
+            {mobileFolderActions.open && mobileFolderActions.kind === "folder" ? (
+              <Button
+                className="justify-start"
+                onClick={() => {
+                  void navigator.clipboard.writeText(mobileFolderActions.folderName);
+                  setStatus(`Copied folder name "${mobileFolderActions.folderName}".`);
+                  setMobileFolderActions({ open: false });
+                }}
+                type="button"
+                variant="outline"
+              >
+                <Copy className="h-4 w-4" />
+                Copy folder name
+              </Button>
+            ) : null}
+            {mobileFolderActions.open && mobileFolderActions.kind === "folder" ? (
+              <Button
+                className="justify-start"
+                onClick={() => {
+                  const folderName = mobileFolderActions.folderName;
+                  setSidebarFolder(folderName);
+                  setMobileFolderActions({ open: false });
+                }}
+                type="button"
+                variant="outline"
+              >
+                <Search className="h-4 w-4" />
+                Filter to this folder
+              </Button>
+            ) : null}
+            <Button
+              className="justify-start"
+              onClick={() => {
+                setMobileFolderActions({ open: false });
+                window.setTimeout(() => openNewFolderModal(), 0);
+              }}
+              type="button"
+              variant="outline"
+            >
+              <FolderPlus className="h-4 w-4" />
+              New folder…
+            </Button>
+            {mobileFolderActions.open && mobileFolderActions.kind === "folder" ? (
+              <Button
+                className="justify-start"
+                onClick={() => {
+                  const folderName = mobileFolderActions.folderName;
+                  setMobileFolderActions({ open: false });
+                  window.setTimeout(() => openRenameFolderModal(folderName), 0);
+                }}
+                type="button"
+                variant="outline"
+              >
+                <Pencil className="h-4 w-4" />
+                Rename folder…
+              </Button>
+            ) : null}
+            {mobileFolderActions.open && mobileFolderActions.kind === "folder" ? (
+              <Button
+                className="justify-start"
+                onClick={() => {
+                  const folderName = mobileFolderActions.folderName;
+                  setMobileFolderActions({ open: false });
+                  void handleDeleteFolder(folderName);
+                }}
+                type="button"
+                variant="destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete folder…
+              </Button>
+            ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        onOpenChange={(open) => {
+          if (!open) {
+            setMobilePasteActions({ open: false });
+          }
+        }}
+        open={phoneViewport && mobilePasteActions.open}
+      >
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-sm rounded-[1.25rem] p-5">
+          <DialogHeader>
+            <DialogTitle>{mobilePasteActionTarget?.title ?? "Paste actions"}</DialogTitle>
+            <DialogDescription>Everything you’d normally reach with right-click on desktop.</DialogDescription>
+          </DialogHeader>
+          {mobilePasteActionTarget ? (
+            <div className="mt-2 flex flex-col gap-2">
+              <Button
+                className="justify-start"
+                onClick={() => {
+                  setSelectedId(mobilePasteActionTarget.id);
+                  setMobilePasteActions({ open: false });
+                  setMobileLibraryOpen(false);
+                }}
+                type="button"
+                variant="outline"
+              >
+                <FilePlus2 className="h-4 w-4" />
+                Open
+              </Button>
+              <Button
+                className="justify-start"
+                onClick={() => {
+                  duplicatePasteById(mobilePasteActionTarget.id);
+                  setMobilePasteActions({ open: false });
+                }}
+                type="button"
+                variant="outline"
+              >
+                <WandSparkles className="h-4 w-4" />
+                Fork
+              </Button>
+              <Button
+                className="justify-start"
+                onClick={() => {
+                  void navigator.clipboard.writeText(mobilePasteActionTarget.content);
+                  setStatus("Copied paste contents to clipboard.");
+                  setMobilePasteActions({ open: false });
+                }}
+                type="button"
+                variant="outline"
+              >
+                <Copy className="h-4 w-4" />
+                Copy all text
+              </Button>
+              {mobilePasteActionTarget.slug &&
+              !isAccountOnlyDraft(mobilePasteActionTarget, mode) &&
+              mobilePasteActionTarget.visibility !== "private" ? (
+                <Button
+                  className="justify-start"
+                  onClick={() => {
+                    const url = getPasteShareUrl(
+                      window.location.origin,
+                      mobilePasteActionTarget.slug!,
+                      mobilePasteActionTarget.secretMode
+                    );
+                    void navigator.clipboard.writeText(url);
+                    setStatus("Copied share link.");
+                    setMobilePasteActions({ open: false });
+                  }}
+                  type="button"
+                  variant="outline"
+                >
+                  <Share2 className="h-4 w-4" />
+                  Copy share link
+                </Button>
+              ) : null}
+              {mobilePasteActionTarget.slug &&
+              !isAccountOnlyDraft(mobilePasteActionTarget, mode) &&
+              mobilePasteActionTarget.visibility !== "private" ? (
+                <Button
+                  className="justify-start"
+                  onClick={() => {
+                    const url = `${window.location.origin}/raw/${mobilePasteActionTarget.slug}`;
+                    void navigator.clipboard.writeText(url);
+                    setStatus("Copied raw URL.");
+                    setMobilePasteActions({ open: false });
+                  }}
+                  type="button"
+                  variant="outline"
+                >
+                  <Link2 className="h-4 w-4" />
+                  Copy raw URL
+                </Button>
+              ) : null}
+              {snapshot.pastes.some((paste) => paste.id === mobilePasteActionTarget.id) ? (
+                <>
+                  <Button
+                    className="justify-start"
+                    onClick={() => {
+                      setBatchSelected(new Set([mobilePasteActionTarget.id]));
+                      setMobilePasteActions({ open: false });
+                      window.setTimeout(() => setBatchMoveOpen(true), 0);
+                    }}
+                    type="button"
+                    variant="outline"
+                  >
+                    <FolderInput className="h-4 w-4" />
+                    Move / rename…
+                  </Button>
+                  <Button
+                    className="justify-start"
+                    onClick={() => {
+                      toggleBatchId(mobilePasteActionTarget.id);
+                      setMobilePasteActions({ open: false });
+                    }}
+                    type="button"
+                    variant="outline"
+                  >
+                    <ListOrdered className="h-4 w-4" />
+                    {batchSelected.has(mobilePasteActionTarget.id) ? "Deselect for batch" : "Select for batch"}
+                  </Button>
+                  <Button
+                    className="justify-start"
+                    onClick={() => {
+                      setMobilePasteActions({ open: false });
+                      void deletePasteById(mobilePasteActionTarget.id);
+                    }}
+                    type="button"
+                    variant="destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {isAccountOnlyDraft(mobilePasteActionTarget, mode) ? "Discard draft" : "Delete"}
+                  </Button>
+                </>
+              ) : null}
+            </div>
+          ) : null}
         </DialogContent>
       </Dialog>
 
