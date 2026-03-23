@@ -18,6 +18,13 @@ WOX-Bin stores application data in **Postgres** (`DATABASE_URL`). Backups are **
 pg_dump "$DATABASE_URL" --format=custom --file="woxbin-$(date -u +%Y%m%d-%H%M).dump"
 ```
 
+On Windows / PowerShell, this repo includes wrappers:
+
+```powershell
+powershell -File scripts/backup-postgres.ps1
+powershell -File scripts/restore-postgres.ps1 -DumpFile .\woxbin-YYYYMMDD-HHMMSS.dump
+```
+
 - Encrypt artifacts at rest (e.g. S3 SSE-KMS, disk encryption).
 - Restrict who can read backup files (contains all user content).
 
@@ -34,6 +41,7 @@ Adjust flags to match your dump format (`--format=custom` vs plain SQL).
 1. Take a **fresh backup**.
 2. Run **`npm run db:push`** or migrations against a **clone** first when possible.
 3. Keep **`drizzle/`** SQL migrations in version control.
+4. Restore the new backup into a non-production database at least once before considering the runbook validated.
 
 ## Related
 

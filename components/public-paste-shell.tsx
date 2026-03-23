@@ -293,6 +293,14 @@ export function PublicPasteShell({
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [paste.slug, paste.content]);
 
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+    const title = paste.title?.trim() || paste.slug;
+    document.title = `${title} — WOX-Bin`;
+  }, [paste.slug, paste.title]);
+
   async function refreshPaste() {
     const [pasteResponse, commentsResponse] = await Promise.all([
       fetch(`/api/pastes/${paste.slug}`, { cache: "no-store" }),
@@ -938,11 +946,11 @@ export function PublicPasteShell({
               </div>
               <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.03] p-4">
                 <p className="font-medium text-foreground">Visibility</p>
-                <p className="mt-2">
-                  {secretMode
-                    ? "Secret link mode. Hidden from archive, feed, comments, and stars."
-                    : paste.visibility === "public"
-                    ? "Listed in the public feed."
+                  <p className="mt-2">
+                    {secretMode
+                      ? "Secret link mode. Hidden from archive, feed, comments, and stars. The payload is still stored server-side unless the author used fragment sharing."
+                      : paste.visibility === "public"
+                      ? "Listed in the public feed."
                     : paste.visibility === "unlisted"
                       ? "Available by direct link only."
                       : "Visible only to the owner and moderators."}

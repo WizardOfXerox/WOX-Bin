@@ -27,13 +27,9 @@ When **`WOX_ENFORCE_CSP=1`**, `next.config.mjs` adds a **baseline** `Content-Sec
 ## Rate limiting
 
 - **Upstash Redis** (`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`) provides **distributed** limits across instances.
-- If Redis is **not** configured, the app still applies **in-memory** fixed windows for:
-  - registration
-  - credentials **sign-in** (keyed by client IP from proxy headers)
-  - forgot-password / reset-password
-  - anonymous public paste creation  
-
-  Memory limits are **per server instance** only — under serverless, attackers can spread load across instances. **Treat Redis as required for production** if you face abuse.
+- If Redis is **not** configured, or the Redis limiter is temporarily unavailable, the app falls back to **in-memory** fixed windows for the current limit buckets.
+- Memory limits are **per server instance** only — under serverless, attackers can spread load across instances. **Treat Redis as required for production** if you face abuse.
+- App-level limits reduce how many abusive requests succeed. They do **not** stop attackers from sending large volumes of traffic to the edge. Use platform-level protection as well for real flood resistance.
 
 ## Authentication
 

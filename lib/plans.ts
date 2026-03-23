@@ -3,7 +3,7 @@ const GB = 1024 * 1024 * 1024;
 
 export const PLAN_IDS = ["free", "pro", "team", "admin"] as const;
 export const PLAN_STATUS_IDS = ["active", "trialing", "past_due", "canceled"] as const;
-export const PLAN_FEATURES = ["webhooks", "sharedWorkspaces", "auditExports"] as const;
+export const PLAN_FEATURES = ["webhooks", "sharedWorkspaces", "auditExports", "customSlugs"] as const;
 export const TEAM_ROLE_IDS = ["owner", "admin", "editor", "viewer"] as const;
 
 export type PlanId = (typeof PLAN_IDS)[number];
@@ -17,6 +17,7 @@ export type PlanLimitCode =
   | "files_per_paste"
   | "paste_size"
   | "webhooks"
+  | "custom_slugs"
   | "team_workspaces";
 
 export type PlanLimits = {
@@ -97,7 +98,8 @@ const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
 const FEATURE_ACCESS: Record<PlanFeature, PlanId[]> = {
   webhooks: ["pro", "team", "admin"],
   sharedWorkspaces: ["team", "admin"],
-  auditExports: ["pro", "team", "admin"]
+  auditExports: ["pro", "team", "admin"],
+  customSlugs: ["pro", "team", "admin"]
 };
 
 export function getPlanLimits(plan: PlanId | null | undefined): PlanLimits {

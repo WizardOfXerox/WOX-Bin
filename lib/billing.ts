@@ -35,16 +35,16 @@ export const BILLING_PLAN_CARDS: BillingPlanCard[] = [
   {
     id: "pro",
     name: "Pro",
-    headline: "Built for heavier publishing and automation",
-    description: "Unlocks webhooks, larger uploads, more API keys, and much deeper version retention.",
-    highlights: ["5,000 hosted pastes", "10 GB storage", "10 API keys", "Webhooks + 200 versions"]
+    headline: "Time-boxed access for heavier publishing and automation",
+    description: "Buy a 30-day or yearly pass when you need custom URLs, larger uploads, more API keys, and deeper version retention.",
+    highlights: ["5,000 hosted pastes", "10 GB storage", "10 API keys + custom URLs", "Webhooks + 200 versions"]
   },
   {
     id: "team",
     name: "Team",
-    headline: "Shared administration and pooled access",
-    description: "Adds team management, shared workspace capabilities, and collaboration-focused controls.",
-    highlights: ["100 GB pooled storage", "50 pooled API keys", "Member roles", "Team administration"]
+    headline: "Shared administration with a renewable team pass",
+    description: "Use a monthly or annual team pass for pooled storage, shared workspaces, custom URLs, and collaboration controls.",
+    highlights: ["100 GB pooled storage", "50 pooled API keys", "Member roles + custom URLs", "Team administration"]
   }
 ];
 

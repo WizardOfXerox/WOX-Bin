@@ -74,7 +74,7 @@ PayMongo supports subscriptions, but that is a separate API-driven setup and Pay
 
 For WOX-Bin, the practical rollout order is:
 
-1. use PayMongo Links or Pages first
+1. use PayMongo Links or Pages first for one-time monthly or yearly passes
 2. handle plan upgrades manually in admin
 3. add webhook automation later if needed
 
@@ -97,7 +97,7 @@ After setting the env vars:
 1. redeploy
 2. open `/pricing`
 3. open `/settings/billing`
-4. click **Upgrade to Pro** or **Upgrade to Team**
+4. click **Buy Pro pass** or **Buy Team pass**
 5. confirm the PayMongo checkout opens in a new tab
 
 ## Future automation

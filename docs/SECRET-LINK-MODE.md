@@ -28,6 +28,8 @@ This mode is intended for sensitive text that should behave differently from nor
 
 It is not a full cryptographic secret-sharing system yet.
 
+If you need WOX-Bin to avoid storing the payload entirely, use **`/fragment`** instead. Secret links are server-stored access-controlled shares, not client-side encrypted zero-knowledge shares.
+
 ## Current limitations
 
 - Secret payloads are still stored in the normal paste table.

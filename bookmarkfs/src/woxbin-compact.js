@@ -154,17 +154,42 @@ function serializeFilesForApi(list) {
   });
 }
 
+function detectExtensionViewMode() {
+  return new Promise((resolve) => {
+    const fallback = () => resolve(window.innerWidth <= 560 ? "popup" : "options");
+    try {
+      if (!chrome?.tabs?.getCurrent) {
+        fallback();
+        return;
+      }
+      chrome.tabs.getCurrent((tab) => {
+        if (chrome.runtime?.lastError) {
+          fallback();
+          return;
+        }
+        resolve(tab ? "options" : "popup");
+      });
+    } catch {
+      fallback();
+    }
+  });
+}
+
 export async function mountWoxBinCompact(rootEl) {
   if (!rootEl) return;
 
   rootEl.innerHTML = "";
+  const viewMode = await detectExtensionViewMode();
+  rootEl.classList.add(`wb-view-${viewMode}`);
+  document.body.classList.toggle("ext-popup-view", viewMode === "popup");
+  document.body.classList.toggle("ext-options-view", viewMode === "options");
 
   const langOpts = WOXBIN_LANGUAGES.map(
     ([v, l]) => `<option value="${v}">${l}</option>`
   ).join("");
 
   const main = document.createElement("div");
-  main.className = "wb-root";
+  main.className = `wb-root wb-root--${viewMode}`;
   main.innerHTML = `
     <div class="wb-onboard" id="wb-onboard" hidden>
       <div class="wb-onboard__inner">
@@ -174,7 +199,7 @@ export async function mountWoxBinCompact(rootEl) {
       </div>
     </div>
 
-    <section class="wb-panel">
+    <section class="wb-panel wb-panel--profiles">
       <h2>Profiles</h2>
       <p class="wb-lead">WOX-Bin cloud is the primary mode. Save one or more hosted profiles, optionally encrypt stored keys with a passphrase, and switch between deployments without retyping everything.</p>
       <div class="wb-field">
@@ -225,7 +250,7 @@ export async function mountWoxBinCompact(rootEl) {
       <p class="wb-connected" id="wb-connected" aria-live="polite"></p>
     </section>
 
-    <section class="wb-panel">
+    <section class="wb-panel wb-panel--keys">
       <h2>API keys</h2>
       <p class="wb-lead">Create, inspect, and revoke API keys from the extension. This uses the current bearer key, so treat the active profile as a credential manager.</p>
       <div class="wb-field">
@@ -238,7 +263,7 @@ export async function mountWoxBinCompact(rootEl) {
       <div id="wb-key-list" class="wb-stack-list"></div>
     </section>
 
-    <section class="wb-panel">
+    <section class="wb-panel wb-panel--library">
       <h2>Library</h2>
       <div class="wb-field wb-search-row">
         <label for="wb-search">Search</label>
@@ -265,7 +290,7 @@ export async function mountWoxBinCompact(rootEl) {
       </div>
     </section>
 
-    <section class="wb-panel">
+    <section class="wb-panel wb-panel--composer">
       <h2>Composer</h2>
       <div class="wb-edit-bar" id="wb-edit-bar" hidden>
         <span class="wb-edit-badge" id="wb-edit-badge"></span>
@@ -386,12 +411,12 @@ export async function mountWoxBinCompact(rootEl) {
   let composerAttachments = [];
 
   function updateEditChrome() {
-    if (editingSlug) {
-      editBar.hidden = false;
+    const isEditing = Boolean(editingSlug);
+    editBar.toggleAttribute("hidden", !isEditing);
+    if (isEditing) {
       editBadge.textContent = `Editing · ${editingSlug}`;
       btnCreate.textContent = "Save changes";
     } else {
-      editBar.hidden = true;
       editBadge.textContent = "";
       btnCreate.textContent = "Publish paste";
     }

@@ -27,6 +27,8 @@ These Markdown files live **in the repository**. They are **not** automatically 
 | **[SMTP.md](./SMTP.md)** | Outbound email — required for **forgot password** (`/forgot-password` → `/reset-password`) |
 | **[UPSTASH-REDIS.md](./UPSTASH-REDIS.md)** | Dedicated Upstash Redis setup for distributed rate limiting |
 | **[SECURITY.md](./SECURITY.md)** | HTTP headers, rate limits, auth hardening, production checklist |
+| **[MONITORING.md](./MONITORING.md)** | Health checks, logging, alert targets, and production response checklist |
+| **[RUNBOOK-BACKUPS.md](./RUNBOOK-BACKUPS.md)** | Database backup and restore runbook, including the PowerShell helpers in `scripts/` |
 | **[VERCEL-SETUP.md](./VERCEL-SETUP.md)** | **Full Vercel deploy checklist** — env vars, DB, Redis, Turnstile, SMTP, OAuth, post-deploy |
 | **[LEGAL.md](./LEGAL.md)** | Terms of Service (live at `/terms`) — operator checklist |
 

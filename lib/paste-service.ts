@@ -23,7 +23,7 @@ import {
   verifyPasteCaptchaGrant
 } from "@/lib/crypto";
 import { logAudit } from "@/lib/audit";
-import { PlanLimitError, formatPlanName, type PlanId } from "@/lib/plans";
+import { PlanLimitError, canUseFeature, formatPlanName, type PlanId } from "@/lib/plans";
 import { getStoredBytesForPasteInput, getUserPlanSummary } from "@/lib/usage-service";
 import { normalizeTagList, slugify } from "@/lib/utils";
 import type { PasteFileDraft, PasteFileMediaKind, PublicPasteRecord } from "@/lib/types";
@@ -654,6 +654,22 @@ export async function savePasteForUser(userId: string, input: SavePasteInput) {
     });
   }
 
+  const autoTitleSlug = slugify(input.title.trim() || "Untitled");
+  const keepsExistingSlug = Boolean(existing?.slug && requestedSlug === existing?.slug);
+  const requestsCustomSlug =
+    requestedSlug.length > 0 && requestedSlug !== autoTitleSlug && !keepsExistingSlug;
+
+  if (requestsCustomSlug && !canUseFeature(planSummary.effectivePlan, "customSlugs")) {
+    throw new PlanLimitError({
+      code: "custom_slugs",
+      plan: planSummary.effectivePlan,
+      limit: true,
+      used: true,
+      feature: "customSlugs",
+      message: `${formatPlanName(planSummary.effectivePlan)} accounts cannot reserve custom URLs. Upgrade to Pro or Team to pick your own share path.`
+    });
+  }
+
   const slug = await resolveRequestedSlug(requestedSlug || input.title, {
     excludeId: existing?.id,
     strict: Boolean(requestedSlug)
@@ -791,6 +807,17 @@ export async function deletePasteForUser(userId: string, slug: string) {
 
 export async function createAnonymousPaste(input: SavePasteInput, ip: string | null) {
   const requestedSlug = typeof input.slug === "string" ? input.slug.trim() : "";
+  const autoTitleSlug = slugify(input.title.trim() || "Untitled");
+  if (requestedSlug && requestedSlug !== autoTitleSlug) {
+    throw new PlanLimitError({
+      code: "custom_slugs",
+      plan: "free",
+      limit: false,
+      used: true,
+      feature: "customSlugs",
+      message: "Custom URLs are only available on signed-in Pro or Team accounts."
+    });
+  }
   const slug = await resolveRequestedSlug(requestedSlug || input.title, {
     strict: Boolean(requestedSlug)
   });

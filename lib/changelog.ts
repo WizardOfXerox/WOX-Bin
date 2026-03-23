@@ -8,6 +8,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    slug: "2026-03-23-hardening-and-ops",
+    date: "2026-03-23",
+    title: "Rate-limit hardening, ops runbooks, and BookmarkFS UI cleanup",
+    summary: "The hosted app now degrades safely when Redis rate limiting is unavailable, the operator docs match the real production behavior, and the BookmarkFS cloud UI is cleaner across popup and options views.",
+    bullets: [
+      "Changed rate limiting so every configured bucket falls back to finite in-memory windows instead of leaving some routes effectively open when Redis is missing.",
+      "Added health-check, backup, and restore PowerShell helpers plus stronger monitoring and backup runbook guidance.",
+      "Clarified that secret links are server-stored shares, not client-side encrypted fragment shares.",
+      "Cleaned up the BookmarkFS cloud UI layout split and the stale Cancel edit state."
+    ]
+  },
+  {
     slug: "2026-03-23-quick-share-and-audit-fixes",
     date: "2026-03-23",
     title: "Quick-share routes, secret-link polish, and audit-driven UI fixes",

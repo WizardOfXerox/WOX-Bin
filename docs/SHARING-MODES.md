@@ -36,12 +36,15 @@ Behavior:
 - stays out of feed/archive style discovery
 - hides community-oriented public features
 - works with password and burn rules
+- still stores the payload on WOX-Bin servers like a normal paste
 
 Best for:
 
 - credentials
 - temporary sensitive notes
 - one-off secure handoff
+
+If you need no server-side payload storage at all, use **`/fragment`** instead.
 
 ## Quick paste
 
@@ -55,7 +58,7 @@ Behavior:
 
 - simpler publish form
 - language selection
-- custom URL support
+- Pro/Team custom URL support
 - optional secret mode
 - optional Turnstile-before-view
 - optional password and burn-after-read

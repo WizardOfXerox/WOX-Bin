@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Clipboard, Copy, ExternalLink, Flame, Link2, ShieldCheck, Sparkles } from "lucide-react";
 
@@ -11,7 +11,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { LANGUAGES } from "@/lib/constants";
-import { normalizeOptionalSlug } from "@/lib/utils";
 
 type PublishResponse = {
   paste: {
@@ -34,17 +33,9 @@ export function QuickPasteClient() {
   const [burnAfterRead, setBurnAfterRead] = useState(false);
   const [captchaRequired, setCaptchaRequired] = useState(false);
   const [password, setPassword] = useState("");
-  const [customSlug, setCustomSlug] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
-
-  const previewPath = useMemo(() => {
-    if (!customSlug) {
-      return secretMode ? "/s/your-slug" : "/p/your-slug";
-    }
-    return `${secretMode ? "/s" : "/p"}/${customSlug}`;
-  }, [customSlug, secretMode]);
 
   async function handlePublish() {
     setLoading(true);
@@ -66,7 +57,6 @@ export function QuickPasteClient() {
           secretMode,
           burnAfterRead,
           captchaRequired,
-          slug: customSlug || undefined,
           burnAfterViews: 0,
           tags: [],
           folderName: null,
@@ -107,8 +97,8 @@ export function QuickPasteClient() {
             <Badge className="px-3 py-1 text-xs">Quick paste</Badge>
             <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">Publish fast without opening the full workspace.</h1>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
-              This route is for fast text and code sharing. You can still choose a language, use a custom URL, switch to
-              secret mode, and require a human challenge before viewing.
+              This route is for fast text and code sharing. Choose a language, switch to secret mode, and require a human
+              challenge before viewing. Custom URLs stay in the full workspace for paid accounts.
             </p>
           </div>
 
@@ -160,14 +150,13 @@ export function QuickPasteClient() {
                   ))}
                 </select>
               </div>
-              <div className="space-y-2">
-                <label className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Custom URL</label>
-                <Input
-                  onChange={(event) => setCustomSlug(normalizeOptionalSlug(event.target.value))}
-                  placeholder="Leave blank to auto-generate"
-                  value={customSlug}
-                />
-                <p className="text-xs text-muted-foreground">{previewPath}</p>
+              <div className="space-y-2 rounded-[1.25rem] border border-dashed border-border bg-muted/25 px-4 py-3">
+                <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Custom URL</p>
+                <p className="text-sm text-foreground">Reserved for Pro and Team accounts</p>
+                <p className="text-xs leading-6 text-muted-foreground">
+                  Quick paste keeps anonymous sharing simple. If you need a custom path, open the full workspace and save
+                  from a paid account.
+                </p>
               </div>
             </div>
 

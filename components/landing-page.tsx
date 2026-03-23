@@ -83,7 +83,7 @@ export function LandingPage({ session }: Props) {
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Ribbon editor &amp; Prism</Badge>
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Templates for every language</Badge>
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Multi-file pastes</Badge>
-              <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Secret links &amp; custom URLs</Badge>
+              <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Secret links &amp; Pro custom URLs</Badge>
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Quick paste &amp; clipboard buckets</Badge>
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Local + cloud sync</Badge>
               <Badge className="px-2.5 py-0.5 text-xs sm:px-3 sm:text-[0.8125rem]">Guided workspace tutorial</Badge>

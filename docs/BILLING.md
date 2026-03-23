@@ -6,9 +6,9 @@ WOX-Bin does **not** embed a payment processor SDK. Instead, **public checkout l
 
 | Variable | Used on | Purpose |
 |----------|---------|---------|
-| `NEXT_PUBLIC_PRO_UPGRADE_URL` | `/pricing`, `/settings/billing` | “Upgrade to Pro” opens this URL |
-| `NEXT_PUBLIC_TEAM_UPGRADE_URL` | `/pricing`, `/settings/billing` | “Upgrade to Team” opens this URL |
-| `NEXT_PUBLIC_BILLING_PORTAL_URL` | `/pricing`, `/settings/billing` | “Customer portal” / manage subscription (optional) |
+| `NEXT_PUBLIC_PRO_UPGRADE_URL` | `/pricing`, `/settings/billing` | “Buy Pro pass” opens this URL |
+| `NEXT_PUBLIC_TEAM_UPGRADE_URL` | `/pricing`, `/settings/billing` | “Buy Team pass” opens this URL |
+| `NEXT_PUBLIC_BILLING_PORTAL_URL` | `/pricing`, `/settings/billing` | “Billing page” / receipts / renewal options (optional) |
 
 Requirements:
 
@@ -44,7 +44,7 @@ Redeploy or restart dev so Next.js picks up the vars.
 If you have:
 
 - a support page
-- a subscription management page
+- a billing or renewal page
 - or another hosted customer page
 
 set:
@@ -70,7 +70,7 @@ See also **[PAYMONGO.md](./PAYMONGO.md)**.
 
 ### 1. Products & prices
 
-In [Stripe Dashboard](https://dashboard.stripe.com/) → **Product catalog**, create products (e.g. “WOX-Bin Pro”, “WOX-Bin Team”) with recurring or one-time prices as you prefer.
+In [Stripe Dashboard](https://dashboard.stripe.com/) → **Product catalog**, create products (e.g. “WOX-Bin Pro”, “WOX-Bin Team”) with one-time or recurring prices as you prefer. WOX-Bin’s UI is written so one-time passes are the default recommendation.
 
 ### 2. Payment Links
 
@@ -85,9 +85,9 @@ NEXT_PUBLIC_TEAM_UPGRADE_URL=https://buy.stripe.com/...
 
 Redeploy or restart dev so Next.js picks up the vars.
 
-### 3. Customer portal (optional)
+### 3. Billing page (optional)
 
-**Settings → Billing → Customer portal** → enable and configure. Copy the **portal session** flow from your integration, or use a **static** portal entry if your setup provides one. Many apps generate portal URLs **server-side** with the Stripe API; WOX-Bin’s field is **client-side**, so it fits:
+**Settings → Billing** → point the optional billing-page button at a hosted receipts, renewal, or account-billing page. Many apps generate portal URLs **server-side** with the Stripe API; WOX-Bin’s field is **client-side**, so it fits:
 
 - A **hosted** portal base or link your provider documents for “open portal”, or
 - A **small page on your site** that creates a portal session and redirects (not included in this repo by default).
@@ -102,4 +102,4 @@ Any HTTPS URL works: Lemon Squeezy checkout, Paddle pay links, Cal.com, Typeform
 
 1. Set the vars in `.env.local` (local) or the host’s env (Vercel, etc.).
 2. Open **`/pricing`** or **`/settings/billing`** while signed in.
-3. Click **Upgrade to Pro** / **Team** — the link should open in a new tab.
+3. Click **Buy Pro pass** / **Buy Team pass** — the link should open in a new tab.

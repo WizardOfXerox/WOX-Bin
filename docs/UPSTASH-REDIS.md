@@ -5,7 +5,7 @@ Use this when you want distributed rate limiting in production. WOX-Bin already 
 - [lib/rate-limit.ts](c:/Users/XIA/Desktop/Wox-Bin/lib/rate-limit.ts)
 - [lib/env.ts](c:/Users/XIA/Desktop/Wox-Bin/lib/env.ts)
 
-Without Redis, some routes fall back to per-instance memory limits only. That is acceptable for local dev, not for a public Vercel deployment.
+Without Redis, the app falls back to per-instance memory limits. That is acceptable for local dev, not for a public Vercel deployment.
 
 ## What this enables
 

@@ -101,7 +101,8 @@ export async function getUserPlanSummary(userId: string): Promise<AccountPlanSum
     features: {
       webhooks: canUseFeature(featurePlan, "webhooks"),
       sharedWorkspaces: canUseFeature(featurePlan, "sharedWorkspaces"),
-      auditExports: canUseFeature(featurePlan, "auditExports")
+      auditExports: canUseFeature(featurePlan, "auditExports"),
+      customSlugs: canUseFeature(featurePlan, "customSlugs")
     },
     usage: {
       pastes: pasteUsage[0]?.count ?? 0,

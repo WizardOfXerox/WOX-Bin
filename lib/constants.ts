@@ -113,7 +113,7 @@ export const APP_COPY = {
   marketingBullets: [
     "Ribbon workspace with formatting tools, find/replace, JSON helpers, print, and built-in templates for every supported language",
     "Prism syntax themes, line numbers, Markdown preview, clickable shared links, code-image export, and multi-file pastes with per-file languages",
-    "Quick paste, clipboard buckets, fragment-only sharing, custom URLs, and secret links all run on the same hosted surface",
+    "Quick paste, clipboard buckets, fragment-only sharing, Pro custom URLs, and secret links all run on the same hosted surface",
     "Local drafts or signed-in sync with folders, versions, stars, comments, public archive pages, API keys, and BookmarkFS companion flows",
     "First-run onboarding starts with the bundled megademo paste and a reopenable guided tutorial inside the workspace",
     "Turnstile, rate limits, email verification, Google sign-in, internal support tickets, moderation controls, and admin operations"

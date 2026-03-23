@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
@@ -13,6 +14,39 @@ type PageProps = {
     slug: string;
   }>;
 };
+
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const session = await auth();
+  const viewer = viewerFromSession(session);
+  const cookieStore = await cookies();
+  const accessGrant = cookieStore.get(getPasteAccessCookieName(slug))?.value ?? null;
+  const captchaGrant = cookieStore.get(getPasteCaptchaCookieName(slug))?.value ?? null;
+  const result = await getPasteForViewer({
+    slug,
+    viewer,
+    accessGrant,
+    captchaGrant,
+    trackView: false
+  });
+
+  if (!result.paste) {
+    return {
+      title: "Secret link not found"
+    };
+  }
+
+  const title = result.paste.title?.trim() || slug;
+  const description =
+    result.paste.content.trim().slice(0, 160) || "Secret link shared on WOX-Bin.";
+
+  return {
+    title,
+    description
+  };
+}
 
 export default async function SecretPastePage({ params }: PageProps) {
   const { slug } = await params;

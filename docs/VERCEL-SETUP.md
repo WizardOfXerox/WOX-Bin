@@ -19,7 +19,7 @@ Recommended for production quality:
 
 | Item | Purpose |
 |------|---------|
-| **Upstash Redis** | Distributed **rate limits** (strongly recommended — without it, only per-instance memory limits apply for some routes). See **[SECURITY.md](./SECURITY.md)** |
+| **Upstash Redis** | Distributed **rate limits** (strongly recommended — without it, limits degrade to per-instance memory windows). See **[SECURITY.md](./SECURITY.md)** |
 | **Cloudflare Turnstile** | **Sign-up** and **anonymous publish** in production (secret + site key) |
 | **SMTP** | **Forgot-password** emails — without it, reset returns 503. See **[SMTP.md](./SMTP.md)** |
 
@@ -97,7 +97,7 @@ See **[SMTP.md](./SMTP.md)**.
 |----------|------|-------------|
 | **`NEXT_PUBLIC_PRO_UPGRADE_URL`** | Exposed | HTTPS checkout URL for Pro |
 | **`NEXT_PUBLIC_TEAM_UPGRADE_URL`** | Exposed | HTTPS checkout URL for Team |
-| **`NEXT_PUBLIC_BILLING_PORTAL_URL`** | Exposed | Customer portal / billing help URL (if you have one) |
+| **`NEXT_PUBLIC_BILLING_PORTAL_URL`** | Exposed | Billing page / receipts / renewal URL (if you have one) |
 
 See **[BILLING.md](./BILLING.md)** and **[PAYMONGO.md](./PAYMONGO.md)**.
 

@@ -746,6 +746,108 @@ body:not(.ext-app) .rwd-table td {
   color: hsl(var(--x-fg));
 }
 
+#woxbin-root [hidden] {
+  display: none !important;
+}
+
+#woxbin-root.wb-view-popup {
+  max-width: 460px;
+}
+
+#woxbin-root.wb-view-options {
+  max-width: 1120px;
+  padding-top: 16px;
+}
+
+#woxbin-root .wb-root--popup {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+#woxbin-root .wb-root--popup .wb-panel {
+  margin-bottom: 0;
+}
+
+#woxbin-root .wb-root--popup .wb-panel--composer {
+  order: 0;
+}
+
+#woxbin-root .wb-root--popup .wb-panel--library {
+  order: 1;
+}
+
+#woxbin-root .wb-root--popup .wb-panel--profiles {
+  order: 2;
+}
+
+#woxbin-root .wb-root--popup .wb-panel--keys {
+  order: 3;
+}
+
+#woxbin-root .wb-root--popup .wb-lead {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+#woxbin-root .wb-root--popup .wb-steps {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+#woxbin-root .wb-root--popup .wb-panel h2 {
+  margin-bottom: 10px;
+}
+
+#woxbin-root .wb-root--options {
+  display: grid;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+#woxbin-root .wb-root--options .wb-onboard {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
+}
+
+#woxbin-root .wb-root--options .wb-panel {
+  margin-bottom: 0;
+}
+
+#woxbin-root .wb-root--options .wb-panel--profiles,
+#woxbin-root .wb-root--options .wb-panel--keys {
+  grid-column: 1;
+}
+
+#woxbin-root .wb-root--options .wb-panel--library,
+#woxbin-root .wb-root--options .wb-panel--composer {
+  grid-column: 2;
+}
+
+#woxbin-root .wb-root--options .wb-panel--composer {
+  position: sticky;
+  top: 16px;
+}
+
+#woxbin-root .wb-root--options .wb-panel--library {
+  min-height: 240px;
+}
+
+#woxbin-root .wb-root--options .wb-panel--profiles .wb-inline-row,
+#woxbin-root .wb-root--options .wb-panel--keys .wb-inline-row {
+  align-items: stretch;
+}
+
+#woxbin-root .wb-root--options .wb-panel--profiles .wb-inline-row > .wb-select,
+#woxbin-root .wb-root--options .wb-panel--profiles .wb-inline-row > .wb-input {
+  flex: 1 1 0;
+}
+
+#woxbin-root .wb-root--options .wb-lead {
+  max-width: 60ch;
+}
+
 #woxbin-root .wb-font-mono {
   font-family: var(--x-mono);
 }
@@ -884,6 +986,27 @@ body:not(.ext-app) .rwd-table td {
 @media (max-width: 400px) {
   #woxbin-root .wb-row2 {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 980px) {
+  #woxbin-root.wb-view-options {
+    max-width: 760px;
+  }
+
+  #woxbin-root .wb-root--options {
+    grid-template-columns: 1fr;
+  }
+
+  #woxbin-root .wb-root--options .wb-panel--profiles,
+  #woxbin-root .wb-root--options .wb-panel--keys,
+  #woxbin-root .wb-root--options .wb-panel--library,
+  #woxbin-root .wb-root--options .wb-panel--composer {
+    grid-column: 1;
+  }
+
+  #woxbin-root .wb-root--options .wb-panel--composer {
+    position: static;
   }
 }
 

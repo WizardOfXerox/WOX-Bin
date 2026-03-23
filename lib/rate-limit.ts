@@ -2,32 +2,15 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
 import { env } from "@/lib/env";
+import {
+  RATE_LIMIT_CONFIG,
+  SCRAPE_LIMIT_NAME,
+  type LimitName,
+  type PublicScrapeTier
+} from "@/lib/rate-limit-config";
 import { isMemoryFallbackLimitName, rateLimitMemoryFallback } from "@/lib/memory-rate-limit";
 
-export type PublicScrapeTier = "anonymous" | "free" | "pro" | "team" | "admin";
-
-type LimitName =
-  | "register"
-  | "sign-in"
-  | "forgot-password"
-  | "reset-password"
-  | "anonymous-publish"
-  | "cli-text-upload"
-  | "file-drop-upload"
-  | "file-drop-manage"
-  | "comment"
-  | "star"
-  | "api-key-create"
-  | "api-key-paste"
-  | "code-image-export"
-  | "convert-job-create"
-  | "pastebin-migrate"
-  | "resend-verification"
-  | "public-scrape-anonymous"
-  | "public-scrape-free"
-  | "public-scrape-pro"
-  | "public-scrape-team"
-  | "public-scrape-admin";
+export type { PublicScrapeTier } from "@/lib/rate-limit-config";
 
 type RateLimitResult = {
   success: boolean;
@@ -44,145 +27,21 @@ const redis =
       })
     : null;
 
-const limiterFactory = () => ({
-  register: new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(5, "1 m"),
-    analytics: true,
-    prefix: "wox:register"
-  }),
-  "sign-in": new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(10, "1 m"),
-    analytics: true,
-    prefix: "wox:signin"
-  }),
-  "forgot-password": new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(5, "1 h"),
-    analytics: true,
-    prefix: "wox:forgot"
-  }),
-  "reset-password": new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(10, "1 h"),
-    analytics: true,
-    prefix: "wox:resetpw"
-  }),
-  "anonymous-publish": new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(20, "1 h"),
-    analytics: true,
-    prefix: "wox:anon"
-  }),
-  "cli-text-upload": new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(30, "1 h"),
-    analytics: true,
-    prefix: "wox:cli:text"
-  }),
-  "file-drop-upload": new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(20, "1 h"),
-    analytics: true,
-    prefix: "wox:file:upload"
-  }),
-  "file-drop-manage": new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(30, "1 h"),
-    analytics: true,
-    prefix: "wox:file:manage"
-  }),
-  comment: new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(25, "10 m"),
-    analytics: true,
-    prefix: "wox:comment"
-  }),
-  star: new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(40, "10 m"),
-    analytics: true,
-    prefix: "wox:star"
-  }),
-  "api-key-create": new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(10, "1 h"),
-    analytics: true,
-    prefix: "wox:key:create"
-  }),
-  "api-key-paste": new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(200, "1 h"),
-    analytics: true,
-    prefix: "wox:key:paste"
-  }),
-  "code-image-export": new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(20, "1 h"),
-    analytics: true,
-    prefix: "wox:codeimg"
-  }),
-  "convert-job-create": new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(30, "1 h"),
-    analytics: true,
-    prefix: "wox:convert:job"
-  }),
-  "pastebin-migrate": new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(5, "24 h"),
-    analytics: true,
-    prefix: "wox:pastebin:migrate"
-  }),
-  "resend-verification": new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(5, "1 h"),
-    analytics: true,
-    prefix: "wox:verify:resend"
-  }),
-  /** Public JSON feed + /raw: unauthenticated clients (per IP). */
-  "public-scrape-anonymous": new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(120, "1 h"),
-    analytics: true,
-    prefix: "wox:scrape:anon"
-  }),
-  "public-scrape-free": new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(400, "1 h"),
-    analytics: true,
-    prefix: "wox:scrape:free"
-  }),
-  "public-scrape-pro": new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(2000, "1 h"),
-    analytics: true,
-    prefix: "wox:scrape:pro"
-  }),
-  "public-scrape-team": new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(6000, "1 h"),
-    analytics: true,
-    prefix: "wox:scrape:team"
-  }),
-  "public-scrape-admin": new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(50000, "1 h"),
-    analytics: true,
-    prefix: "wox:scrape:admin"
-  })
-});
+const limiterFactory = () =>
+  Object.fromEntries(
+    Object.entries(RATE_LIMIT_CONFIG).map(([name, config]) => [
+      name,
+      new Ratelimit({
+        redis: redis!,
+        limiter: Ratelimit.slidingWindow(config.max, config.window),
+        analytics: true,
+        prefix: config.prefix
+      })
+    ])
+  ) as Record<LimitName, Ratelimit>;
 
 const limiters = redis ? limiterFactory() : null;
-
-const SCRAPE_LIMIT_NAME: Record<PublicScrapeTier, LimitName> = {
-  anonymous: "public-scrape-anonymous",
-  free: "public-scrape-free",
-  pro: "public-scrape-pro",
-  team: "public-scrape-team",
-  admin: "public-scrape-admin"
-};
+let redisWarningShown = false;
 
 /**
  * Shared bucket for `GET /api/public/feed` and `GET /raw/*` (plan-tiered when using a valid API key).
@@ -193,13 +52,20 @@ export async function rateLimitPublicScrape(tier: PublicScrapeTier, identifier: 
 
 export async function rateLimit(name: LimitName, identifier: string): Promise<RateLimitResult> {
   if (limiters) {
-    const result = await limiters[name].limit(identifier);
-    return {
-      success: result.success,
-      limit: result.limit,
-      remaining: result.remaining,
-      reset: result.reset
-    };
+    try {
+      const result = await limiters[name].limit(identifier);
+      return {
+        success: result.success,
+        limit: result.limit,
+        remaining: result.remaining,
+        reset: result.reset
+      };
+    } catch (error) {
+      if (!redisWarningShown) {
+        redisWarningShown = true;
+        console.warn("[rate-limit] Redis limiter unavailable; falling back to per-instance memory windows.", error);
+      }
+    }
   }
 
   /** Without Redis, abuse limits are per-instance only — enable Upstash in production. */
@@ -207,10 +73,5 @@ export async function rateLimit(name: LimitName, identifier: string): Promise<Ra
     return rateLimitMemoryFallback(name, identifier);
   }
 
-  return {
-    success: true,
-    limit: Number.POSITIVE_INFINITY,
-    remaining: Number.POSITIVE_INFINITY,
-    reset: Date.now() + 60_000
-  };
+  throw new Error(`Unknown rate limit bucket: ${name}`);
 }

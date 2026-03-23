@@ -99,7 +99,7 @@ export function BillingSettingsClient({ initial, isAdmin }: Props) {
                     upgradeUrl ? (
                       <Button asChild className="mt-4 w-full" variant={plan.id === "team" ? "secondary" : "default"}>
                         <a href={upgradeUrl} rel="noreferrer" target="_blank">
-                          {plan.id === snapshot.plan.plan ? "Manage this plan" : `Upgrade to ${plan.name}`}
+                          {plan.id === snapshot.plan.plan ? "Renew or manage access" : `Buy ${plan.name} pass`}
                         </a>
                       </Button>
                     ) : (
@@ -115,7 +115,7 @@ export function BillingSettingsClient({ initial, isAdmin }: Props) {
           {snapshot.billing.links.billingPortalUrl ? (
             <Button asChild variant="outline">
               <a href={snapshot.billing.links.billingPortalUrl} rel="noreferrer" target="_blank">
-                Open billing portal
+                Open billing page
               </a>
             </Button>
           ) : null}

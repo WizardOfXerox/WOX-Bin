@@ -14,6 +14,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type ChangeEvent,
 } from "react";
 import { flushSync } from "react-dom";
@@ -58,7 +59,9 @@ import {
   Upload,
   Video,
   WandSparkles,
-  X
+  X,
+  ZoomIn,
+  ZoomOut
 } from "lucide-react";
 
 import { PasteLineageBanner } from "@/components/paste-lineage-banner";
@@ -194,6 +197,9 @@ const PUBLIC_FEED_FOLDER = "__wox_public_feed__";
 
 const STATUS_MESSAGE_AUTO_DISMISS_MS = 8000;
 const ERROR_MESSAGE_AUTO_DISMISS_MS = 12000;
+const MIN_WORKSPACE_ZOOM = 85;
+const MAX_WORKSPACE_ZOOM = 120;
+const DEFAULT_WORKSPACE_ZOOM = 100;
 
 type ListQuickFilter = "all" | "favorites" | "recent" | "archived";
 
@@ -410,7 +416,7 @@ const DESKTOP_TUTORIAL_STEPS: WorkspaceTutorialStep[] = [
     title: "Sharing, privacy, and advanced settings",
     description: "The details panel is where a draft becomes a managed share with URL, privacy, and lifecycle controls.",
     bullets: [
-      "Visibility, custom URL, category, tags, password, burn rules, Turnstile-before-view, versioning, and template status all live here.",
+      "Visibility, Pro or Team custom URLs, category, tags, password, burn rules, Turnstile-before-view, versioning, and template status all live here.",
       "This is also where you switch between normal sharing and secret-link behavior, then copy the resulting URL after save.",
       "Folder assignment and metadata stay separate from the editor so the writing surface stays clean."
     ],
@@ -460,7 +466,7 @@ const DESKTOP_TUTORIAL_TOURS = buildTutorialTours(DESKTOP_TUTORIAL_STEPS, [
   {
     id: "sharing",
     label: "Sharing",
-    description: "Privacy, custom URLs, secret links, and publish-time controls.",
+    description: "Privacy, paid custom URLs, secret links, and publish-time controls.",
     stepIds: ["details"]
   },
   {
@@ -526,7 +532,7 @@ const MOBILE_TUTORIAL_STEPS: WorkspaceTutorialStep[] = [
     title: "Advanced settings on demand",
     description: "On mobile, advanced settings open from this Details button instead of staying docked on screen.",
     bullets: [
-      "Tap it for visibility, custom URL, password, tags, folder, versions, secret-link mode, and sharing controls.",
+      "Tap it for visibility, paid custom URLs, password, tags, folder, versions, secret-link mode, and sharing controls.",
       "This keeps the core editor clean while still exposing the full hosted feature set.",
       "The same privacy and publishing controls are available here as on desktop."
     ],
@@ -697,6 +703,10 @@ function formatPlanName(plan: PlanId) {
 
 function formatPlanStatus(status: PlanStatus) {
   return status.replace("_", " ");
+}
+
+function clampWorkspaceZoom(value: number) {
+  return Math.max(MIN_WORKSPACE_ZOOM, Math.min(MAX_WORKSPACE_ZOOM, Math.round(value)));
 }
 
 function formatBytes(bytes: number) {
@@ -888,6 +898,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   const [syntaxTheme, setSyntaxTheme] = useState<SyntaxThemeId>("tomorrow");
   const [workspaceTone, setWorkspaceTone] = useState<WorkspaceToneId>("default");
   const [editorFontSize, setEditorFontSize] = useState(15);
+  const [pageZoom, setPageZoom] = useState(DEFAULT_WORKSPACE_ZOOM);
   const [editorLineNumbers, setEditorLineNumbers] = useState(true);
   const [editorWordWrap, setEditorWordWrap] = useState(false);
   const [editorActiveIndentGuides, setEditorActiveIndentGuides] = useState(false);
@@ -934,6 +945,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   const selectedPasteRef = useRef<WorkspacePaste | null>(null);
   const deferredSearch = useDeferredValue(search);
   const effectiveEditorFontPx = narrowEditorViewport ? Math.max(editorFontSize, 16) : editorFontSize;
+  const workspaceZoomFactor = pageZoom / 100;
   const sessionUserId = sessionUser?.id;
   const lastForkImportKeyRef = useRef<string | null>(null);
   const forkImportInFlightRef = useRef<string | null>(null);
@@ -1262,6 +1274,13 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
           setEditorFontSize(n);
         }
       }
+      const zoom = localStorage.getItem("woxbin_page_zoom");
+      if (zoom) {
+        const n = Number(zoom);
+        if (Number.isFinite(n)) {
+          setPageZoom(clampWorkspaceZoom(n));
+        }
+      }
       setEditorLineNumbers(localStorage.getItem("woxbin_editor_line_numbers") !== "0");
       setEditorWordWrap(
         isMobileLayout
@@ -1291,6 +1310,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
       localStorage.setItem("woxbin_syntax_theme", syntaxTheme);
       localStorage.setItem("woxbin_workspace_tone", workspaceTone);
       localStorage.setItem("woxbin_editor_font", String(editorFontSize));
+      localStorage.setItem("woxbin_page_zoom", String(pageZoom));
       localStorage.setItem("woxbin_editor_line_numbers", editorLineNumbers ? "1" : "0");
       localStorage.setItem("woxbin_editor_word_wrap", editorWordWrap ? "1" : "0");
       localStorage.setItem("woxbin_editor_active_indent_guides", editorActiveIndentGuides ? "1" : "0");
@@ -1310,6 +1330,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
     syntaxTheme,
     workspaceTone,
     editorFontSize,
+    pageZoom,
     editorLineNumbers,
     editorWordWrap,
     editorActiveIndentGuides,
@@ -1738,6 +1759,12 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   /** Prefer quota tier so admins/moderators see “Admin” limits on the badge, not only the DB plan row. */
   const displayedPlan = accountPlan?.quotaPlan ?? accountPlan?.plan ?? sessionUser?.plan ?? "free";
   const displayedPlanStatus = accountPlan?.planStatus ?? sessionUser?.planStatus ?? "active";
+  const canEditCustomSlug = Boolean(accountPlan?.features.customSlugs);
+  const customSlugReadOnly = mode !== "account" || !canEditCustomSlug;
+
+  const changePageZoom = useCallback((delta: number) => {
+    setPageZoom((current) => clampWorkspaceZoom(current + delta));
+  }, []);
 
   function updateSelectedPaste(recipe: (paste: WorkspacePaste) => WorkspacePaste) {
     if (!selectedPaste || !snapshot.pastes.some((p) => p.id === selectedPaste.id)) {
@@ -3808,10 +3835,14 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                             ? "-mx-1 flex-nowrap gap-2 overflow-x-auto px-1 pb-1"
                             : "flex-wrap",
                           editorPaneCompact ? "gap-2" : "gap-2 sm:gap-3",
-                          "[&>button]:min-h-10 [&>button]:touch-manipulation [&>button]:shrink-0 sm:[&>button]:min-h-0"
+                          "[&>button]:touch-manipulation [&>button]:shrink-0",
+                          phoneViewport
+                            ? "[&>button]:h-9 [&>button]:min-h-9 [&>button]:px-3 [&>button]:text-xs sm:[&>button]:text-sm"
+                            : "[&>button]:min-h-10 sm:[&>button]:min-h-0"
                         )}
                       >
                         <Button
+                          className={phoneViewport ? "gap-1.5" : undefined}
                           disabled={saving || !selectedPasteInWorkspace}
                           onClick={() => void handleSavePaste()}
                           size={editorPaneCompact ? "sm" : "default"}
@@ -3821,6 +3852,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                           {saving ? "Saving..." : "Save"}
                         </Button>
                         <Button
+                          className={phoneViewport ? "gap-1.5" : undefined}
                           onClick={handleDuplicatePaste}
                           size={editorPaneCompact ? "sm" : "default"}
                           type="button"
@@ -3830,6 +3862,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                           Fork
                         </Button>
                         <Button
+                          className={phoneViewport ? "gap-1.5" : undefined}
                           disabled={!selectedPasteInWorkspace}
                           onClick={() => void handleDeletePaste()}
                           size={editorPaneCompact ? "sm" : "default"}
@@ -4748,7 +4781,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               {accountPlan.plan !== accountPlan.effectivePlan ? (
                 <div className="rounded-[1rem] border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/5 dark:text-amber-100">
                   Your {formatPlanName(accountPlan.plan)} billing is {formatPlanStatus(accountPlan.planStatus)}; feature access follows{" "}
-                  {formatPlanName(accountPlan.effectivePlan)} until the subscription is active again.
+                  {formatPlanName(accountPlan.effectivePlan)} until paid access is active again.
                 </div>
               ) : null}
 
@@ -5027,7 +5060,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                     Custom URL
                   </label>
                   <Input
-                    disabled={!selectedPasteInWorkspace}
+                    disabled={!selectedPasteInWorkspace || customSlugReadOnly}
                     id="wox-paste-custom-url"
                     onChange={(event) =>
                       updateSelectedPaste((paste) => ({
@@ -5043,6 +5076,13 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                     {selectedPaste.slug
                       ? `Share path: ${getPasteSharePath(selectedPaste.slug, selectedPaste.secretMode)}`
                       : "Leave this blank to generate the URL from the title when you save or publish."}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {mode !== "account"
+                      ? "Custom URLs only apply to hosted account saves."
+                      : canEditCustomSlug
+                        ? "If the path is already taken, save returns a conflict so you can pick another one."
+                        : "Custom URLs are limited to Pro and Team accounts. Free saves still get an automatic share path."}
                   </p>
                 </div>
 
@@ -5192,9 +5232,9 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                     />
                     <span className="min-w-0 leading-snug">
                       Secret link mode
-                      <span className="mt-1 block text-xs text-muted-foreground">
-                        Uses a dedicated <code className="rounded bg-background/70 px-1">/s/</code> URL, hides community features, and defaults to burn after read.
-                      </span>
+                        <span className="mt-1 block text-xs text-muted-foreground">
+                          Uses a dedicated <code className="rounded bg-background/70 px-1">/s/</code> URL, hides community features, and defaults to burn after read. This is still server-stored sharing, not client-side encrypted fragment sharing.
+                        </span>
                     </span>
                   </label>
                   <label className="flex w-full cursor-pointer items-center gap-3 rounded-[1.2rem] border border-border bg-muted/40 px-4 py-3 text-sm">
@@ -5516,6 +5556,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
         workspaceTone === "warm" && "workspace-tone-warm",
         workspaceTone === "forest" && "workspace-tone-forest"
       )}
+      style={pageZoom === DEFAULT_WORKSPACE_ZOOM ? undefined : ({ zoom: workspaceZoomFactor } as CSSProperties)}
     >
       <header className="glass-panel z-40 shrink-0 border-b border-border px-3 py-1.5 print:hidden sm:px-4 sm:py-2">
         <div className="flex items-center justify-between gap-2 md:hidden">
@@ -5638,6 +5679,43 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
             uiTheme={uiTheme}
             workspaceTone={workspaceTone}
           />
+          <div className="mt-3 rounded-[1.1rem] border border-border bg-muted/35 p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Workspace zoom</p>
+              <button
+                className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                onClick={() => setPageZoom(DEFAULT_WORKSPACE_ZOOM)}
+                type="button"
+              >
+                Reset
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                className="h-9 w-9 shrink-0"
+                disabled={pageZoom <= MIN_WORKSPACE_ZOOM}
+                onClick={() => changePageZoom(-5)}
+                size="icon"
+                type="button"
+                variant="outline"
+              >
+                <ZoomOut className="h-4 w-4" />
+              </Button>
+              <div className="min-w-0 flex-1 rounded-full border border-border bg-background/60 px-3 py-2 text-center text-sm font-medium tabular-nums">
+                {pageZoom}%
+              </div>
+              <Button
+                className="h-9 w-9 shrink-0"
+                disabled={pageZoom >= MAX_WORKSPACE_ZOOM}
+                onClick={() => changePageZoom(5)}
+                size="icon"
+                type="button"
+                variant="outline"
+              >
+                <ZoomIn className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {sessionUser ? (
               <>
@@ -5921,6 +5999,38 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   <WandSparkles className="h-3.5 w-3.5 sm:mr-1 sm:h-4 sm:w-4" />
                   <span className="hidden sm:inline">Tutorial</span>
                 </Button>
+                <div className="flex items-center gap-1 rounded-full border border-border bg-muted/40 p-0.5">
+                  <Button
+                    className="h-8 w-8 rounded-full px-0"
+                    disabled={pageZoom <= MIN_WORKSPACE_ZOOM}
+                    onClick={() => changePageZoom(-5)}
+                    size="icon"
+                    title="Zoom out"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <ZoomOut className="h-3.5 w-3.5" />
+                  </Button>
+                  <button
+                    className="min-w-[3.35rem] rounded-full px-2 py-1 text-center text-xs font-medium tabular-nums text-foreground"
+                    onClick={() => setPageZoom(DEFAULT_WORKSPACE_ZOOM)}
+                    title="Reset zoom"
+                    type="button"
+                  >
+                    {pageZoom}%
+                  </button>
+                  <Button
+                    className="h-8 w-8 rounded-full px-0"
+                    disabled={pageZoom >= MAX_WORKSPACE_ZOOM}
+                    onClick={() => changePageZoom(5)}
+                    size="icon"
+                    title="Zoom in"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <ZoomIn className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
                 {sessionUser.role === "admin" ? (
                   <Button asChild className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm" type="button" variant="outline">
                     <Link className="inline-flex items-center gap-1.5" href="/admin">
@@ -5941,6 +6051,38 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               </>
             ) : (
               <div className="flex flex-wrap gap-2">
+                <div className="flex items-center gap-1 rounded-full border border-border bg-muted/40 p-0.5">
+                  <Button
+                    className="h-8 w-8 rounded-full px-0"
+                    disabled={pageZoom <= MIN_WORKSPACE_ZOOM}
+                    onClick={() => changePageZoom(-5)}
+                    size="icon"
+                    title="Zoom out"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <ZoomOut className="h-3.5 w-3.5" />
+                  </Button>
+                  <button
+                    className="min-w-[3.35rem] rounded-full px-2 py-1 text-center text-xs font-medium tabular-nums text-foreground"
+                    onClick={() => setPageZoom(DEFAULT_WORKSPACE_ZOOM)}
+                    title="Reset zoom"
+                    type="button"
+                  >
+                    {pageZoom}%
+                  </button>
+                  <Button
+                    className="h-8 w-8 rounded-full px-0"
+                    disabled={pageZoom >= MAX_WORKSPACE_ZOOM}
+                    onClick={() => changePageZoom(5)}
+                    size="icon"
+                    title="Zoom in"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <ZoomIn className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
                 <Button className="h-8 text-xs sm:h-9 sm:text-sm" onClick={() => openTutorial(0)} size="sm" type="button" variant="outline">
                   <WandSparkles className="h-3.5 w-3.5 sm:mr-1 sm:h-4 sm:w-4" />
                   Tutorial
@@ -6140,20 +6282,20 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
       {selectedPaste ? (
         phoneViewport ? (
           <div className="glass-panel z-10 flex shrink-0 items-center justify-between gap-2 border-t border-border px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] print:hidden md:hidden">
-            <Button className="min-h-10 flex-1" data-tutorial="library-button" onClick={() => setMobileLibraryOpen(true)} size="sm" type="button" variant="outline">
+            <Button className="h-9 min-h-9 flex-1 gap-1.5 px-2.5 text-[11px]" data-tutorial="library-button" onClick={() => setMobileLibraryOpen(true)} size="sm" type="button" variant="outline">
               <PanelLeft className="h-4 w-4" />
               Library
             </Button>
-            <Button className="min-h-10 flex-1" onClick={() => void handleSavePaste()} size="sm" type="button">
+            <Button className="h-9 min-h-9 flex-1 gap-1.5 px-2.5 text-[11px]" onClick={() => void handleSavePaste()} size="sm" type="button">
               <Save className="h-4 w-4" />
               Save
             </Button>
-            <Button className="min-h-10 flex-1" onClick={handleNewPaste} size="sm" type="button" variant="outline">
+            <Button className="h-9 min-h-9 flex-1 gap-1.5 px-2.5 text-[11px]" onClick={handleNewPaste} size="sm" type="button" variant="outline">
               <FilePlus2 className="h-4 w-4" />
               New
             </Button>
             <Button
-              className="min-h-10 flex-1"
+              className="h-9 min-h-9 flex-1 gap-1.5 px-2.5 text-[11px]"
               data-tutorial="details-button"
               disabled={!selectedPaste}
               onClick={() => setMobileDetailsOpen(true)}
@@ -6177,11 +6319,11 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               <p className="mt-0.5 text-xs text-muted-foreground">{selectedPaste.language}</p>
             </div>
             <div className="flex shrink-0 touch-manipulation gap-2 self-start pt-0.5">
-              <Button className="min-h-10" onClick={() => void handleSavePaste()} size="sm" type="button">
+              <Button className="h-9 min-h-9 gap-1.5 px-3 text-xs" onClick={() => void handleSavePaste()} size="sm" type="button">
                 <Save className="h-4 w-4" />
                 Save
               </Button>
-              <Button className="min-h-10" onClick={handleNewPaste} size="sm" type="button" variant="outline">
+              <Button className="h-9 min-h-9 gap-1.5 px-3 text-xs" onClick={handleNewPaste} size="sm" type="button" variant="outline">
                 <FilePlus2 className="h-4 w-4" />
                 New
               </Button>

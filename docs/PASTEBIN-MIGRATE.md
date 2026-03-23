@@ -31,7 +31,7 @@ Without this variable, **Settings → Integrations → Pastebin import** shows t
 ## Limits and rate limiting
 
 - Pastebin’s list API caps how many pastes you can request per call (WOX-Bin forwards your chosen limit, up to 500 per migration request).
-- WOX-Bin enforces **5 migration attempts per user per 24 hours** when [Upstash Redis](https://upstash.com) is configured (`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`). If Redis is not configured, the in-memory path allows all requests (suitable only for local dev).
+- WOX-Bin enforces **5 migration attempts per user per 24 hours**. With [Upstash Redis](https://upstash.com), that limit is shared across instances. Without Redis, it falls back to per-instance memory only, which is suitable for local dev but weaker in public serverless deployments.
 - Your WOX-Bin **plan limits** (paste count, etc.) still apply; the importer stops and reports when a plan limit is hit.
 
 ## API (for custom clients)

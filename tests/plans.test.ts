@@ -36,8 +36,11 @@ describe("plan helpers", () => {
     expect(canUseFeature("free", "webhooks")).toBe(false);
     expect(canUseFeature("pro", "webhooks")).toBe(true);
     expect(canUseFeature("team", "sharedWorkspaces")).toBe(true);
+    expect(canUseFeature("free", "customSlugs")).toBe(false);
+    expect(canUseFeature("pro", "customSlugs")).toBe(true);
     expect(canUseFeature("admin", "webhooks")).toBe(true);
     expect(canUseFeature("admin", "sharedWorkspaces")).toBe(true);
+    expect(canUseFeature("admin", "customSlugs")).toBe(true);
   });
 
   it("marks paid plans correctly", () => {
@@ -98,7 +101,8 @@ describe("billing copy", () => {
       features: {
         webhooks: false,
         sharedWorkspaces: false,
-        auditExports: false
+        auditExports: false,
+        customSlugs: false
       },
       usage: {
         pastes: 0,

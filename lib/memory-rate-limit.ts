@@ -1,5 +1,7 @@
+import { RATE_LIMIT_CONFIG, type LimitName } from "@/lib/rate-limit-config";
+
 /**
- * Fixed-window rate limits when Upstash Redis is not configured.
+ * Fixed-window rate limits when Upstash Redis is not configured or temporarily unavailable.
  * Per-process only (each serverless instance has its own counters) — still blocks casual abuse;
  * production should use Redis for distributed limits. @see docs/SECURITY.md
  */
@@ -9,20 +11,6 @@ export type RateLimitResult = {
   remaining: number;
   reset: number;
 };
-
-const CONFIG = {
-  register: { max: 5, windowMs: 60_000 },
-  "sign-in": { max: 10, windowMs: 60_000 },
-  "forgot-password": { max: 5, windowMs: 60 * 60_000 },
-  "reset-password": { max: 10, windowMs: 60 * 60_000 },
-  "anonymous-publish": { max: 20, windowMs: 60 * 60_000 },
-  "cli-text-upload": { max: 30, windowMs: 60 * 60_000 },
-  "file-drop-upload": { max: 20, windowMs: 60 * 60_000 },
-  "file-drop-manage": { max: 30, windowMs: 60 * 60_000 },
-  "resend-verification": { max: 5, windowMs: 60 * 60_000 }
-} as const;
-
-export type MemoryFallbackLimitName = keyof typeof CONFIG;
 
 type Bucket = { count: number; resetAt: number };
 const store = new Map<string, Bucket>();
@@ -39,8 +27,8 @@ function pruneExpired() {
   }
 }
 
-export function rateLimitMemoryFallback(name: MemoryFallbackLimitName, identifier: string): RateLimitResult {
-  const cfg = CONFIG[name];
+export function rateLimitMemoryFallback(name: LimitName, identifier: string): RateLimitResult {
+  const cfg = RATE_LIMIT_CONFIG[name];
   const key = `${name}:${identifier}`;
   const now = Date.now();
   let bucket = store.get(key);
@@ -75,6 +63,6 @@ export function rateLimitMemoryFallback(name: MemoryFallbackLimitName, identifie
   };
 }
 
-export function isMemoryFallbackLimitName(name: string): name is MemoryFallbackLimitName {
-  return name in CONFIG;
+export function isMemoryFallbackLimitName(name: string): name is LimitName {
+  return name in RATE_LIMIT_CONFIG;
 }

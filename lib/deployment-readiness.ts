@@ -274,10 +274,10 @@ export async function getDeploymentReadinessSnapshot(): Promise<DeploymentReadin
     level: redisConfigured ? "pass" : "warn",
     summary: redisConfigured
       ? "Distributed rate limiting is configured."
-      : "Redis is not configured; rate limits fall back to per-instance memory where implemented.",
+      : "Redis is not configured; rate limits fall back to per-instance memory windows.",
     detail: redisConfigured
       ? "Serverless rate limits can stay consistent across instances."
-      : "This is acceptable for local development, but not ideal for public production traffic on Vercel.",
+      : "This is acceptable for local development, but public production traffic should use Redis so throttling stays consistent across serverless instances.",
     docs: ["docs/VERCEL-SETUP.md", "docs/SECURITY.md"]
   });
 
