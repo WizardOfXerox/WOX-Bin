@@ -156,6 +156,7 @@ import {
   importLocalWorkspaceJson,
   loadLocalWorkspace,
   markLocalMergeComplete,
+  parseLocalWorkspaceJson,
   renameLocalFolder,
   saveLocalPaste,
   storeAnonymousClaim
@@ -2233,15 +2234,55 @@ export function WorkspaceShell({ sessionUser, initialForkSlug }: Props) {
 
     if (parsedJson && isWorkspaceExportJson(parsedJson)) {
       try {
-        const imported = await importLocalWorkspaceJson(text);
-        setMode("local");
-        setSnapshot({
-          folders: imported.folders,
-          pastes: imported.pastes as WorkspacePaste[]
-        });
-        setSelectedId(imported.pastes[0]?.id ?? null);
-        leavePublicFeedForNewWorkspacePaste();
-        setStatus(`Imported ${imported.pastes.length} paste(s) from workspace export.`);
+        const imported = parseLocalWorkspaceJson(text);
+
+        if (mode === "account" && sessionUser) {
+          setSaving(true);
+
+          try {
+            let importedCount = 0;
+            let firstSavedId: string | null = null;
+
+            for (const draft of imported.pastes) {
+              const response = await fetch("/api/workspace/pastes", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify(buildPastePayload(draft as WorkspacePaste))
+              });
+
+              if (!response.ok) {
+                const body = (await response.json().catch(() => null)) as { error?: string } | null;
+                throw new Error(body?.error ?? `Could not import "${draft.title}".`);
+              }
+
+              const body = (await response.json()) as SavePasteResponse;
+              setAccountPlan(body.plan);
+              if (!firstSavedId) {
+                firstSavedId = body.paste.id;
+              }
+              importedCount += 1;
+            }
+
+            await refreshWorkspace("account");
+            setSelectedId(firstSavedId);
+            leavePublicFeedForNewWorkspacePaste();
+            setStatus(`Imported ${importedCount} paste(s) into your account workspace.`);
+          } finally {
+            setSaving(false);
+          }
+        } else {
+          const localImported = await importLocalWorkspaceJson(text);
+          setMode("local");
+          setSnapshot({
+            folders: localImported.folders,
+            pastes: localImported.pastes as WorkspacePaste[]
+          });
+          setSelectedId(localImported.pastes[0]?.id ?? null);
+          leavePublicFeedForNewWorkspacePaste();
+          setStatus(`Imported ${localImported.pastes.length} paste(s) from workspace export.`);
+        }
       } catch {
         setError("That workspace export could not be imported. Check that it is a valid Wox-Bin JSON backup.");
       }

@@ -27,7 +27,7 @@ Import it the same way (**Import file**). To regenerate the file after editing t
 npm run gen:example-big-paste
 ```
 
-All other **`npm run`** commands (database, tests, conversion worker, etc.) are listed in **[docs/NPM-SCRIPTS.md](./docs/NPM-SCRIPTS.md)**.
+All other **`npm run`** commands (database, tests, conversion worker, etc.) are listed in **[docs/NPM-SCRIPTS.md](../docs/NPM-SCRIPTS.md)**.
 
 ## What’s in the example file
 
@@ -67,11 +67,10 @@ The file **`example-pastes.json`** has this shape:
 
 When you use **Export** in WOX-Bin, you get a file in the same format. You can edit or merge such JSON and re-import it via **Import file**.
 
-## Fork / reply from a public paste
+## Fork from a public paste
 
-On any public paste page (`/p/{slug}`), use **Fork** or **Reply** to open the workspace with a draft. You can also deep-link:
+On any public paste page (`/p/{slug}`), use **Fork** to open the workspace with a draft. You can also deep-link:
 
 - `/app?fork={slug}` — fork (same content + lineage)
-- `/app?reply={slug}` — reply (empty body, reply lineage)
 
 Password-protected pastes must be unlocked in `/p/…` in the same browser first (access cookie), or the import will show an error.

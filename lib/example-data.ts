@@ -1,4 +1,4 @@
-import source from "@/example-pastes.json";
+import source from "@/samples/example-pastes.json";
 import { DEFAULT_FOLDERS } from "@/lib/constants";
 import type { LocalWorkspaceSnapshot, PasteDraft } from "@/lib/types";
 

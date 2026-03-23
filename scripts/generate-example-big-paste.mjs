@@ -1,5 +1,5 @@
 /**
- * Regenerates ../example-big-paste.json — one importable workspace paste with
+ * Regenerates ../samples/example-big-paste.json — one importable workspace paste with
  * markdown kitchen sink, lorem ipsum, Prism samples for every LANGUAGES id, and 5 attachments.
  * Run: node scripts/generate-example-big-paste.mjs
  */
@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
-const outPath = path.join(root, "example-big-paste.json");
+const outPath = path.join(root, "samples", "example-big-paste.json");
 
 const LOREM_CLASSIC = `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 

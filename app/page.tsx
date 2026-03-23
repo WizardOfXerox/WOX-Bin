@@ -1,3 +1,4 @@
+import { auth } from "@/auth";
 import { LandingPage } from "@/components/landing-page";
 import { LegacyPasteRedirect } from "@/components/legacy-paste-redirect";
 
@@ -14,5 +15,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     return <LegacyPasteRedirect slug={params.p} />;
   }
 
-  return <LandingPage />;
+  const session = await auth();
+
+  return <LandingPage session={session} />;
 }

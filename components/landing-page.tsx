@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Session } from "next-auth";
 import {
   ArrowRight,
   Braces,
@@ -21,7 +22,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
-export function LandingPage() {
+type Props = {
+  session: Session | null;
+};
+
+export function LandingPage({ session }: Props) {
+  const signedIn = Boolean(session?.user);
   const heroTail = TOOLS_ENABLED
     ? "browser utilities live at "
     : "The tools surface is temporarily disabled while it is being finished. See ";
@@ -37,8 +43,8 @@ export function LandingPage() {
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">WOX-Bin</p>
             <div className="flex shrink-0 items-center gap-2">
-              <LandingMobileNav />
-              <LandingDesktopAuthNav />
+              <LandingMobileNav initialSession={session} />
+              <LandingDesktopAuthNav initialSession={session} />
             </div>
           </div>
           <h1 className="max-w-none text-balance font-sans text-[1.7rem] font-semibold leading-[1.15] tracking-tight text-foreground min-[400px]:text-[1.9rem] sm:text-3xl sm:leading-tight md:text-5xl md:leading-[1.1] lg:text-6xl lg:leading-[1.08]">
@@ -90,23 +96,51 @@ export function LandingPage() {
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
-              <Button asChild className="h-12 w-full min-h-12 touch-manipulation sm:h-auto sm:w-auto sm:min-h-0" size="lg" variant="outline">
-                <Link href="/sign-up">Create account</Link>
-              </Button>
+              {signedIn ? (
+                <Button
+                  asChild
+                  className="h-12 w-full min-h-12 touch-manipulation sm:h-auto sm:w-auto sm:min-h-0"
+                  size="lg"
+                  variant="outline"
+                >
+                  <Link href="/settings/account">Account settings</Link>
+                </Button>
+              ) : (
+                <Button
+                  asChild
+                  className="h-12 w-full min-h-12 touch-manipulation sm:h-auto sm:w-auto sm:min-h-0"
+                  size="lg"
+                  variant="outline"
+                >
+                  <Link href="/sign-up">Create account</Link>
+                </Button>
+              )}
               <Button asChild className="h-12 w-full min-h-12 touch-manipulation sm:h-auto sm:w-auto sm:min-h-0" size="lg" variant="secondary">
                 <Link href="/pricing">Compare plans</Link>
               </Button>
             </div>
             <div className="grid gap-2 text-sm text-muted-foreground sm:flex sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1">
-              <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/sign-in">
-                Sign in
-              </Link>
+              {signedIn ? (
+                <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/settings/account">
+                  Account settings
+                </Link>
+              ) : (
+                <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/sign-in">
+                  Sign in
+                </Link>
+              )}
               <span aria-hidden className="hidden text-border sm:inline">
                 ·
               </span>
-              <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/forgot-password">
-                Forgot password
-              </Link>
+              {signedIn ? (
+                <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/settings/sessions">
+                  Sessions
+                </Link>
+              ) : (
+                <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/forgot-password">
+                  Forgot password
+                </Link>
+              )}
               <span aria-hidden className="hidden text-border sm:inline">
                 ·
               </span>
@@ -325,9 +359,15 @@ export function LandingPage() {
         </section>
 
         <footer className="mt-16 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-border/60 pt-8 text-center text-xs text-muted-foreground sm:mt-20 sm:pt-10">
-          <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/sign-in">
-            Sign in
-          </Link>
+          {signedIn ? (
+            <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/settings/account">
+              Account settings
+            </Link>
+          ) : (
+            <Link className="underline-offset-4 hover:text-foreground hover:underline" href="/sign-in">
+              Sign in
+            </Link>
+          )}
           <span aria-hidden className="hidden text-border sm:inline">
             ·
           </span>

@@ -34,7 +34,7 @@ All commands are defined in **`package.json`** (`scripts`). Run them from the **
 
 | Script | Command | Purpose |
 |--------|---------|---------|
-| **`gen:example-big-paste`** | `node scripts/generate-example-big-paste.mjs` | Regenerates **`example-big-paste.json`** (megademo paste). See **[EXAMPLE.md](../EXAMPLE.md)**. |
+| **`gen:example-big-paste`** | `node scripts/generate-example-big-paste.mjs` | Regenerates **`samples/example-big-paste.json`** (megademo paste). See **[samples/EXAMPLE.md](../samples/EXAMPLE.md)**. |
 | **`gen:convertio-formats`** | `node scripts/generate-convertio-formats-ts.mjs` | Regenerates `lib/tools/convertio-formats.generated.ts` from **`docs/CONVERTIO-FORMATS-CATALOG.md`**. |
 | **`fetch:convertio-pairs`** | `node scripts/fetch-convertio-pairs.mjs` | Crawls Convertio format pages → **`public/data/convertio-pairs.json`** (long-running; be polite with `CONVERTIO_DELAY_MS`). |
 

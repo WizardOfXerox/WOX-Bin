@@ -133,6 +133,11 @@ function normalizeSnapshot(snapshot: Partial<LocalWorkspaceSnapshot>): LocalWork
   };
 }
 
+export function parseLocalWorkspaceJson(text: string): LocalWorkspaceSnapshot {
+  const parsed = JSON.parse(text) as Partial<LocalWorkspaceSnapshot>;
+  return normalizeSnapshot(parsed);
+}
+
 function parseLegacyStorage(value: string | null): LocalWorkspaceSnapshot | null {
   if (!value) {
     return null;
@@ -361,8 +366,7 @@ export async function replaceLocalWorkspace(snapshot: LocalWorkspaceSnapshot) {
 }
 
 export async function importLocalWorkspaceJson(text: string) {
-  const parsed = JSON.parse(text) as Partial<LocalWorkspaceSnapshot>;
-  const normalized = normalizeSnapshot(parsed);
+  const normalized = parseLocalWorkspaceJson(text);
   await replaceLocalWorkspace(normalized);
   return normalized;
 }

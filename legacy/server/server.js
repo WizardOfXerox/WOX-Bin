@@ -339,7 +339,7 @@ let examplePasteTemplatesCache = null;
 function loadExamplePasteTemplates() {
   if (examplePasteTemplatesCache) return examplePasteTemplatesCache;
   try {
-    const filePath = path.join(__dirname, '..', 'example-pastes.json');
+    const filePath = path.join(__dirname, '..', 'samples', 'example-pastes.json');
     if (!fs.existsSync(filePath)) return (examplePasteTemplatesCache = []);
     const raw = fs.readFileSync(filePath, 'utf8');
     const json = JSON.parse(raw || '{}');

@@ -380,7 +380,7 @@ async function seedLocalExamplePastesIfMissing() {
   if (requiredExampleIds.every(id => data.pastes.some(p => p && p.id === id))) return;
 
   try {
-    const res = await fetch(location.origin + '/example-pastes.json', { credentials: 'include' });
+    const res = await fetch(location.origin + '/samples/example-pastes.json', { credentials: 'include' });
     if (!res.ok) return;
     const json = await res.json();
     const templates = Array.isArray(json.pastes) ? json.pastes : [];

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { Session } from "next-auth";
 import { signOut, useSession } from "next-auth/react";
 import { useState } from "react";
 import { ArrowRight, LogOut, Menu } from "lucide-react";
@@ -21,9 +22,14 @@ import { cn } from "@/lib/utils";
 /**
  * Mobile-only nav: large tap targets, bottom-sheet style on small viewports.
  */
-export function LandingMobileNav() {
+type Props = {
+  initialSession?: Session | null;
+};
+
+export function LandingMobileNav({ initialSession = null }: Props) {
   const [open, setOpen] = useState(false);
   const { data: session, status } = useSession();
+  const effectiveSession = status === "loading" ? initialSession : session;
 
   return (
     <Dialog onOpenChange={setOpen} open={open}>
@@ -80,13 +86,13 @@ export function LandingMobileNav() {
               </Button>
             </DialogClose>
           </div>
-          {status === "loading" ? (
+          {status === "loading" && !initialSession?.user ? (
             <div aria-hidden className="h-12 w-full animate-pulse rounded-full bg-muted/40" />
-          ) : session?.user ? (
+          ) : effectiveSession?.user ? (
             <>
               <DialogClose asChild>
                 <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
-                  <Link href="/settings/account">{accountLabelFromSession(session)}</Link>
+                  <Link href="/settings/account">{accountLabelFromSession(effectiveSession)}</Link>
                 </Button>
               </DialogClose>
               <Button
