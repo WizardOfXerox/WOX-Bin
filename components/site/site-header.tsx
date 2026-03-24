@@ -78,13 +78,52 @@ export function SiteHeader({ className }: Props) {
   const sessionUser = session?.user ?? null;
   const showLoadingSkeleton = status === "loading" && !sessionUser;
 
+  const desktopActions = (
+    <>
+      <LanguageSwitcher compact />
+      {showLoadingSkeleton ? (
+        <div aria-hidden className="h-9 w-28 animate-pulse rounded-full bg-muted/40" />
+      ) : sessionUser ? (
+        <>
+          <Button asChild variant="outline">
+            <Link className="inline-flex items-center gap-2" href="/settings/account">
+              <UserAvatar
+                image={sessionUser.image}
+                label={sessionUser.displayName || sessionUser.name || sessionUser.email}
+                size="sm"
+                username={sessionUser.username}
+              />
+              <span>{accountLabelFromSession(session)}</span>
+            </Link>
+          </Button>
+          <Button onClick={() => void signOut({ callbackUrl: "/" })} type="button" variant="outline">
+            <LogOut className="h-4 w-4" />
+            {t("nav.signOut")}
+          </Button>
+        </>
+      ) : (
+        <Button asChild variant="outline">
+          <Link href="/sign-in">{t("nav.signIn")}</Link>
+        </Button>
+      )}
+      <Button asChild>
+        <Link href="/app">
+          {t("nav.openWorkspace")}
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </Button>
+    </>
+  );
+
   return (
-    <header className={cn("glass-panel flex items-center gap-3 px-4 py-3 sm:px-5", className)}>
+    <header className={cn("glass-panel flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5 lg:gap-4", className)}>
       <Link className="shrink-0 text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground" href="/">
         WOX-Bin
       </Link>
 
-      <nav className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto whitespace-nowrap md:flex">
+      <div className="hidden shrink-0 items-center gap-2 md:ml-auto md:flex 2xl:ml-0 2xl:hidden">{desktopActions}</div>
+
+      <nav className="order-3 hidden w-full flex-wrap items-center gap-1 md:flex 2xl:order-none 2xl:min-w-0 2xl:flex-1 2xl:w-auto 2xl:flex-nowrap 2xl:overflow-x-auto 2xl:whitespace-nowrap workspace-scrollbar-hide">
         {SITE_NAV_ITEMS.map((item) => (
           <Link
             key={item.href}
@@ -96,40 +135,7 @@ export function SiteHeader({ className }: Props) {
         ))}
       </nav>
 
-      <div className="hidden shrink-0 items-center gap-2 md:flex">
-        <LanguageSwitcher compact />
-        {showLoadingSkeleton ? (
-          <div aria-hidden className="h-9 w-28 animate-pulse rounded-full bg-muted/40" />
-        ) : sessionUser ? (
-          <>
-            <Button asChild variant="outline">
-              <Link className="inline-flex items-center gap-2" href="/settings/account">
-                <UserAvatar
-                  image={sessionUser.image}
-                  label={sessionUser.displayName || sessionUser.name || sessionUser.email}
-                  size="sm"
-                  username={sessionUser.username}
-                />
-                <span>{accountLabelFromSession(session)}</span>
-              </Link>
-            </Button>
-            <Button onClick={() => void signOut({ callbackUrl: "/" })} type="button" variant="outline">
-              <LogOut className="h-4 w-4" />
-              {t("nav.signOut")}
-            </Button>
-          </>
-        ) : (
-          <Button asChild variant="outline">
-            <Link href="/sign-in">{t("nav.signIn")}</Link>
-          </Button>
-        )}
-        <Button asChild>
-          <Link href="/app">
-            {t("nav.openWorkspace")}
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </Button>
-      </div>
+      <div className="hidden shrink-0 items-center gap-2 2xl:flex">{desktopActions}</div>
 
       <Dialog>
         <DialogTrigger asChild>
