@@ -194,6 +194,8 @@ export async function PATCH(request: Request) {
         ? null
         : parsed.data.displayName
       : current.displayName;
+  const nextImage =
+    parsed.data.image !== undefined ? (parsed.data.image === "" ? null : parsed.data.image) : current.image;
 
   let nextUsername = current.username;
   if (parsed.data.username !== undefined) {
@@ -218,6 +220,7 @@ export async function PATCH(request: Request) {
     .update(users)
     .set({
       displayName: nextDisplayName,
+      image: nextImage,
       username: nextUsername,
       name: nextName,
       updatedAt: new Date()
@@ -233,7 +236,8 @@ export async function PATCH(request: Request) {
     ip,
     metadata: {
       usernameChanged: parsed.data.username !== undefined && nextUsername !== current.username,
-      displayNameChanged: parsed.data.displayName !== undefined
+      displayNameChanged: parsed.data.displayName !== undefined,
+      imageChanged: parsed.data.image !== undefined
     }
   });
 
@@ -242,6 +246,6 @@ export async function PATCH(request: Request) {
     displayName: nextDisplayName,
     email: current.email,
     name: nextName,
-    image: current.image
+    image: nextImage
   });
 }

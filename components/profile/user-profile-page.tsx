@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SiteHeader } from "@/components/site/site-header";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { getPasteSharePath } from "@/lib/paste-links";
 import type { UserProfilePasteRow, UserProfileSnapshot } from "@/lib/profile-service";
 import { formatDate } from "@/lib/utils";
@@ -32,18 +33,6 @@ type FilterValue = "all" | "public" | "unlisted" | "private" | "hidden" | "secre
 
 function profileLabel(snapshot: UserProfileSnapshot) {
   return snapshot.profile.displayName?.trim() || snapshot.profile.username;
-}
-
-function profileInitials(snapshot: UserProfileSnapshot) {
-  const source = profileLabel(snapshot).trim();
-  const parts = source.split(/\s+/).slice(0, 2);
-  if (parts.length === 0) {
-    return "WB";
-  }
-  return parts
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("")
-    .slice(0, 2);
 }
 
 function matchesFilter(paste: UserProfilePasteRow, filter: FilterValue) {
@@ -174,9 +163,13 @@ export function UserProfilePage({ snapshot }: Props) {
           <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)] lg:gap-8 lg:p-8">
             <div className="min-w-0">
               <div className="flex flex-wrap items-start gap-4 sm:gap-5">
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[1.75rem] border border-primary/20 bg-primary/10 text-2xl font-semibold text-primary">
-                  {profileInitials(snapshot)}
-                </div>
+                <UserAvatar
+                  className="rounded-[1.75rem]"
+                  image={snapshot.profile.image}
+                  label={snapshot.profile.displayName || snapshot.profile.username}
+                  size="xl"
+                  username={snapshot.profile.username}
+                />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge className="border-white/10 bg-white/[0.04] text-foreground">User profile</Badge>

@@ -29,6 +29,7 @@ export default async function AccountSettingsPage() {
         email: true,
         username: true,
         displayName: true,
+        image: true,
         passwordHash: true,
         emailVerified: true
       }
@@ -49,6 +50,7 @@ export default async function AccountSettingsPage() {
     email: row.email,
     username: row.username,
     displayName: row.displayName,
+    image: row.image,
     hasPassword: Boolean(row.passwordHash),
     emailVerified: Boolean(row.emailVerified),
     smtpConfigured: isSmtpConfigured(),

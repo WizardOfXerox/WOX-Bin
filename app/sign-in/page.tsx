@@ -1,19 +1,31 @@
 "use client";
 
+import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { Suspense, useEffect, useMemo, useState, type FormEvent } from "react";
+import { Clock3, Trash2 } from "lucide-react";
+import { Suspense, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { useUiLanguage } from "@/components/providers/ui-language-provider";
 import {
   getAuthNoticeRedirectUrl,
   normalizePostSignInRedirectUrl
 } from "@/lib/auth-client-redirect";
+import {
+  clearRememberedAccountQueue,
+  forgetRememberedAccount,
+  queueRememberedAccountSave,
+  readRememberAccountPreference,
+  readRememberedAccounts,
+  type RememberedAccount,
+  writeRememberAccountPreference
+} from "@/lib/remembered-accounts";
 
 const SESSION_ERROR_MESSAGES: Record<string, string> = {
   SessionRevoked: "This session was signed out or revoked elsewhere. Sign in again.",
@@ -66,6 +78,12 @@ function SignInPageContent() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [rememberAccount, setRememberAccount] = useState(() =>
+    typeof window !== "undefined" ? readRememberAccountPreference() : false
+  );
+  const [rememberedAccounts, setRememberedAccounts] = useState<RememberedAccount[]>(() =>
+    typeof window !== "undefined" ? readRememberedAccounts() : []
+  );
   const [recoverOpen, setRecoverOpen] = useState(authError === "emailNotVerified");
   const [recoverIdentifier, setRecoverIdentifier] = useState("");
   const [recoverPassword, setRecoverPassword] = useState("");
@@ -79,6 +97,7 @@ function SignInPageContent() {
   const [magicEmail, setMagicEmail] = useState("");
   const [magicStatus, setMagicStatus] = useState<string | null>(null);
   const [magicLoading, setMagicLoading] = useState(false);
+  const passwordInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     void fetch("/api/config/client")
@@ -93,10 +112,48 @@ function SignInPageContent() {
       });
   }, []);
 
+  function handleRememberPreferenceChange(next: boolean) {
+    setRememberAccount(next);
+    writeRememberAccountPreference(next);
+  }
+
+  function chooseRememberedAccount(account: RememberedAccount) {
+    const nextIdentifier = account.email?.trim() || account.username?.trim() || "";
+    setIdentifier(nextIdentifier);
+    setRecoverIdentifier(nextIdentifier);
+    setMagicEmail(account.email?.trim() || "");
+    setError(null);
+    setMagicStatus(null);
+    setRecoverError(null);
+    setRecoverMessage(null);
+    setRememberAccount(true);
+    writeRememberAccountPreference(true);
+    passwordInputRef.current?.focus();
+  }
+
+  function removeRememberedAccount(accountId: string) {
+    forgetRememberedAccount(accountId);
+    setRememberedAccounts(readRememberedAccounts());
+  }
+
+  function queueRememberPreference(provider: "credentials" | "google" | "email") {
+    if (rememberAccount) {
+      queueRememberedAccountSave(provider);
+      return;
+    }
+    clearRememberedAccountQueue();
+  }
+
+  async function handleGoogleSignIn() {
+    queueRememberPreference("google");
+    await signIn("google", { callbackUrl: "/app" });
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError(null);
+    queueRememberPreference("credentials");
 
     const result = await signIn("credentials", {
       identifier,
@@ -107,11 +164,13 @@ function SignInPageContent() {
 
     const noticeRedirectUrl = getAuthNoticeRedirectUrl(result?.url);
     if (noticeRedirectUrl) {
+      clearRememberedAccountQueue();
       window.location.href = noticeRedirectUrl;
       return;
     }
 
     if (!result || result.error) {
+      clearRememberedAccountQueue();
       setError(t("auth.signIn.failed"));
       setLoading(false);
       return;
@@ -125,6 +184,7 @@ function SignInPageContent() {
     setMagicLoading(true);
     setMagicStatus(null);
     setError(null);
+    queueRememberPreference("email");
     const result = await signIn("email", {
       email: magicEmail.trim(),
       callbackUrl: "/app",
@@ -132,6 +192,7 @@ function SignInPageContent() {
     });
     setMagicLoading(false);
     if (result?.error) {
+      clearRememberedAccountQueue();
       setMagicStatus("Could not send sign-in email. Check the address and try again.");
       return;
     }
@@ -181,6 +242,65 @@ function SignInPageContent() {
             </div>
             <LanguageSwitcher compact />
           </div>
+          {rememberedAccounts.length ? (
+            <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-4">
+              <div>
+                <p className="text-sm font-medium text-foreground">{t("auth.signIn.recentTitle")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t("auth.signIn.recentDescription")}</p>
+              </div>
+              <div className="grid gap-3">
+                {rememberedAccounts.map((account) => {
+                  const accountLabel =
+                    account.displayName?.trim() || account.username?.trim() || account.email?.trim() || account.name?.trim() || "Account";
+                  const accountDetail = account.email?.trim() || account.username?.trim() || "Saved on this browser";
+                  return (
+                    <div className="rounded-2xl border border-border bg-card/70 p-3" key={account.id}>
+                      <div className="flex items-start gap-3">
+                        <UserAvatar
+                          image={account.image}
+                          label={account.displayName || account.name || account.email}
+                          size="md"
+                          username={account.username}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-foreground">{accountLabel}</p>
+                              <p className="truncate text-xs text-muted-foreground">{accountDetail}</p>
+                            </div>
+                            <Button
+                              className="shrink-0"
+                              onClick={() => removeRememberedAccount(account.id)}
+                              size="icon"
+                              type="button"
+                              variant="ghost"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">{t("auth.signIn.forgetAccount")}</span>
+                            </Button>
+                          </div>
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <Button onClick={() => chooseRememberedAccount(account)} size="sm" type="button" variant="outline">
+                              {t("auth.signIn.useAccount")}
+                            </Button>
+                            {googleOAuthAvailable && account.preferredProvider === "google" ? (
+                              <Button onClick={() => void handleGoogleSignIn()} size="sm" type="button" variant="secondary">
+                                {t("auth.signIn.useGoogle")}
+                              </Button>
+                            ) : null}
+                            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                              <Clock3 className="h-3.5 w-3.5" />
+                              {t("auth.signIn.lastUsed")} {formatDistanceToNow(new Date(account.lastUsedAt), { addSuffix: true })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
           <form className="space-y-4" onSubmit={handleSubmit}>
             <Input
               value={identifier}
@@ -191,6 +311,7 @@ function SignInPageContent() {
             />
             <div className="space-y-2">
               <Input
+                ref={passwordInputRef}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder={t("auth.signIn.password")}
@@ -204,6 +325,18 @@ function SignInPageContent() {
                 </Link>
               </p>
             </div>
+            <label className="flex items-start gap-3 rounded-xl border border-border bg-muted/20 px-4 py-3 text-sm">
+              <input
+                checked={rememberAccount}
+                className="mt-0.5 size-4 shrink-0 rounded border border-input accent-primary"
+                onChange={(event) => handleRememberPreferenceChange(event.target.checked)}
+                type="checkbox"
+              />
+              <span className="min-w-0">
+                <span className="font-medium text-foreground">{t("auth.signIn.rememberLabel")}</span>
+                <span className="mt-1 block text-xs text-muted-foreground">{t("auth.signIn.rememberDescription")}</span>
+              </span>
+            </label>
             {sessionNotice ? <p className="text-sm text-amber-200/90">{sessionNotice}</p> : null}
             {emailVerifyNotice ? (
               <p
@@ -271,7 +404,7 @@ function SignInPageContent() {
           </div>
           <div className="space-y-3">
             {googleOAuthAvailable ? (
-              <Button className="w-full" type="button" variant="outline" onClick={() => signIn("google", { callbackUrl: "/app" })}>
+              <Button className="w-full" type="button" variant="outline" onClick={() => void handleGoogleSignIn()}>
                 {t("auth.signIn.google")}
               </Button>
             ) : null}

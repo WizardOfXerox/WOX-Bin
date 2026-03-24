@@ -20,6 +20,7 @@ import { accountLabelFromSession } from "@/lib/account-label";
 import { useUiLanguage } from "@/components/providers/ui-language-provider";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { cn } from "@/lib/utils";
+import { UserAvatar } from "@/components/ui/user-avatar";
 
 /**
  * Mobile-only nav: large tap targets, bottom-sheet style on small viewports.
@@ -107,7 +108,15 @@ export function LandingMobileNav({ initialSession = null }: Props) {
             <>
               <DialogClose asChild>
                 <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
-                  <Link href="/settings/account">{accountLabelFromSession(effectiveSession)}</Link>
+                  <Link className="inline-flex items-center gap-2" href="/settings/account">
+                    <UserAvatar
+                      image={effectiveSession.user.image}
+                      label={effectiveSession.user.displayName || effectiveSession.user.name || effectiveSession.user.email}
+                      size="sm"
+                      username={effectiveSession.user.username}
+                    />
+                    <span>{accountLabelFromSession(effectiveSession)}</span>
+                  </Link>
                 </Button>
               </DialogClose>
               <Button

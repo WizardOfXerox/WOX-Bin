@@ -251,6 +251,16 @@ export const apiKeyCreateSchema = z.object({
 export const accountSettingsPatchSchema = z
   .object({
     displayName: z.union([z.string().trim().max(80), z.literal("")]).optional(),
+    image: z
+      .union([
+        z
+          .string()
+          .trim()
+          .max(2048)
+          .refine((value) => /^https?:\/\//i.test(value), "Profile image URL must start with http:// or https://."),
+        z.literal("")
+      ])
+      .optional(),
     username: z
       .string()
       .trim()
@@ -259,8 +269,8 @@ export const accountSettingsPatchSchema = z
       .regex(/^[a-z0-9_]+$/i, "Username may only contain letters, numbers, and underscores.")
       .optional()
   })
-  .refine((data) => data.displayName !== undefined || data.username !== undefined, {
-    message: "Provide display name and/or username to update."
+  .refine((data) => data.displayName !== undefined || data.image !== undefined || data.username !== undefined, {
+    message: "Provide display name, image, and/or username to update."
   });
 
 /** DELETE /api/settings/account — password required when account has a password hash. */

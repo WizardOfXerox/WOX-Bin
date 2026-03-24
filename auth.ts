@@ -208,7 +208,7 @@ export const authOptions: NextAuthOptions = {
   },
   providers,
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       const tokenUserColumns = {
         id: true,
         username: true,
@@ -217,6 +217,7 @@ export const authOptions: NextAuthOptions = {
         planStatus: true,
         onboardingComplete: true,
         displayName: true,
+        image: true,
         accountStatus: true,
         suspendedUntil: true
       } as const;
@@ -243,6 +244,7 @@ export const authOptions: NextAuthOptions = {
           token.planStatus = row.planStatus;
           token.onboardingComplete = row.onboardingComplete;
           token.displayName = row.displayName ?? null;
+          token.picture = row.image ?? null;
         }
       }
 
@@ -277,6 +279,21 @@ export const authOptions: NextAuthOptions = {
         await db.update(browserSessions).set({ lastSeenAt: new Date() }).where(eq(browserSessions.id, sid));
         delete token.error;
         return true;
+      }
+
+      if (trigger === "update" && session?.user) {
+        if (typeof session.user.username === "string" || session.user.username === null) {
+          token.username = session.user.username ?? null;
+        }
+        if (typeof session.user.displayName === "string" || session.user.displayName === null) {
+          token.displayName = session.user.displayName ?? null;
+        }
+        if (typeof session.user.name === "string" || session.user.name === null) {
+          token.name = session.user.name ?? null;
+        }
+        if (typeof session.user.image === "string" || session.user.image === null) {
+          token.picture = session.user.image ?? null;
+        }
       }
 
       if (user?.id) {
@@ -314,6 +331,7 @@ export const authOptions: NextAuthOptions = {
           token.planStatus = row.planStatus;
           token.onboardingComplete = row.onboardingComplete;
           token.displayName = row.displayName ?? null;
+          token.picture = row.image ?? null;
         } else {
           token.id = user.id;
           token.username = user.username ?? null;
@@ -322,6 +340,7 @@ export const authOptions: NextAuthOptions = {
           token.planStatus = user.planStatus ?? "active";
           token.onboardingComplete = user.onboardingComplete ?? false;
           token.displayName = user.displayName ?? null;
+          token.picture = user.image ?? null;
         }
       } else if (token.sub) {
         const ok = await ensureBrowserSession(token.sub);
@@ -349,6 +368,7 @@ export const authOptions: NextAuthOptions = {
         session.user.planStatus = token.planStatus ?? "active";
         session.user.onboardingComplete = token.onboardingComplete ?? false;
         session.user.displayName = token.displayName ?? null;
+        session.user.image = typeof token.picture === "string" ? token.picture : null;
         if (token.browserSessionId) {
           session.user.browserSessionId = token.browserSessionId as string;
         }

@@ -7,6 +7,7 @@ import { ArrowRight, LogOut } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { UserAvatar } from "@/components/ui/user-avatar";
 
 import { accountLabelFromSession } from "@/lib/account-label";
 import { useUiLanguage } from "@/components/providers/ui-language-provider";
@@ -51,7 +52,15 @@ export function LandingDesktopAuthNav({ initialSession = null }: Props) {
       ) : effectiveSession?.user ? (
         <>
           <Button asChild title="Account settings" variant="ghost">
-            <Link href="/settings/account">{accountLabelFromSession(effectiveSession)}</Link>
+            <Link className="inline-flex items-center gap-2" href="/settings/account">
+              <UserAvatar
+                image={effectiveSession.user.image}
+                label={effectiveSession.user.displayName || effectiveSession.user.name || effectiveSession.user.email}
+                size="sm"
+                username={effectiveSession.user.username}
+              />
+              <span>{accountLabelFromSession(effectiveSession)}</span>
+            </Link>
           </Button>
           <Button
             className="gap-1.5"

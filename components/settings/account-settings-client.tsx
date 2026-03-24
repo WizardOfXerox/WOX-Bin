@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { useUiLanguage } from "@/components/providers/ui-language-provider";
 
 export type AccountProfileInitial = {
   email: string | null;
   username: string | null;
   displayName: string | null;
+  image: string | null;
   hasPassword: boolean;
   emailVerified: boolean;
   smtpConfigured: boolean;
@@ -33,6 +35,7 @@ export function AccountSettingsClient({ initial }: Props) {
   const { update } = useSession();
   const [username, setUsername] = useState(initial.username ?? "");
   const [displayName, setDisplayName] = useState(initial.displayName ?? "");
+  const [image, setImage] = useState(initial.image ?? "");
   const [hasPassword, setHasPassword] = useState(initial.hasPassword);
   const [googleConnected, setGoogleConnected] = useState(initial.googleConnected);
   const [totpEnabled, setTotpEnabled] = useState(initial.totpEnabled);
@@ -40,7 +43,8 @@ export function AccountSettingsClient({ initial }: Props) {
   const [totpLastUsedAt, setTotpLastUsedAt] = useState(initial.totpLastUsedAt);
   const [savedProfile, setSavedProfile] = useState({
     username: initial.username ?? "",
-    displayName: initial.displayName ?? ""
+    displayName: initial.displayName ?? "",
+    image: initial.image ?? ""
   });
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -89,14 +93,18 @@ export function AccountSettingsClient({ initial }: Props) {
     setError(null);
     setStatus(null);
 
-    const payload: { username?: string; displayName?: string } = {};
+    const payload: { username?: string; displayName?: string; image?: string } = {};
     const trimmedUser = username.trim().toLowerCase();
     const trimmedDisplay = displayName.trim();
+    const trimmedImage = image.trim();
     if (trimmedUser !== savedProfile.username.toLowerCase()) {
       payload.username = trimmedUser;
     }
     if (trimmedDisplay !== savedProfile.displayName) {
       payload.displayName = trimmedDisplay;
+    }
+    if (trimmedImage !== savedProfile.image) {
+      payload.image = trimmedImage;
     }
 
     if (Object.keys(payload).length === 0) {
@@ -115,6 +123,7 @@ export function AccountSettingsClient({ initial }: Props) {
       error?: string;
       username?: string;
       displayName?: string | null;
+      image?: string | null;
     };
 
     if (!response.ok) {
@@ -129,12 +138,26 @@ export function AccountSettingsClient({ initial }: Props) {
     if (body.displayName !== undefined) {
       setDisplayName(body.displayName ?? "");
     }
+    if (body.image !== undefined) {
+      setImage(body.image ?? "");
+    }
     setSavedProfile({
       username: typeof body.username === "string" ? body.username : trimmedUser,
-      displayName: body.displayName !== undefined ? body.displayName ?? "" : trimmedDisplay
+      displayName: body.displayName !== undefined ? body.displayName ?? "" : trimmedDisplay,
+      image: body.image !== undefined ? body.image ?? "" : trimmedImage
     });
 
-    await update();
+    await update({
+      user: {
+        username: typeof body.username === "string" ? body.username : trimmedUser,
+        displayName: body.displayName !== undefined ? body.displayName ?? null : trimmedDisplay || null,
+        name:
+          (body.displayName !== undefined ? body.displayName ?? null : trimmedDisplay || null) ??
+          (typeof body.username === "string" ? body.username : trimmedUser) ??
+          null,
+        image: body.image !== undefined ? body.image ?? null : trimmedImage || null
+      }
+    });
     setStatus("Profile saved.");
     setLoading(false);
   }
@@ -547,6 +570,34 @@ export function AccountSettingsClient({ initial }: Props) {
                 placeholder="How you want to be addressed"
                 value={displayName}
               />
+            </div>
+
+            <div className="rounded-2xl border border-border bg-muted/20 p-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <UserAvatar
+                  className="shadow-sm"
+                  image={image}
+                  label={displayName || username || initial.email}
+                  size="xl"
+                  username={username}
+                />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <label className="text-sm font-medium text-foreground" htmlFor="account-image">
+                    Profile image URL
+                  </label>
+                  <Input
+                    autoComplete="url"
+                    id="account-image"
+                    onChange={(e) => setImage(e.target.value)}
+                    placeholder="https://example.com/avatar.png"
+                    type="url"
+                    value={image}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Paste an http:// or https:// image URL. Leave this blank to remove your custom avatar.
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">

@@ -577,9 +577,16 @@ export async function mountWoxBinCompact(rootEl) {
     setStatus("Presets cleared.", "ok");
   });
 
-  async function renderProfileOptions(selectedId = null) {
+  function resolveExplicitProfileSelection(state, selectedId) {
+    if (selectedId !== undefined) {
+      return selectedId || "";
+    }
+    return state.selectedProfileId || "";
+  }
+
+  async function renderProfileOptions(selectedId) {
     const state = await loadProfiles();
-    const effectiveSelected = selectedId || state.selectedProfileId || "";
+    const effectiveSelected = resolveExplicitProfileSelection(state, selectedId);
     profileSelect.innerHTML = "";
     const createOption = document.createElement("option");
     createOption.value = "";
@@ -595,10 +602,11 @@ export async function mountWoxBinCompact(rootEl) {
     return state;
   }
 
-  async function syncProfileForm(profileId = null) {
+  async function syncProfileForm(profileId) {
     const state = await renderProfileOptions(profileId);
+    const effectiveSelected = resolveExplicitProfileSelection(state, profileId);
     const activeProfile =
-      state.profiles.find((profile) => profile.id === (profileId || state.selectedProfileId || "")) || null;
+      state.profiles.find((profile) => profile.id === effectiveSelected) || null;
     currentProfile = activeProfile;
     profileLabelInput.value = activeProfile?.label || "";
     baseUrlInput.value = activeProfile?.baseUrl || defaultUrlForInput();
@@ -725,7 +733,7 @@ export async function mountWoxBinCompact(rootEl) {
   btnNewProfile.addEventListener("click", async () => {
     await setSelectedProfileId(null);
     currentProfile = null;
-    await syncProfileForm(null);
+    await syncProfileForm("");
     listWrap.innerHTML = "";
     keyList.innerHTML = "";
     connectedEl.textContent = "";

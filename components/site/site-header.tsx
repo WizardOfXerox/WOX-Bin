@@ -8,6 +8,7 @@ import { ArrowRight, LogOut, Menu } from "lucide-react";
 
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import {
   Dialog,
   DialogClose,
@@ -100,7 +101,15 @@ export function SiteHeader({ className }: Props) {
         ) : sessionUser ? (
           <>
             <Button asChild variant="outline">
-              <Link href="/settings/account">{accountLabelFromSession(session)}</Link>
+              <Link className="inline-flex items-center gap-2" href="/settings/account">
+                <UserAvatar
+                  image={sessionUser.image}
+                  label={sessionUser.displayName || sessionUser.name || sessionUser.email}
+                  size="sm"
+                  username={sessionUser.username}
+                />
+                <span>{accountLabelFromSession(session)}</span>
+              </Link>
             </Button>
             <Button onClick={() => void signOut({ callbackUrl: "/" })} type="button" variant="outline">
               <LogOut className="h-4 w-4" />
@@ -152,11 +161,19 @@ export function SiteHeader({ className }: Props) {
               <div aria-hidden className="h-12 w-full animate-pulse rounded-full bg-muted/40" />
         ) : sessionUser ? (
               <>
-                <DialogClose asChild>
-                  <Button asChild className="h-12 justify-center text-base" variant="outline">
-                    <Link href="/settings/account">{accountLabelFromSession(session)}</Link>
-                  </Button>
-                </DialogClose>
+              <DialogClose asChild>
+                <Button asChild className="h-12 justify-center text-base" variant="outline">
+                  <Link className="inline-flex items-center gap-2" href="/settings/account">
+                    <UserAvatar
+                      image={sessionUser.image}
+                      label={sessionUser.displayName || sessionUser.name || sessionUser.email}
+                      size="sm"
+                      username={sessionUser.username}
+                    />
+                    <span>{accountLabelFromSession(session)}</span>
+                  </Link>
+                </Button>
+              </DialogClose>
                 <Button
                   className="h-12 justify-center gap-2 text-base"
                   onClick={() => void signOut({ callbackUrl: "/" })}
