@@ -1,7 +1,7 @@
 {
     "name": "WOX-Bin Companion + BookmarkFS",
     "description": "WOX-Bin cloud companion with multi-site API-key profiles, plus an experimental local BookmarkFS vault.",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "manifest_version": 3,
     "background": {
         "service_worker": "background.js",
@@ -34,8 +34,8 @@
         "run_at": "document_start"
     }],
     "web_accessible_resources": [{
-        "resources": ["dist/unrar.wasm"],
-        "matches": ["<all_urls>"]
+        "resources": ["dist/unrar.wasm", "dist/afterdark.html", "dist/afterdark.js", "dist/style.css"],
+        "matches": ["https://*/*", "http://localhost/*", "http://127.0.0.1/*"]
     }],
     "content_security_policy": {
         "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com"

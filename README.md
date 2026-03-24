@@ -19,6 +19,7 @@ The active codebase now has three intentionally separate surfaces:
 
 - **WOX-Bin workspace** — the paste product (`/app`, `/p/[slug]`, `/raw/[slug]`, archive/feed, settings, admin)
 - **WOX quick-share** — fast-share routes (`/quick`, `/clipboard`, `/fragment`, `/s/[slug]`, `/out`, CLI drops)
+- **WOX privacy suite** — client-side privacy helpers (`/privacy-tools`, `/noref`, `/scrub`, `/proof`, `/snapshot`, `/poll`, `/chat`)
 - **WOX Tools** — the utilities hub (`/tools/*`, conversion helpers, PDF/image/data tools), currently **disabled by default** until `WOX_ENABLE_TOOLS=1`
 
 They share auth, deployment, and parts of the UI system, but they should be treated as separate areas when planning features, audits, and operator runbooks. See **[docs/PRODUCT-SURFACES.md](docs/PRODUCT-SURFACES.md)** and **[docs/VERCEL-READINESS-AUDIT.md](docs/VERCEL-READINESS-AUDIT.md)**.
@@ -56,6 +57,13 @@ They share auth, deployment, and parts of the UI system, but they should be trea
 - `/clipboard` and `/c/[slug]` — short-lived clipboard buckets with human-friendly keys
 - `/fragment` — client-side fragment-only sharing with no server storage
 - `/out` — privacy redirect used for external shared links
+- `/privacy-tools` — privacy suite hub for encrypted snapshots, proofs, polls, chat, metadata scrubbing, and NoRef links
+- `/noref` — generate privacy-preserving redirect links backed by `/out`
+- `/scrub` — remove EXIF/metadata from supported image files in the browser
+- `/proof` and `/proof/[slug]` — create and verify SHA-256 proof receipts for local text or files
+- `/snapshot` and `/snapshot/[slug]` — create and open client-side encrypted text snapshots
+- `/poll` and `/poll/[slug]` — create lightweight public polls with shareable result pages
+- `/chat` and `/chat/[slug]` — create short-lived encrypted chat rooms with fragment-key invite links
 - shared public-site header across the main routes, so Home, Workspace, Clipboard, Docs, Help, and the quick-share surfaces stay reachable outside `/app`
 - **CLI drops** — `/api/public/termbin`, `/api/public/upload`, `/t/[slug]`, `/x/[slug]/[[...filename]]`; see **[docs/CLI-DROPS.md](docs/CLI-DROPS.md)**
 - **`/tools`** — tools index
@@ -65,6 +73,7 @@ They share auth, deployment, and parts of the UI system, but they should be trea
 - **`/tools/pdf-split`** — split one PDF into one file per page (ZIP) in the browser
 - **`/tools/image-convert`**, **`/tools/data-lab`**, **`/tools/zip-lab`** — more client-side converters
 - **Docs (in repo, not a public URL on Vercel by default):** **[docs/README.md](docs/README.md)** (index) · **[docs/TOOLS.md](docs/TOOLS.md)** · **[docs/CONVERSION-PLATFORM.md](docs/CONVERSION-PLATFORM.md)** · **[docs/VERCEL-CONVERSIONS.md](docs/VERCEL-CONVERSIONS.md)** (Vercel + FFmpeg/S3) · **[docs/CONVERSION-WORKER.md](docs/CONVERSION-WORKER.md)**
+- **Privacy suite details:** **[docs/PRIVACY-SUITE.md](docs/PRIVACY-SUITE.md)** (snapshot, scrub, proof, poll, chat, and NoRef behavior)
 - Password-protected pastes, burn-after-read, burn-after-views, secret links, comments, stars, reports, moderation hooks, clickable shared hyperlinks, and visible view counts
 - `/settings` → `/settings/account` (profile), plus `/settings/billing`, `/settings/usage`, `/settings/sessions`, `/settings/webhooks`, `/settings/team`, and `/settings/team/pastes` (teammates’ public/unlisted pastes)
 - `/admin` with overview, deployment readiness, user management, paste moderation, audit export, and SMTP test hooks

@@ -1,6 +1,6 @@
 {
   "name": "bookmarkfs",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "WOX-Bin browser companion with an experimental BookmarkFS local vault",
   "type": "module",
   "scripts": {

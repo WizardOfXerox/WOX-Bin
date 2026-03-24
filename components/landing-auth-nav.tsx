@@ -36,6 +36,9 @@ export function LandingDesktopAuthNav({ initialSession = null }: Props) {
         <Link href="/quick">{t("nav.quickPaste")}</Link>
       </Button>
       <Button asChild variant="ghost">
+        <Link href="/privacy-tools">{t("nav.privacy")}</Link>
+      </Button>
+      <Button asChild variant="ghost">
         <Link href="/help">{t("nav.help")}</Link>
       </Button>
       <Button asChild variant="ghost">

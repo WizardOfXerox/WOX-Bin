@@ -8,6 +8,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    slug: "2026-03-25-privacy-suite-and-noref",
+    date: "2026-03-25",
+    title: "Privacy suite, NoRef links, and encrypted helper routes",
+    summary:
+      "WOX-Bin now includes a dedicated privacy suite with browser-side metadata scrubbing, proof receipts, encrypted snapshots, temporary encrypted chat, public polls, and a first-class NoRef link generator.",
+    bullets: [
+      "Added a dedicated privacy-tools hub plus public routes for NoRef links, metadata scrubbing, proof receipts, encrypted snapshots, public polls, and encrypted chat rooms.",
+      "Added client-side crypto helpers so snapshot and chat payloads are encrypted before upload and unlocked with URL fragment keys.",
+      "Added privacy-specific database tables and rate-limit buckets for proofs, snapshots, polls, and chat.",
+      "Added shared public-site navigation links so the privacy suite is reachable outside the workspace and tools shell.",
+      "Updated repository docs so the new privacy suite is documented alongside the existing sharing modes and roadmap."
+    ]
+  },
+  {
     slug: "2026-03-25-mfa-language-and-site-shell",
     date: "2026-03-25",
     title: "Authenticator MFA, shared site navigation, and workspace polish",

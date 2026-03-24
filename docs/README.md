@@ -22,6 +22,7 @@ These Markdown files live **in the repository**. They are **not** automatically 
 | **[TOTP-MFA.md](./TOTP-MFA.md)** | Authenticator-app MFA, recovery codes, sign-in challenge flow, and operator notes |
 | **[SHARING-MODES.md](./SHARING-MODES.md)** | What `/app`, `/quick`, `/clipboard`, `/fragment`, `/s/[slug]`, `/out`, and CLI drops are for |
 | **[CLI-DROPS.md](./CLI-DROPS.md)** | Termbin-style text uploads and 0x0-style file uploads for CLI use |
+| **[PRIVACY-SUITE.md](./PRIVACY-SUITE.md)** | Privacy-suite routes for NoRef links, encrypted snapshots/chat, polls, proof receipts, and metadata scrubbing |
 | **[SECRET-LINK-MODE.md](./SECRET-LINK-MODE.md)** | Secret-link sharing mode, current behavior, and future roadmap |
 | **[FEATURE-INTEGRATION-ROADMAP.md](./FEATURE-INTEGRATION-ROADMAP.md)** | External product ideas mapped to WOX-Bin: what fits Vercel now, what needs object storage, what needs separate infra |
 | **[TURNSTILE.md](./TURNSTILE.md)** | Cloudflare Turnstile (`NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`) |

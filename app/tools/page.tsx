@@ -1,7 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { ArrowRight, Braces, Code2, FileArchive, FileImage, FileStack, FileText, ImageIcon, Merge, Scissors } from "lucide-react";
+import {
+  ArrowRight,
+  Braces,
+  Code2,
+  FileArchive,
+  FileImage,
+  FileStack,
+  FileText,
+  ImageIcon,
+  Link2,
+  Lock,
+  Merge,
+  ScanSearch,
+  Scissors,
+  Vote
+} from "lucide-react";
 
 import { CONVERT_TOOLS } from "@/lib/tools/convert-registry";
 import { TOOLS_PAGE_MAIN } from "@/lib/tools/tools-layout";
@@ -35,6 +50,30 @@ const featured = [
     description: "CSV ↔ JSON, TSV, JSON format, Base64, SHA-256 — local.",
     href: "/tools/data-lab",
     icon: Braces
+  },
+  {
+    title: "Privacy suite",
+    description: "Encrypted snapshots, chat, polls, proofs, and privacy redirect tools.",
+    href: "/tools/privacy",
+    icon: Lock
+  },
+  {
+    title: "Metadata scrubber",
+    description: "Strip image metadata in the browser and download a cleaner copy.",
+    href: "/tools/scrub",
+    icon: ScanSearch
+  },
+  {
+    title: "NoRef generator",
+    description: "Generate share links that hide the referring page.",
+    href: "/tools/noref",
+    icon: Link2
+  },
+  {
+    title: "Poll creator",
+    description: "Create anonymous public polls with shareable result pages.",
+    href: "/tools/poll",
+    icon: Vote
   },
   {
     title: "ZIP lab",

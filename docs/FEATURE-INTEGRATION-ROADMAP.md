@@ -14,6 +14,7 @@ It is intentionally pragmatic:
 Already implemented or partially implemented in the current codebase:
 
 - privacy redirect (`noref`-style)
+- privacy suite routes for `snapshot`, `scrub`, `proof`, `poll`, and `chat`
 - secret links
 - burn after read / expiration / password-protected viewing
 - custom paste URLs
@@ -24,6 +25,7 @@ Already implemented or partially implemented in the current codebase:
 Relevant docs:
 
 - [CLI-DROPS.md](./CLI-DROPS.md)
+- [PRIVACY-SUITE.md](./PRIVACY-SUITE.md)
 - [SECRET-LINK-MODE.md](./SECRET-LINK-MODE.md)
 - [VERCEL-CONVERSIONS.md](./VERCEL-CONVERSIONS.md)
 - [VERCEL-READINESS-AUDIT.md](./VERCEL-READINESS-AUDIT.md)
@@ -35,6 +37,7 @@ These ideas fit the existing architecture and can be implemented inside the curr
 | Feature | Source inspiration | Fit | Notes |
 |---|---|---|---|
 | Privacy redirect | `noref.to` | High | Internal `/out` redirect is the right model. Do not depend on a third-party redirect service. |
+| Privacy suite helpers | Privsen | High | `snapshot`, `scrub`, `proof`, `poll`, and `chat` fit cleanly when they stay privacy-oriented and browser-first. |
 | Secret links | OneTimeSecret, TempVault, `paste.sh` | High | Already partly present. Next step is stronger client-side encryption and bucket-style UX. |
 | Custom URLs | CloakBin | High | Safe because WOX-Bin uses `/p/[slug]` and `/s/[slug]`, not site-root slugs. |
 | Termbin-style CLI text upload | `termbin.com` | High | HTTP form is Vercel-safe. Raw TCP `nc` protocol is not. |

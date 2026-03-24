@@ -27,6 +27,7 @@ type NavItem = {
   labelKey:
     | "nav.home"
     | "nav.workspace"
+    | "nav.privacy"
     | "nav.quickPaste"
     | "nav.clipboard"
     | "nav.fragment"
@@ -44,6 +45,7 @@ type NavItem = {
 const SITE_NAV_ITEMS: NavItem[] = [
   { href: "/", labelKey: "nav.home", matches: (pathname) => pathname === "/" },
   { href: "/app", labelKey: "nav.workspace", matches: (pathname) => pathname === "/app" },
+  { href: "/privacy-tools", labelKey: "nav.privacy", matches: (pathname) => pathname === "/privacy-tools" || pathname === "/noref" || pathname === "/snapshot" || pathname?.startsWith("/snapshot/") === true || pathname === "/proof" || pathname?.startsWith("/proof/") === true || pathname === "/poll" || pathname?.startsWith("/poll/") === true || pathname === "/chat" || pathname?.startsWith("/chat/") === true || pathname === "/scrub" },
   { href: "/quick", labelKey: "nav.quickPaste", matches: (pathname) => pathname === "/quick" },
   { href: "/clipboard", labelKey: "nav.clipboard", matches: (pathname) => pathname === "/clipboard" || pathname?.startsWith("/c/") === true },
   { href: "/fragment", labelKey: "nav.fragment", matches: (pathname) => pathname === "/fragment" },

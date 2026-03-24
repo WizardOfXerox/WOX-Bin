@@ -10,7 +10,8 @@ export const WOXBIN_STORAGE = {
   profiles: "woxbin_profiles_v2",
   selectedProfileId: "woxbin_selected_profile_id",
   pendingCompose: "woxbin_pending_compose",
-  offlineCache: "woxbin_offline_cache_v1"
+  offlineCache: "woxbin_offline_cache_v1",
+  afterdarkLauncherEnabled: "woxbin_afterdark_launcher_enabled"
 };
 
 const passphraseCache = new Map();

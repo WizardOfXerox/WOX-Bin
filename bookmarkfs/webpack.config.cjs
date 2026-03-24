@@ -42,7 +42,10 @@ const defaultSiteUrl =
   "";
 
 module.exports = {
-  entry: "./src/index.js",
+  entry: {
+    bundle: "./src/index.js",
+    afterdark: "./src/afterdark.js"
+  },
   mode: "production",
   devtool: false,
   experiments: {
@@ -66,13 +69,14 @@ module.exports = {
     new CopyPlugin({
       patterns: [
         { from: "src/ui/index.html", to: "index.html" },
+        { from: "src/ui/afterdark.html", to: "afterdark.html" },
         { from: "src/ui/style.css", to: "style.css" },
         { from: "node_modules/node-unrar-js/dist/js/unrar.wasm", to: "unrar.wasm" }
       ]
     })
   ],
   output: {
-    filename: "bundle.js",
+    filename: "[name].js",
     path: path.resolve(__dirname, "dist")
   }
 };

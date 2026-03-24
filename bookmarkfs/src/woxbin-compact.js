@@ -205,6 +205,7 @@ export async function mountWoxBinCompact(rootEl) {
       </div>
       <div class="wb-shell-head__actions">
         <span class="wb-shell-head__badge">${viewBadge}</span>
+        <button type="button" class="wb-btn wb-btn-secondary wb-btn-tiny" id="wb-shell-open-afterdark">Afterdark ↗</button>
         <button type="button" class="wb-btn wb-btn-secondary wb-btn-tiny" id="wb-shell-open-sync">Hosted sync ↗</button>
       </div>
     </header>
@@ -244,6 +245,9 @@ export async function mountWoxBinCompact(rootEl) {
           <button type="button" class="wb-btn wb-btn-secondary wb-btn-tiny" id="wb-preset-add" title="Save current URL as preset">Save URL preset</button>
           <button type="button" class="wb-btn wb-btn-ghost wb-btn-tiny" id="wb-preset-clear" title="Remove all presets">Clear presets</button>
         </div>
+      </div>
+      <div class="wb-inline-checks">
+        <label><input type="checkbox" id="wb-afterdark-launcher" /> Show Afterdark launcher on WOX-Bin pages</label>
       </div>
       <ol class="wb-steps">
         <li>Copy your API key when it is shown (one time only).</li>
@@ -402,6 +406,7 @@ export async function mountWoxBinCompact(rootEl) {
   const newKeyLabelInput = $("wb-new-key-label");
   const cacheMeta = $("wb-cache-meta");
   const cacheList = $("wb-cache-list");
+  const afterdarkLauncherInput = $("wb-afterdark-launcher");
   const folderSelect = $("wb-folder");
   const tagsInput = $("wb-tags");
   const pinnedInput = $("wb-pinned");
@@ -419,7 +424,12 @@ export async function mountWoxBinCompact(rootEl) {
   const attachPick = $("wb-attach-pick");
   const attachSummary = $("wb-attach-summary");
   const btnOpenSync = $("wb-shell-open-sync");
+  const btnOpenAfterdark = $("wb-shell-open-afterdark");
   const ephemeralApiKeyTokens = new Map();
+
+  btnOpenAfterdark?.addEventListener("click", () => {
+    window.open(chrome.runtime.getURL("dist/afterdark.html"), "_blank");
+  });
 
   btnOpenSync?.addEventListener("click", async () => {
     try {
@@ -1697,6 +1707,19 @@ export async function mountWoxBinCompact(rootEl) {
   if (!dismissData[WOXBIN_STORAGE.onboardingDismissed]) {
     onboardEl.hidden = false;
   }
+
+  const launcherState = await storageLocalGet([WOXBIN_STORAGE.afterdarkLauncherEnabled]);
+  if (afterdarkLauncherInput) {
+    afterdarkLauncherInput.checked = Boolean(launcherState[WOXBIN_STORAGE.afterdarkLauncherEnabled]);
+    afterdarkLauncherInput.addEventListener("change", async () => {
+      await storageLocalSet({ [WOXBIN_STORAGE.afterdarkLauncherEnabled]: afterdarkLauncherInput.checked });
+      setStatus(
+        afterdarkLauncherInput.checked ? "Afterdark launcher enabled on supported WOX-Bin pages." : "Afterdark launcher disabled.",
+        "ok"
+      );
+    });
+  }
+
   $("wb-onboard-dismiss").addEventListener("click", async () => {
     onboardEl.hidden = true;
     await storageLocalSet({ [WOXBIN_STORAGE.onboardingDismissed]: true });

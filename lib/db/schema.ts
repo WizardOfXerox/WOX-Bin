@@ -433,6 +433,146 @@ export const publicDrops = pgTable(
   })
 );
 
+export const privacySnapshots = pgTable(
+  "privacy_snapshots",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    slug: text("slug").notNull(),
+    payloadCiphertext: text("payload_ciphertext").notNull(),
+    payloadIv: text("payload_iv").notNull(),
+    viewCount: integer("view_count").notNull().default(0),
+    expiresAt: timestamp("expires_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow()
+  },
+  (table) => ({
+    slugUnique: uniqueIndex("privacy_snapshots_slug_unique").on(table.slug),
+    activeExpiresIdx: index("privacy_snapshots_active_expires_idx").on(table.expiresAt, table.createdAt)
+  })
+);
+
+export const privacyProofs = pgTable(
+  "privacy_proofs",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    slug: text("slug").notNull(),
+    label: text("label").notNull(),
+    algorithm: text("algorithm").notNull().default("sha256"),
+    digestHex: text("digest_hex").notNull(),
+    note: text("note"),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow()
+  },
+  (table) => ({
+    slugUnique: uniqueIndex("privacy_proofs_slug_unique").on(table.slug),
+    digestCreatedIdx: index("privacy_proofs_digest_created_idx").on(table.digestHex, table.createdAt)
+  })
+);
+
+export const privacyPolls = pgTable(
+  "privacy_polls",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    slug: text("slug").notNull(),
+    question: text("question").notNull(),
+    allowMultiple: boolean("allow_multiple").notNull().default(false),
+    totalVotes: integer("total_votes").notNull().default(0),
+    expiresAt: timestamp("expires_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow()
+  },
+  (table) => ({
+    slugUnique: uniqueIndex("privacy_polls_slug_unique").on(table.slug),
+    activeExpiresIdx: index("privacy_polls_active_expires_idx").on(table.expiresAt, table.createdAt)
+  })
+);
+
+export const privacyPollOptions = pgTable(
+  "privacy_poll_options",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    pollId: text("poll_id")
+      .notNull()
+      .references(() => privacyPolls.id, { onDelete: "cascade" }),
+    label: text("label").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    voteCount: integer("vote_count").notNull().default(0)
+  },
+  (table) => ({
+    pollSortIdx: index("privacy_poll_options_poll_sort_idx").on(table.pollId, table.sortOrder)
+  })
+);
+
+export const privacyPollVotes = pgTable(
+  "privacy_poll_votes",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    pollId: text("poll_id")
+      .notNull()
+      .references(() => privacyPolls.id, { onDelete: "cascade" }),
+    optionId: text("option_id")
+      .notNull()
+      .references(() => privacyPollOptions.id, { onDelete: "cascade" }),
+    voterHash: text("voter_hash").notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow()
+  },
+  (table) => ({
+    pollOptionVoterUnique: uniqueIndex("privacy_poll_votes_poll_option_voter_unique").on(
+      table.pollId,
+      table.optionId,
+      table.voterHash
+    ),
+    pollVoterIdx: index("privacy_poll_votes_poll_voter_idx").on(table.pollId, table.voterHash)
+  })
+);
+
+export const privacyChatRooms = pgTable(
+  "privacy_chat_rooms",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    slug: text("slug").notNull(),
+    titleCiphertext: text("title_ciphertext").notNull(),
+    titleIv: text("title_iv").notNull(),
+    messageCount: integer("message_count").notNull().default(0),
+    expiresAt: timestamp("expires_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    lastMessageAt: timestamp("last_message_at", { mode: "date" }).notNull().defaultNow()
+  },
+  (table) => ({
+    slugUnique: uniqueIndex("privacy_chat_rooms_slug_unique").on(table.slug),
+    activeExpiresIdx: index("privacy_chat_rooms_active_expires_idx").on(table.expiresAt, table.lastMessageAt)
+  })
+);
+
+export const privacyChatMessages = pgTable(
+  "privacy_chat_messages",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    roomId: text("room_id")
+      .notNull()
+      .references(() => privacyChatRooms.id, { onDelete: "cascade" }),
+    payloadCiphertext: text("payload_ciphertext").notNull(),
+    payloadIv: text("payload_iv").notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow()
+  },
+  (table) => ({
+    roomCreatedIdx: index("privacy_chat_messages_room_created_idx").on(table.roomId, table.createdAt)
+  })
+);
+
 export const comments = pgTable("comments", {
   id: serial("id").primaryKey(),
   pasteId: text("paste_id")

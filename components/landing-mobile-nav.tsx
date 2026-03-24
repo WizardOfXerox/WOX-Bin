@@ -88,6 +88,11 @@ export function LandingMobileNav({ initialSession = null }: Props) {
             </DialogClose>
             <DialogClose asChild>
               <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
+                <Link href="/privacy-tools">{t("nav.privacy")}</Link>
+              </Button>
+            </DialogClose>
+            <DialogClose asChild>
+              <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
                 <Link href="/bookmarkfs">{t("nav.bookmarkfs")}</Link>
               </Button>
             </DialogClose>
