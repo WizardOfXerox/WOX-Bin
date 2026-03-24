@@ -25,6 +25,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { ShareAnywhereDialog } from "@/components/share/share-anywhere";
 import { PasteLineageBanner } from "@/components/paste-lineage-banner";
 import { readTurnstileToken, resetTurnstileFields, TurnstileField } from "@/components/turnstile-field";
 import { CodeImageDialog } from "@/components/workspace/code-image-dialog";
@@ -227,6 +228,7 @@ export function PublicPasteShell({
   const [reportNotes, setReportNotes] = useState("");
   const [reportState, setReportState] = useState<string | null>(null);
   const [codeImageOpen, setCodeImageOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const [showLineNumbers, setShowLineNumbers] = useState(true);
   const [showLineSeparators, setShowLineSeparators] = useState(true);
@@ -484,6 +486,9 @@ export function PublicPasteShell({
   const authorProfileHref = paste.author.username ? `/u/${encodeURIComponent(paste.author.username)}` : null;
   const forkHref = `/app?fork=${encodeURIComponent(paste.slug)}`;
   const secretMode = paste.secretMode;
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const shareUrl = getPasteShareUrl(origin, paste.slug, paste.secretMode);
+  const rawUrl = `${origin}/raw/${paste.slug}`;
 
   return (
     <main className="wox-public-paste-print-root mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:py-8 md:px-6 md:py-10">
@@ -545,8 +550,12 @@ export function PublicPasteShell({
             </div>
 
             <div className="no-print grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:gap-3">
-              <Button className="w-full sm:w-auto" type="button" variant="outline" onClick={() => copyLink("share")}>
+              <Button className="w-full sm:w-auto" type="button" variant="outline" onClick={() => setShareOpen(true)}>
                 <Share2 className="h-4 w-4" />
+                Share
+              </Button>
+              <Button className="w-full sm:w-auto" type="button" variant="outline" onClick={() => copyLink("share")}>
+                <Copy className="h-4 w-4" />
                 Copy link
               </Button>
               <Button className="w-full sm:w-auto" type="button" variant="outline" onClick={() => copyLink("raw")}>
@@ -612,6 +621,15 @@ export function PublicPasteShell({
             </div>
           </div>
         </div>
+
+        <ShareAnywhereDialog
+          onOpenChange={setShareOpen}
+          open={shareOpen}
+          rawUrl={rawUrl}
+          text={`${secretMode ? "Shared secret link" : "Shared paste"} on WOX-Bin`}
+          title={paste.title}
+          url={shareUrl}
+        />
 
         <div className="px-4 py-5 sm:px-6 sm:py-6">
           {locked ? (

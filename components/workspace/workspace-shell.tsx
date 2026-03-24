@@ -68,6 +68,7 @@ import {
 } from "lucide-react";
 
 import { PasteLineageBanner } from "@/components/paste-lineage-banner";
+import { ShareAnywherePanel } from "@/components/share/share-anywhere";
 import { CodeImageDialog } from "@/components/workspace/code-image-dialog";
 import { PrismThemeLink } from "@/components/workspace/prism-theme-link";
 import {
@@ -909,6 +910,17 @@ function ShareBuilderPanel({
         <Button onClick={() => void navigator.clipboard.writeText(rawUrl)} size="sm" type="button" variant="outline">
           Copy raw
         </Button>
+      </div>
+
+      <div className="space-y-2 rounded-xl border border-border bg-muted/40 p-3">
+        <p className="text-xs font-medium text-muted-foreground">Share anywhere</p>
+        <ShareAnywherePanel
+          className="pt-1"
+          rawUrl={rawUrl}
+          text={`${secretMode ? "Shared secret link" : "Shared paste"} on WOX-Bin`}
+          title={slug}
+          url={shareUrl}
+        />
       </div>
 
       <div className="space-y-2 rounded-xl border border-border bg-muted/40 p-3">
