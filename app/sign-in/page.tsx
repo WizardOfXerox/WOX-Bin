@@ -8,6 +8,8 @@ import { Suspense, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { useUiLanguage } from "@/components/providers/ui-language-provider";
 import {
   getAuthNoticeRedirectUrl,
   normalizePostSignInRedirectUrl
@@ -28,13 +30,14 @@ const EMAIL_VERIFY_MESSAGES: Record<string, { tone: "ok" | "warn"; text: string 
 };
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
-  emailNotVerified: "Your email is not verified yet. Check your inbox for the verification link before signing in.",
+  emailNotVerified: "Your email is not verified yet. Check your inbox for the verification link, or use verification help below.",
   accountSuspended: "Your account is currently suspended. Check your email for details or contact the site operator.",
   accountBanned: "Your account has been banned. Contact the site operator if you need clarification."
 };
 
 function SignInPageContent() {
   const searchParams = useSearchParams();
+  const { t } = useUiLanguage();
   const sessionError = searchParams.get("sessionError");
   const emailVerify = searchParams.get("emailVerify");
   const authError = searchParams.get("authError");
@@ -63,6 +66,13 @@ function SignInPageContent() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [recoverOpen, setRecoverOpen] = useState(authError === "emailNotVerified");
+  const [recoverIdentifier, setRecoverIdentifier] = useState("");
+  const [recoverPassword, setRecoverPassword] = useState("");
+  const [recoverEmail, setRecoverEmail] = useState("");
+  const [recoverLoading, setRecoverLoading] = useState(false);
+  const [recoverMessage, setRecoverMessage] = useState<string | null>(null);
+  const [recoverError, setRecoverError] = useState<string | null>(null);
 
   const [magicLinkAvailable, setMagicLinkAvailable] = useState(false);
   const [googleOAuthAvailable, setGoogleOAuthAvailable] = useState(false);
@@ -102,7 +112,7 @@ function SignInPageContent() {
     }
 
     if (!result || result.error) {
-      setError("Sign in failed. Check your username/email and password.");
+      setError(t("auth.signIn.failed"));
       setLoading(false);
       return;
     }
@@ -128,19 +138,54 @@ function SignInPageContent() {
     setMagicStatus("Check your inbox for a sign-in link.");
   }
 
+  async function handleVerificationRecovery(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setRecoverLoading(true);
+    setRecoverError(null);
+    setRecoverMessage(null);
+
+    const response = await fetch("/api/auth/recover-verification", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        identifier: recoverIdentifier.trim() || identifier.trim(),
+        password: recoverPassword,
+        email: recoverEmail.trim() || undefined
+      })
+    });
+
+    const body = (await response.json().catch(() => null)) as { error?: string; email?: string } | null;
+    setRecoverLoading(false);
+
+    if (!response.ok) {
+      setRecoverError(body?.error ?? "Could not recover verification email.");
+      return;
+    }
+
+    setRecoverMessage(
+      body?.email
+        ? `Verification email sent to ${body.email}.`
+        : "Verification email sent. Check your inbox."
+    );
+    setRecoverPassword("");
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-16">
       <Card className="w-full max-w-lg">
         <CardContent className="space-y-6">
-          <div>
-            <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Welcome back</p>
-            <h1 className="mt-2 text-3xl font-semibold">Sign in to your workspace</h1>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">{t("auth.signIn.eyebrow")}</p>
+              <h1 className="mt-2 text-3xl font-semibold">{t("auth.signIn.title")}</h1>
+            </div>
+            <LanguageSwitcher compact />
           </div>
           <form className="space-y-4" onSubmit={handleSubmit}>
             <Input
               value={identifier}
               onChange={(event) => setIdentifier(event.target.value)}
-              placeholder="Username or email"
+              placeholder={t("auth.signIn.identifier")}
               autoComplete="username"
               required
             />
@@ -148,14 +193,14 @@ function SignInPageContent() {
               <Input
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder="Password"
+                placeholder={t("auth.signIn.password")}
                 type="password"
                 autoComplete="current-password"
                 required
               />
               <p className="text-right text-xs">
                 <Link className="text-primary underline-offset-4 hover:underline" href="/forgot-password">
-                  Forgot password?
+                  {t("auth.signIn.forgotPassword")}
                 </Link>
               </p>
             </div>
@@ -174,18 +219,65 @@ function SignInPageContent() {
             {authErrorNotice ? <p className="text-sm text-amber-200/90">{authErrorNotice}</p> : null}
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
             <Button className="w-full" disabled={loading} type="submit">
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? t("auth.signIn.submitting") : t("auth.signIn.submit")}
             </Button>
           </form>
+          <div className="rounded-xl border border-border bg-muted/20 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">{t("auth.signIn.verificationHelpTitle")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t("auth.signIn.verificationHelpDescription")}
+                </p>
+              </div>
+              {authError === "emailNotVerified" ? null : (
+                <Button onClick={() => setRecoverOpen((open) => !open)} size="sm" type="button" variant="ghost">
+                  {recoverOpen ? t("auth.signIn.hide") : t("auth.signIn.open")}
+                </Button>
+              )}
+            </div>
+            {recoverOpen || authError === "emailNotVerified" ? (
+              <form className="mt-4 space-y-3" onSubmit={handleVerificationRecovery}>
+                <Input
+                  autoComplete="username"
+                  onChange={(event) => setRecoverIdentifier(event.target.value)}
+                  placeholder={t("auth.signIn.identifier")}
+                  value={recoverIdentifier}
+                />
+                <Input
+                  autoComplete="current-password"
+                  onChange={(event) => setRecoverPassword(event.target.value)}
+                  placeholder={t("auth.signIn.password")}
+                  type="password"
+                  value={recoverPassword}
+                />
+                <Input
+                  autoComplete="email"
+                  onChange={(event) => setRecoverEmail(event.target.value)}
+                  placeholder={t("auth.signIn.correctedEmail")}
+                  type="email"
+                  value={recoverEmail}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t("auth.signIn.correctedEmailHint")}
+                </p>
+                {recoverError ? <p className="text-sm text-destructive">{recoverError}</p> : null}
+                {recoverMessage ? <p className="text-sm text-emerald-500 dark:text-emerald-400">{recoverMessage}</p> : null}
+                <Button className="w-full" disabled={recoverLoading} type="submit" variant="secondary">
+                  {recoverLoading ? t("auth.signIn.sending") : t("auth.signIn.resendVerification")}
+                </Button>
+              </form>
+            ) : null}
+          </div>
           <div className="space-y-3">
             {googleOAuthAvailable ? (
               <Button className="w-full" type="button" variant="outline" onClick={() => signIn("google", { callbackUrl: "/app" })}>
-                Continue with Google
+                {t("auth.signIn.google")}
               </Button>
             ) : null}
             {magicLinkAvailable ? (
               <form className="space-y-2 rounded-xl border border-border bg-muted/20 p-4" onSubmit={(e) => void handleMagicLink(e)}>
-                <p className="text-xs font-medium text-muted-foreground">Sign in with email link</p>
+                <p className="text-xs font-medium text-muted-foreground">{t("auth.signIn.magicLinkTitle")}</p>
                 <Input
                   autoComplete="email"
                   onChange={(e) => setMagicEmail(e.target.value)}
@@ -194,7 +286,7 @@ function SignInPageContent() {
                   value={magicEmail}
                 />
                 <Button className="w-full" disabled={magicLoading || !magicEmail.trim()} type="submit" variant="secondary">
-                  {magicLoading ? "Sending link…" : "Email me a magic link"}
+                  {magicLoading ? t("auth.signIn.magicLinkSending") : t("auth.signIn.magicLink")}
                 </Button>
                 {magicStatus ? <p className="text-xs text-muted-foreground">{magicStatus}</p> : null}
               </form>
@@ -211,9 +303,9 @@ function SignInPageContent() {
               .
             </p>
             <p className="text-sm text-muted-foreground">
-              New here?{" "}
+              {t("auth.signIn.newHere")}{" "}
               <Link className="text-primary" href="/sign-up">
-                Create an account
+                {t("auth.signIn.createAccount")}
               </Link>
             </p>
           </div>

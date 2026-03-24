@@ -44,6 +44,12 @@ export const registerSchema = z.object({
   })
 });
 
+export const unverifiedAccountRecoverySchema = z.object({
+  identifier: credentialsIdentifierSchema,
+  password: z.string().min(8).max(128),
+  email: z.string().trim().toLowerCase().email("Enter a valid email address.").max(255).optional().nullable()
+});
+
 export const pasteFileSchema = z
   .object({
     filename: z.string().trim().min(1).max(255),
@@ -266,6 +272,22 @@ export const accountDeleteSchema = z.object({
 export const accountPasswordSchema = z.object({
   currentPassword: z.string().max(128).optional(),
   newPassword: z.string().min(8).max(128)
+});
+
+export const totpEnableSchema = z.object({
+  setupId: z.string().trim().min(1).max(128),
+  code: z.string().trim().min(6).max(32)
+});
+
+export const totpDisableSchema = z.object({
+  password: z.string().max(128).optional(),
+  code: z.string().trim().max(32).optional(),
+  recoveryCode: z.string().trim().max(64).optional()
+});
+
+export const totpRecoveryRegenerateSchema = z.object({
+  code: z.string().trim().max(32),
+  recoveryCode: z.string().trim().max(64).optional()
 });
 
 export const webhookSettingsSchema = z.object({

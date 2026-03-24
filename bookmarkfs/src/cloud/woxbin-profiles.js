@@ -122,10 +122,6 @@ function sanitizeProfile(rawProfile) {
       ? rawProfile.encryptedSecret
       : null;
 
-  if (!apiKey && !encryptedSecret) {
-    return null;
-  }
-
   return {
     id: String(rawProfile.id || randomId()),
     label: label.slice(0, 64),
@@ -196,9 +192,6 @@ export async function saveProfile({
   }
 
   const trimmedKey = String(apiKey || "").trim();
-  if (!trimmedKey) {
-    throw new Error("API key is required.");
-  }
 
   const state = await loadProfiles();
   const now = new Date().toISOString();
@@ -212,17 +205,23 @@ export async function saveProfile({
     updatedAt: now
   };
 
-  if (passphrase) {
-    record.encryptedSecret = await encryptSecret(trimmedKey, passphrase);
-    passphraseCache.set(record.id, passphrase);
-  } else {
-    record.apiKey = trimmedKey;
-    passphraseCache.delete(record.id);
-  }
-
   const existing = state.profiles.find((profile) => profile.id === record.id);
   if (existing) {
     record.createdAt = existing.createdAt;
+  }
+
+  if (trimmedKey) {
+    if (passphrase) {
+      record.encryptedSecret = await encryptSecret(trimmedKey, passphrase);
+      passphraseCache.set(record.id, passphrase);
+    } else {
+      record.apiKey = trimmedKey;
+      passphraseCache.delete(record.id);
+    }
+  } else if (existing) {
+    // Keep prior credentials when user edits label/base URL only.
+    record.apiKey = existing.apiKey || "";
+    record.encryptedSecret = existing.encryptedSecret || null;
   }
 
   const profiles = state.profiles.filter((profile) => profile.id !== record.id);
@@ -260,7 +259,8 @@ export async function resolveProfileCredentials(profile, passphrase = "") {
     return { baseUrl: profile.baseUrl, apiKey: profile.apiKey, locked: false };
   }
   if (!profile.encryptedSecret) {
-    return { baseUrl: profile.baseUrl, apiKey: "", locked: true };
+    // No encrypted secret and no apiKey means profile exists but isn't configured yet.
+    return { baseUrl: profile.baseUrl, apiKey: "", locked: false };
   }
 
   const cached = passphrase || passphraseCache.get(profile.id) || "";

@@ -8,6 +8,7 @@ import { accounts, teamMembers, teams, users } from "@/lib/db/schema";
 import { jsonError } from "@/lib/http";
 import { logAudit } from "@/lib/audit";
 import { getRequestIp } from "@/lib/request";
+import { getTotpStatus } from "@/lib/totp-mfa";
 import { accountDeleteSchema, accountSettingsPatchSchema } from "@/lib/validators";
 
 export async function GET() {
@@ -33,11 +34,15 @@ export async function GET() {
     return jsonError("User not found.", 404);
   }
 
-  const [googleAccount] = await db
-    .select({ provider: accounts.provider })
-    .from(accounts)
-    .where(and(eq(accounts.userId, session.user.id), eq(accounts.provider, "google")))
-    .limit(1);
+  const [googleAccount, totpStatus] = await Promise.all([
+    db
+      .select({ provider: accounts.provider })
+      .from(accounts)
+      .where(and(eq(accounts.userId, session.user.id), eq(accounts.provider, "google")))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    getTotpStatus(session.user.id)
+  ]);
 
   return NextResponse.json({
     username: row.username,
@@ -47,7 +52,11 @@ export async function GET() {
     image: row.image,
     emailVerified: row.emailVerified ? row.emailVerified.toISOString() : null,
     hasPassword: Boolean(row.passwordHash),
-    googleConnected: Boolean(googleAccount)
+    googleConnected: Boolean(googleAccount),
+    totpAvailable: totpStatus.available,
+    totpEnabled: totpStatus.enabled,
+    totpEnabledAt: totpStatus.enabledAt?.toISOString() ?? null,
+    totpLastUsedAt: totpStatus.lastUsedAt?.toISOString() ?? null
   });
 }
 

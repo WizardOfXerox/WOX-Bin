@@ -90,6 +90,7 @@ function textDataUrl(value: string, mimeType: string) {
 
 export function BookmarkFsSyncClient() {
   const pendingRef = useRef<Map<string, PendingRequest>>(new Map());
+  const bridgeReadySeenRef = useRef(false);
   const [bridgeState, setBridgeState] = useState<"checking" | "ready" | "missing">("checking");
   const [bridgeVersion, setBridgeVersion] = useState<string | null>(null);
   const [vaultRootName, setVaultRootName] = useState("bookmarkfs");
@@ -123,6 +124,7 @@ export function BookmarkFsSyncClient() {
         return;
       }
       if (data.type === "bookmarkfs-ready") {
+        bridgeReadySeenRef.current = true;
         setBridgeState("ready");
         return;
       }
@@ -150,6 +152,35 @@ export function BookmarkFsSyncClient() {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const sendHandshake = () => {
+      window.postMessage(
+        {
+          source: PAGE_SOURCE,
+          target: EXTENSION_SOURCE,
+          type: "bookmarkfs-handshake"
+        },
+        window.location.origin
+      );
+    };
+
+    // Kick once immediately, then keep probing while we are not connected.
+    sendHandshake();
+    const timer = window.setInterval(() => {
+      if (bridgeReadySeenRef.current) {
+        return;
+      }
+      sendHandshake();
+    }, 1200);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, []);
+
   const callBridge = useCallback(async <T,>(action: string, payload: Record<string, unknown> = {}) => {
     if (typeof window === "undefined") {
       throw new Error("BookmarkFS bridge is only available in the browser.");
@@ -164,7 +195,7 @@ export function BookmarkFsSyncClient() {
       const timeout = window.setTimeout(() => {
         pendingRef.current.delete(id);
         reject(new Error("BookmarkFS extension bridge timed out."));
-      }, 8000);
+      }, 12000);
 
       pendingRef.current.set(id, {
         resolve: (value) => resolve(value as T),
@@ -205,35 +236,50 @@ export function BookmarkFsSyncClient() {
     }
   }, [callBridge, selectedName]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function bootstrap() {
+  const probeBridge = useCallback(async () => {
+    setBridgeState("checking");
+    let lastError: unknown = null;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
       try {
         const result = await callBridge<{ version: string; rootName: string }>("ping");
-        if (cancelled) {
-          return;
-        }
         setBridgeState("ready");
         setBridgeVersion(result.version || null);
         setVaultRootName(result.rootName || "bookmarkfs");
         await refreshVault();
-      } catch {
-        if (!cancelled) {
-          setBridgeState("missing");
+        return;
+      } catch (error) {
+        lastError = error;
+        if (attempt < 3) {
+          // Give MV3 service worker + content script bridge a moment to wake up.
+          await new Promise((resolve) => window.setTimeout(resolve, 350 * (attempt + 1)));
         }
       }
     }
+    setBridgeState("missing");
+    if (lastError instanceof Error) {
+      setError(lastError.message);
+    }
+  }, [callBridge, refreshVault]);
 
+  useEffect(() => {
+    let cancelled = false;
     const timer = window.setTimeout(() => {
-      void bootstrap();
+      if (!cancelled) {
+        void probeBridge();
+      }
     }, 150);
-
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [callBridge, refreshVault]);
+  }, [probeBridge]);
+
+  useEffect(() => {
+    if (bridgeState !== "ready" || loading || entries.length > 0) {
+      return;
+    }
+    void refreshVault();
+  }, [bridgeState, loading, entries.length, refreshVault]);
 
   async function loadVaultFile(fullName: string) {
     setPendingRead(true);
@@ -553,8 +599,18 @@ export function BookmarkFsSyncClient() {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
+              <Button
+                onClick={() => {
+                  setError(null);
+                  void probeBridge();
+                }}
+                variant="secondary"
+              >
+                <RefreshCcw className="h-4 w-4" />
+                Retry bridge check
+              </Button>
               <Button asChild>
-                <a href="https://github.com/WizardOfXerox/WOX-Bin/tree/main/bookmarkfs" rel="noreferrer" target="_blank">
+                <a href="https://github.com/WizardOfXerox/WOX-Bin/tree/main/bookmarkfs" rel="noopener noreferrer" target="_blank">
                   Open extension source
                   <ExternalLink className="h-4 w-4" />
                 </a>
@@ -945,7 +1001,7 @@ export function BookmarkFsSyncClient() {
                   <Link href="/bookmarkfs">Back to BookmarkFS page</Link>
                 </Button>
                 <Button asChild size="sm" variant="outline">
-                  <a href="https://github.com/WizardOfXerox/WOX-Bin/tree/main/bookmarkfs" rel="noreferrer" target="_blank">
+                  <a href="https://github.com/WizardOfXerox/WOX-Bin/tree/main/bookmarkfs" rel="noopener noreferrer" target="_blank">
                     Extension source
                     <ExternalLink className="h-4 w-4" />
                   </a>

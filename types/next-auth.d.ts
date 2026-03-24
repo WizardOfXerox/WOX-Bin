@@ -39,5 +39,6 @@ declare module "next-auth" {
     planStatus?: "active" | "trialing" | "past_due" | "canceled";
     onboardingComplete?: boolean;
     displayName?: string | null;
+    mfaComplete?: boolean;
   }
 }

@@ -128,9 +128,56 @@ export const PrismOverlayEditor = forwardRef<PrismOverlayEditorHandle, Props>(fu
     [lineCount]
   );
 
+  function syncMirroredScroll() {
+    const ta = taRef.current;
+    const pre = preRef.current;
+    if (ta && pre) {
+      pre.scrollTop = ta.scrollTop;
+      pre.scrollLeft = ta.scrollLeft;
+      if (gutterInnerRef.current) {
+        gutterInnerRef.current.style.transform = `translateY(-${ta.scrollTop}px)`;
+      }
+      onScrollInfo?.({
+        scrollTop: ta.scrollTop,
+        scrollHeight: ta.scrollHeight,
+        clientHeight: ta.clientHeight
+      });
+    }
+  }
+
+  function revealSelection(start: number) {
+    const ta = taRef.current;
+    if (!ta) {
+      return;
+    }
+    const style = window.getComputedStyle(ta);
+    const lineHeight = Number.parseFloat(style.lineHeight) || 24;
+    const paddingTop = Number.parseFloat(style.paddingTop) || 0;
+    const targetLine = value.slice(0, start).split("\n").length - 1;
+    const targetTop = paddingTop + targetLine * lineHeight;
+    const targetBottom = targetTop + lineHeight;
+    const margin = lineHeight * 2;
+
+    if (targetTop < ta.scrollTop + margin) {
+      ta.scrollTop = Math.max(0, targetTop - margin);
+    } else if (targetBottom > ta.scrollTop + ta.clientHeight - margin) {
+      ta.scrollTop = Math.max(0, targetBottom - ta.clientHeight + margin);
+    }
+
+    syncMirroredScroll();
+  }
+
   useImperativeHandle(ref, () => ({
     focus: () => taRef.current?.focus(),
-    setSelectionRange: (start, end) => taRef.current?.setSelectionRange(start, end),
+    setSelectionRange: (start, end) => {
+      const ta = taRef.current;
+      if (!ta) {
+        return;
+      }
+      ta.setSelectionRange(start, end);
+      setBracketCaret(start);
+      revealSelection(start);
+    },
     getSelectionStart: () => taRef.current?.selectionStart ?? 0,
     getSelectionEnd: () => taRef.current?.selectionEnd ?? 0,
     getValue: () => value,
@@ -313,23 +360,7 @@ export const PrismOverlayEditor = forwardRef<PrismOverlayEditorHandle, Props>(fu
   }, [activeIndentGuides, wordWrap, drawActiveIndentGuides]);
 
   function syncScroll() {
-    const ta = taRef.current;
-    const pre = preRef.current;
-    if (ta && pre) {
-      pre.scrollTop = ta.scrollTop;
-      pre.scrollLeft = ta.scrollLeft;
-      if (gutterInnerRef.current) {
-        gutterInnerRef.current.style.transform = `translateY(-${ta.scrollTop}px)`;
-      }
-      onScrollInfo?.({
-        scrollTop: ta.scrollTop,
-        scrollHeight: ta.scrollHeight,
-        clientHeight: ta.clientHeight
-      });
-      if (activeIndentGuides && !wordWrap) {
-        requestAnimationFrame(() => drawActiveIndentGuides());
-      }
-    }
+    syncMirroredScroll();
   }
 
   const lh = editorFontSizePx ? Math.round(editorFontSizePx * 1.65) : undefined;

@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { SiteHeader } from "@/components/site/site-header";
 import { Textarea } from "@/components/ui/textarea";
 import { ShareAnywhereDialog } from "@/components/share/share-anywhere";
 import { PasteLineageBanner } from "@/components/paste-lineage-banner";
@@ -492,6 +493,7 @@ export function PublicPasteShell({
 
   return (
     <main className="wox-public-paste-print-root mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:py-8 md:px-6 md:py-10">
+      <SiteHeader className="print:hidden" />
       <section className="glass-panel overflow-hidden">
         <div className="border-b border-white/10 bg-white/[0.03] px-4 py-5 sm:px-6 sm:py-6">
           <div className="flex flex-wrap items-start justify-between gap-4">

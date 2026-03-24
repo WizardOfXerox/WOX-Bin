@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { eq, or } from "drizzle-orm";
+import { count, eq, or } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { folders, pastes, users } from "@/lib/db/schema";
+import { accounts, folders, pastes, users } from "@/lib/db/schema";
 import { hashPassword } from "@/lib/crypto";
 import { jsonError } from "@/lib/http";
 import { getRequestIp } from "@/lib/request";
@@ -13,6 +13,7 @@ import { logAudit } from "@/lib/audit";
 import { sendSignupVerificationEmail } from "@/lib/email-verification";
 import { isSmtpConfigured } from "@/lib/mail";
 import { seedWorkspaceForNewUser } from "@/lib/paste-service";
+import { canRecycleUnverifiedAccount } from "@/lib/unverified-account";
 
 export async function POST(request: Request) {
   const ip = getRequestIp(request) ?? "unknown";
@@ -43,14 +44,44 @@ export async function POST(request: Request) {
   const username = parsed.data.username.toLowerCase();
   const email = parsed.data.email;
 
-  const [existing] = await db
-    .select({ id: users.id })
+  const conflicts = await db
+    .select({
+      id: users.id,
+      username: users.username,
+      email: users.email,
+      emailVerified: users.emailVerified,
+      createdAt: users.createdAt
+    })
     .from(users)
-    .where(or(eq(users.username, username), eq(users.email, email)))
-    .limit(1);
+    .where(or(eq(users.username, username), eq(users.email, email)));
 
-  if (existing) {
-    return jsonError("That username or email is already in use.", 409);
+  const blockingConflicts: string[] = [];
+  for (const conflict of conflicts) {
+    const [providerUsage] = await db
+      .select({ count: count() })
+      .from(accounts)
+      .where(eq(accounts.userId, conflict.id));
+
+    if (
+      canRecycleUnverifiedAccount({
+        emailVerified: conflict.emailVerified,
+        createdAt: conflict.createdAt,
+        linkedProviderCount: Number(providerUsage?.count ?? 0)
+      })
+    ) {
+      await db.delete(users).where(eq(users.id, conflict.id));
+      continue;
+    }
+
+    if (!conflict.emailVerified) {
+      blockingConflicts.push("That username or email is reserved by an unverified account. If it is yours, use verification recovery on the sign-in page.");
+    } else {
+      blockingConflicts.push("That username or email is already in use.");
+    }
+  }
+
+  if (blockingConflicts.length > 0) {
+    return jsonError(blockingConflicts[0], 409);
   }
 
   const passwordHash = await hashPassword(parsed.data.password);

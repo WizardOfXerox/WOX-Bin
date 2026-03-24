@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { SupportCenter } from "@/components/support/support-center";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SiteHeader } from "@/components/site/site-header";
 import { listSupportTicketsForUser } from "@/lib/support-service";
 
 type SupportPageProps = {
@@ -28,6 +29,7 @@ export default async function SupportPage({ searchParams }: SupportPageProps) {
       <main className="min-h-screen bg-background">
         <div className="absolute inset-0 bg-hero-mesh opacity-35" aria-hidden />
         <div className="relative mx-auto max-w-6xl px-4 py-10 sm:px-6 md:py-14">
+          <SiteHeader className="mb-8" />
           <section className="grid gap-8 border-b border-border/60 pb-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)]">
             <div className="space-y-5">
               <Badge className="px-3 py-1 text-xs">Support</Badge>
@@ -111,6 +113,7 @@ export default async function SupportPage({ searchParams }: SupportPageProps) {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-6">
+      <SiteHeader />
       <SupportCenter
         initialSelectedTicketId={params.ticket ?? null}
         initialTickets={tickets}

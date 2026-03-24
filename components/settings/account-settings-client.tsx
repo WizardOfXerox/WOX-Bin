@@ -6,6 +6,8 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { useUiLanguage } from "@/components/providers/ui-language-provider";
 
 export type AccountProfileInitial = {
   email: string | null;
@@ -16,6 +18,10 @@ export type AccountProfileInitial = {
   smtpConfigured: boolean;
   googleConnected: boolean;
   googleOAuthAvailable: boolean;
+  totpAvailable: boolean;
+  totpEnabled: boolean;
+  totpEnabledAt: string | null;
+  totpLastUsedAt: string | null;
 };
 
 type Props = {
@@ -23,11 +29,15 @@ type Props = {
 };
 
 export function AccountSettingsClient({ initial }: Props) {
+  const { t } = useUiLanguage();
   const { update } = useSession();
   const [username, setUsername] = useState(initial.username ?? "");
   const [displayName, setDisplayName] = useState(initial.displayName ?? "");
   const [hasPassword, setHasPassword] = useState(initial.hasPassword);
   const [googleConnected, setGoogleConnected] = useState(initial.googleConnected);
+  const [totpEnabled, setTotpEnabled] = useState(initial.totpEnabled);
+  const [totpEnabledAt, setTotpEnabledAt] = useState(initial.totpEnabledAt);
+  const [totpLastUsedAt, setTotpLastUsedAt] = useState(initial.totpLastUsedAt);
   const [savedProfile, setSavedProfile] = useState({
     username: initial.username ?? "",
     displayName: initial.displayName ?? ""
@@ -51,6 +61,22 @@ export function AccountSettingsClient({ initial }: Props) {
   const [providerLoading, setProviderLoading] = useState(false);
   const [providerError, setProviderError] = useState<string | null>(null);
   const [providerStatus, setProviderStatus] = useState<string | null>(null);
+
+  const [totpSetup, setTotpSetup] = useState<{
+    setupId: string;
+    secret: string;
+    qrSvg: string;
+  } | null>(null);
+  const [totpCode, setTotpCode] = useState("");
+  const [totpDisableCode, setTotpDisableCode] = useState("");
+  const [totpDisableRecoveryCode, setTotpDisableRecoveryCode] = useState("");
+  const [totpRecoveryRegenerateCode, setTotpRecoveryRegenerateCode] = useState("");
+  const [totpRecoveryRegenerateRecoveryCode, setTotpRecoveryRegenerateRecoveryCode] = useState("");
+  const [totpPassword, setTotpPassword] = useState("");
+  const [totpLoading, setTotpLoading] = useState(false);
+  const [totpError, setTotpError] = useState<string | null>(null);
+  const [totpStatus, setTotpStatus] = useState<string | null>(null);
+  const [totpRecoveryCodes, setTotpRecoveryCodes] = useState<string[]>([]);
 
   const [deletePhrase, setDeletePhrase] = useState("");
   const [deletePassword, setDeletePassword] = useState("");
@@ -280,6 +306,169 @@ export function AccountSettingsClient({ initial }: Props) {
     await signOut({ callbackUrl: "/" });
   }
 
+  function copyRecoveryCodes() {
+    if (!totpRecoveryCodes.length) {
+      return;
+    }
+    void navigator.clipboard.writeText(totpRecoveryCodes.join("\n"));
+    setTotpStatus("Recovery codes copied. Store them somewhere safe.");
+  }
+
+  function downloadRecoveryCodes() {
+    if (!totpRecoveryCodes.length) {
+      return;
+    }
+    const blob = new Blob([totpRecoveryCodes.join("\n")], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "wox-bin-recovery-codes.txt";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleStartTotpSetup() {
+    if (!initial.totpAvailable) {
+      setTotpError("Authenticator sign-in is not ready on this deployment yet. Try again after the latest database update is applied.");
+      setTotpStatus(null);
+      return;
+    }
+    setTotpLoading(true);
+    setTotpError(null);
+    setTotpStatus(null);
+    const response = await fetch("/api/settings/account/totp/setup", {
+      method: "POST"
+    });
+    const body = (await response.json().catch(() => null)) as
+      | {
+          error?: string;
+          setupId?: string;
+          secret?: string;
+          qrSvg?: string;
+        }
+      | null;
+    setTotpLoading(false);
+    if (!response.ok || !body?.setupId || !body.secret || !body.qrSvg) {
+      setTotpError(body?.error ?? "Could not start authenticator setup.");
+      return;
+    }
+    setTotpSetup({
+      setupId: body.setupId,
+      secret: body.secret,
+      qrSvg: body.qrSvg
+    });
+    setTotpCode("");
+    setTotpRecoveryCodes([]);
+    setTotpStatus("Scan the QR code, then enter the 6-digit code from your authenticator app.");
+  }
+
+  async function handleEnableTotp(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!totpSetup) {
+      setTotpError("Start setup first.");
+      return;
+    }
+    setTotpLoading(true);
+    setTotpError(null);
+    setTotpStatus(null);
+
+    const response = await fetch("/api/settings/account/totp/enable", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        setupId: totpSetup.setupId,
+        code: totpCode
+      })
+    });
+
+    const body = (await response.json().catch(() => null)) as
+      | { error?: string; recoveryCodes?: string[]; revokedOtherSessions?: boolean }
+      | null;
+
+    setTotpLoading(false);
+    if (!response.ok) {
+      setTotpError(body?.error ?? "Could not enable authenticator sign-in.");
+      return;
+    }
+
+    setTotpEnabled(true);
+    setTotpEnabledAt(new Date().toISOString());
+    setTotpLastUsedAt(new Date().toISOString());
+    setTotpSetup(null);
+    setTotpCode("");
+    setTotpRecoveryCodes(body?.recoveryCodes ?? []);
+    setTotpStatus(
+      body?.revokedOtherSessions
+        ? "Authenticator app enabled. Other sessions were signed out."
+        : "Authenticator app enabled."
+    );
+  }
+
+  async function handleDisableTotp(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setTotpLoading(true);
+    setTotpError(null);
+    setTotpStatus(null);
+
+    const response = await fetch("/api/settings/account/totp", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        password: hasPassword ? totpPassword : undefined,
+        code: hasPassword ? undefined : totpDisableCode,
+        recoveryCode: hasPassword ? undefined : totpDisableRecoveryCode
+      })
+    });
+
+    const body = (await response.json().catch(() => null)) as
+      | { error?: string; revokedOtherSessions?: boolean }
+      | null;
+
+    setTotpLoading(false);
+    if (!response.ok) {
+      setTotpError(body?.error ?? "Could not disable authenticator sign-in.");
+      return;
+    }
+
+    setTotpEnabled(false);
+    setTotpEnabledAt(null);
+    setTotpLastUsedAt(null);
+    setTotpPassword("");
+    setTotpDisableCode("");
+    setTotpDisableRecoveryCode("");
+    setTotpRecoveryCodes([]);
+    setTotpStatus(
+      body?.revokedOtherSessions
+        ? "Authenticator app disabled. Other sessions were signed out."
+        : "Authenticator app disabled."
+    );
+  }
+
+  async function handleRegenerateRecoveryCodes(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setTotpLoading(true);
+    setTotpError(null);
+    setTotpStatus(null);
+    const response = await fetch("/api/settings/account/totp/recovery-codes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code: totpRecoveryRegenerateCode,
+        recoveryCode: totpRecoveryRegenerateRecoveryCode || undefined
+      })
+    });
+    const body = (await response.json().catch(() => null)) as { error?: string; recoveryCodes?: string[] } | null;
+    setTotpLoading(false);
+    if (!response.ok) {
+      setTotpError(body?.error ?? "Could not regenerate recovery codes.");
+      return;
+    }
+    setTotpRecoveryCodes(body?.recoveryCodes ?? []);
+    setTotpRecoveryRegenerateCode("");
+    setTotpRecoveryRegenerateRecoveryCode("");
+    setTotpStatus("Recovery codes regenerated. Replace any previously saved copies.");
+  }
+
   const showVerifyBanner = initial.smtpConfigured && initial.email && !initial.emailVerified;
 
   return (
@@ -288,9 +477,9 @@ export function AccountSettingsClient({ initial }: Props) {
         <CardContent className="space-y-5 pt-6">
           <div>
             <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Profile</p>
-            <h2 className="mt-2 text-2xl font-semibold">Account</h2>
+            <h2 className="mt-2 text-2xl font-semibold">{t("settings.account.profileHeading")}</h2>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Your username is public where you share pastes. Display name is shown in the app header and session.
+              {t("settings.account.profileDescription")}
             </p>
           </div>
 
@@ -387,10 +576,23 @@ export function AccountSettingsClient({ initial }: Props) {
       <Card>
         <CardContent className="space-y-5 pt-6">
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Security</p>
-            <h2 className="mt-2 text-xl font-semibold">Sign-in methods</h2>
+            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">{t("settings.account.languageHeading")}</p>
+            <h2 className="mt-2 text-xl font-semibold">{t("common.language")}</h2>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Keep at least one stable way back into the account. Google can only be disconnected after a password exists.
+              {t("settings.account.languageDescription")}
+            </p>
+          </div>
+          <LanguageSwitcher />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-5 pt-6">
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Security</p>
+            <h2 className="mt-2 text-xl font-semibold">{t("settings.account.securityHeading")}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {t("settings.account.securityDescription")}
             </p>
           </div>
 
@@ -529,6 +731,196 @@ export function AccountSettingsClient({ initial }: Props) {
                 {providerError ? <p className="text-sm text-destructive">{providerError}</p> : null}
                 {providerStatus ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{providerStatus}</p> : null}
               </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-muted/20 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">{t("settings.account.totpTitle")}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {!initial.totpAvailable
+                      ? "Authenticator sign-in will appear here after the latest database update is applied."
+                      : totpEnabled
+                      ? "A 6-digit authenticator code is required after your primary sign-in method."
+                      : "Add an authenticator app as a second factor for password, Google, and magic-link sign-in."}
+                </p>
+              </div>
+              <span className="rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground">
+                {!initial.totpAvailable ? "Not ready" : totpEnabled ? "Enabled" : totpSetup ? "Setup in progress" : "Not enabled"}
+              </span>
+            </div>
+
+            <div className="mt-4 space-y-4 text-sm text-muted-foreground">
+              {!initial.totpAvailable ? (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                  Authenticator sign-in needs the latest database schema on this deployment. Once applied, you can scan a QR code here and finish setup with a 6-digit code.
+                </div>
+              ) : null}
+
+              {totpEnabledAt ? (
+                <p>
+                  Enabled {new Date(totpEnabledAt).toLocaleString()}
+                  {totpLastUsedAt ? ` • last used ${new Date(totpLastUsedAt).toLocaleString()}` : ""}
+                </p>
+              ) : null}
+
+              {initial.totpAvailable && !totpEnabled && !totpSetup ? (
+                <Button disabled={totpLoading} onClick={() => void handleStartTotpSetup()} type="button" variant="outline">
+                  {totpLoading ? "Preparing…" : t("settings.account.totpSetup")}
+                </Button>
+              ) : null}
+
+              {totpSetup ? (
+                <div className="space-y-4 rounded-2xl border border-border bg-background/60 p-4">
+                  <div className="rounded-2xl border border-border bg-white p-3 text-black" dangerouslySetInnerHTML={{ __html: totpSetup.qrSvg }} />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">Manual secret</p>
+                    <div className="rounded-xl border border-border bg-muted/30 px-3 py-2 font-mono text-xs tracking-[0.18em] text-foreground">
+                      {totpSetup.secret}
+                    </div>
+                  </div>
+                  <form className="space-y-3" onSubmit={(event) => void handleEnableTotp(event)}>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground" htmlFor="totp-code">
+                        Confirm authenticator code
+                      </label>
+                      <Input
+                        autoComplete="one-time-code"
+                        id="totp-code"
+                        inputMode="numeric"
+                        maxLength={8}
+                        onChange={(event) => setTotpCode(event.target.value)}
+                        placeholder="123456"
+                        value={totpCode}
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      <Button disabled={totpLoading} type="submit">
+                        {totpLoading ? "Enabling…" : t("settings.account.totpEnable")}
+                      </Button>
+                      <Button
+                        disabled={totpLoading}
+                        onClick={() => {
+                          setTotpSetup(null);
+                          setTotpCode("");
+                          setTotpStatus(null);
+                          setTotpError(null);
+                        }}
+                        type="button"
+                        variant="ghost"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+              ) : null}
+
+              {totpEnabled ? (
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <form className="space-y-3 rounded-2xl border border-border bg-background/60 p-4" onSubmit={(event) => void handleDisableTotp(event)}>
+                    <p className="text-sm font-medium text-foreground">{t("settings.account.totpDisable")}</p>
+                    {hasPassword ? (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground" htmlFor="totp-password">
+                          Current password
+                        </label>
+                        <Input
+                          autoComplete="current-password"
+                          id="totp-password"
+                          onChange={(event) => setTotpPassword(event.target.value)}
+                          type="password"
+                          value={totpPassword}
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-foreground" htmlFor="totp-disable-code">
+                            Authenticator code
+                          </label>
+                          <Input
+                            autoComplete="one-time-code"
+                            id="totp-disable-code"
+                            inputMode="numeric"
+                            maxLength={8}
+                            onChange={(event) => setTotpDisableCode(event.target.value)}
+                            placeholder="123456"
+                            value={totpDisableCode}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-foreground" htmlFor="totp-disable-recovery">
+                            Or recovery code
+                          </label>
+                          <Input
+                            autoCapitalize="characters"
+                            id="totp-disable-recovery"
+                            onChange={(event) => setTotpDisableRecoveryCode(event.target.value)}
+                            placeholder="ABCDE-12345"
+                            value={totpDisableRecoveryCode}
+                          />
+                        </div>
+                      </>
+                    )}
+                    <Button disabled={totpLoading} type="submit" variant="outline">
+                      {totpLoading ? "Disabling…" : t("settings.account.totpDisable")}
+                    </Button>
+                  </form>
+
+                  <form className="space-y-3 rounded-2xl border border-border bg-background/60 p-4" onSubmit={(event) => void handleRegenerateRecoveryCodes(event)}>
+                    <p className="text-sm font-medium text-foreground">{t("settings.account.totpRecovery")}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Regenerating recovery codes invalidates any old ones. Use your authenticator app code or one remaining recovery code.
+                    </p>
+                    <Input
+                      autoComplete="one-time-code"
+                      inputMode="numeric"
+                      maxLength={8}
+                      onChange={(event) => setTotpRecoveryRegenerateCode(event.target.value)}
+                      placeholder="Authenticator code"
+                      value={totpRecoveryRegenerateCode}
+                    />
+                    <Input
+                      autoCapitalize="characters"
+                      onChange={(event) => setTotpRecoveryRegenerateRecoveryCode(event.target.value)}
+                      placeholder="Or recovery code"
+                      value={totpRecoveryRegenerateRecoveryCode}
+                    />
+                    <Button disabled={totpLoading} type="submit" variant="outline">
+                      {totpLoading ? "Regenerating…" : "Generate new recovery codes"}
+                    </Button>
+                  </form>
+                </div>
+              ) : null}
+
+              {totpRecoveryCodes.length ? (
+                <div className="space-y-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-100">
+                  <p className="text-sm font-semibold text-amber-50">Save these recovery codes now</p>
+                  <p className="text-xs text-amber-100/90">
+                    Each code can be used once if you lose access to your authenticator app.
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {totpRecoveryCodes.map((code) => (
+                      <div key={code} className="rounded-lg border border-amber-400/25 bg-black/10 px-3 py-2 font-mono text-xs tracking-[0.18em]">
+                        {code}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <Button onClick={copyRecoveryCodes} type="button" variant="secondary">
+                      {t("settings.account.totpCopyRecovery")}
+                    </Button>
+                    <Button onClick={downloadRecoveryCodes} type="button" variant="outline">
+                      {t("settings.account.totpDownloadRecovery")}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {totpError ? <p className="text-sm text-destructive">{totpError}</p> : null}
+              {totpStatus ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{totpStatus}</p> : null}
             </div>
           </div>
         </CardContent>

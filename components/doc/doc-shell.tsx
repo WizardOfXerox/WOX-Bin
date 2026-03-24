@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { SiteHeader } from "@/components/site/site-header";
+
 const LINKS: { href: string; label: string }[] = [
   { href: "/doc", label: "Overview" },
   { href: "/doc/api", label: "API" },
@@ -19,6 +21,7 @@ export function DocShell({ title, subtitle, children }: Props) {
   return (
     <main className="min-h-screen bg-background">
       <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 md:py-14">
+        <SiteHeader className="mb-8" />
         <nav aria-label="Documentation" className="mb-8 flex flex-wrap gap-2 border-b border-border pb-4 text-sm">
           {LINKS.map((item) => (
             <Link

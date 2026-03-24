@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Check, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { SiteHeader } from "@/components/site/site-header";
 import { Card, CardContent } from "@/components/ui/card";
 import type { BillingLinks, BillingPlanCard } from "@/lib/billing";
 
@@ -28,6 +29,7 @@ export function PricingPage({ cards, links, signedIn }: Props) {
     <main className="min-h-screen bg-background">
       <div aria-hidden className="absolute inset-0 bg-hero-mesh opacity-40" />
       <div className="relative mx-auto max-w-6xl px-4 py-10 sm:px-6 md:py-14">
+        <SiteHeader className="mb-8" />
         <div className="mb-10 flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">WOX-Bin</p>
@@ -38,8 +40,8 @@ export function PricingPage({ cards, links, signedIn }: Props) {
               same purchase shape.
             </p>
           </div>
-          <Link className="text-sm text-primary underline-offset-4 hover:underline" href="/">
-            &larr; Home
+          <Link className="text-sm text-primary underline-offset-4 hover:underline" href="/doc">
+            API &amp; docs
           </Link>
         </div>
 

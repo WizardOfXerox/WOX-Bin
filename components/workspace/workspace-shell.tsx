@@ -126,6 +126,7 @@ import { WorkspacePasteComments } from "@/components/workspace/workspace-paste-c
 import { readTurnstileToken, resetTurnstileFields, TurnstileField } from "@/components/turnstile-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   ContextMenu,
@@ -201,6 +202,7 @@ import {
 import type { AccountPlanSummary, PlanId, PlanStatus } from "@/lib/plans";
 import type { LocalWorkspaceSnapshot, PasteDraft, PasteVersionDraft, PublicPasteRecord } from "@/lib/types";
 import { cn, formatDate, normalizeOptionalSlug, normalizeTagList, slugify } from "@/lib/utils";
+import { useUiLanguage } from "@/components/providers/ui-language-provider";
 
 /** Sidebar folder sentinel: public feed (legacy “everyone’s public”). */
 const PUBLIC_FEED_FOLDER = "__wox_public_feed__";
@@ -210,7 +212,8 @@ const ERROR_MESSAGE_AUTO_DISMISS_MS = 12000;
 const MIN_WORKSPACE_ZOOM = 70;
 const MAX_WORKSPACE_ZOOM = 150;
 const WORKSPACE_ZOOM_STEP = 10;
-const DEFAULT_WORKSPACE_ZOOM = 100;
+const DESKTOP_DEFAULT_WORKSPACE_ZOOM = 100;
+const MOBILE_DEFAULT_WORKSPACE_ZOOM = 70;
 const API_KEY_TOKEN_STORAGE_PREFIX = "woxbin_api_key_tokens";
 
 type ListQuickFilter = "all" | "favorites" | "recent" | "archived";
@@ -243,6 +246,10 @@ function workspaceMobileNavClass(active: boolean) {
     "block w-full min-h-11 rounded-lg px-3 py-3 text-left text-base font-medium leading-snug transition-colors",
     active ? "bg-muted/90 text-foreground" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
   );
+}
+
+function defaultWorkspaceZoom(isPhoneViewport: boolean) {
+  return isPhoneViewport ? MOBILE_DEFAULT_WORKSPACE_ZOOM : DESKTOP_DEFAULT_WORKSPACE_ZOOM;
 }
 
 /** Hysteresis for editor title ribbon — avoids compact ↔ expanded flicker when scrollTop hovers near the threshold. */
@@ -302,6 +309,21 @@ type MobileFolderActionsState =
 type MobilePasteActionsState =
   | { open: false }
   | { open: true; pasteId: string };
+
+type TutorialLayoutSnapshot = {
+  leftSidebarCollapsed: boolean;
+  rightSidebarCollapsed: boolean;
+  ribbonCollapsed: boolean;
+  ribbonTab: RibbonTab;
+  mobileLibraryOpen: boolean;
+  mobileDetailsOpen: boolean;
+  windowScrollX: number;
+  windowScrollY: number;
+  libraryScrollTop: number;
+  detailsScrollTop: number;
+  editorPaneScrollTop: number;
+  editorTextScrollRatio: number;
+};
 
 function buildPasteFingerprint(paste: WorkspacePaste) {
   return `${paste.id}|${paste.slug ?? ""}|${paste.content}|${paste.title}|${paste.visibility}|${paste.folder ?? ""}|${paste.pinned}|${paste.favorite}|${paste.archived}|${paste.template}|${paste.secretMode}|${paste.captchaRequired}|${JSON.stringify(paste.files)}`;
@@ -821,6 +843,12 @@ function formatBytes(bytes: number) {
   return `${bytes} B`;
 }
 
+function estimatePasteStoredBytes(input: { content: string; files?: Array<{ content: string }> }) {
+  const encoder = new TextEncoder();
+  const fileBytes = (input.files ?? []).reduce((total, file) => total + encoder.encode(file.content).length, 0);
+  return encoder.encode(input.content).length + fileBytes;
+}
+
 function formatCount(value: number) {
   return new Intl.NumberFormat().format(value);
 }
@@ -962,6 +990,7 @@ function usageWidth(used: number, limit: number) {
 export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRequested = false }: Props) {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useUiLanguage();
   const [mode, setMode] = useState<WorkspaceMode>(sessionUser ? "account" : "local");
   const [snapshot, setSnapshot] = useState<WorkspaceSnapshot>({
     folders: DEFAULT_FOLDERS,
@@ -990,6 +1019,9 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   const [replaceOpen, setReplaceOpen] = useState(false);
   const [replaceFind, setReplaceFind] = useState("");
   const [replaceWith, setReplaceWith] = useState("");
+  const findInputRef = useRef<HTMLInputElement>(null);
+  const replaceFindInputRef = useRef<HTMLInputElement>(null);
+  const replaceWithInputRef = useRef<HTMLInputElement>(null);
   const [mdPreviewOpen, setMdPreviewOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -1006,7 +1038,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   const [syntaxTheme, setSyntaxTheme] = useState<SyntaxThemeId>("tomorrow");
   const [workspaceTone, setWorkspaceTone] = useState<WorkspaceToneId>("default");
   const [editorFontSize, setEditorFontSize] = useState(15);
-  const [pageZoom, setPageZoom] = useState(DEFAULT_WORKSPACE_ZOOM);
+  const [pageZoom, setPageZoom] = useState(DESKTOP_DEFAULT_WORKSPACE_ZOOM);
   const [editorLineNumbers, setEditorLineNumbers] = useState(true);
   const [editorWordWrap, setEditorWordWrap] = useState(false);
   const [editorActiveIndentGuides, setEditorActiveIndentGuides] = useState(false);
@@ -1038,6 +1070,8 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mainEditorRef = useRef<PrismOverlayEditorHandle>(null);
   const editorPaneScrollRef = useRef<HTMLDivElement>(null);
+  const libraryScrollRef = useRef<HTMLDivElement>(null);
+  const detailsScrollRef = useRef<HTMLDivElement>(null);
   const [editorPaneCompact, setEditorPaneCompact] = useState(false);
   const [workspaceMobileMenuOpen, setWorkspaceMobileMenuOpen] = useState(false);
   const [phoneViewport, setPhoneViewport] = useState(false);
@@ -1053,12 +1087,13 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   const mdScrollLock = useRef<"editor" | "preview" | null>(null);
   const lastAutosaveFingerprintRef = useRef("");
   const selectedPasteRef = useRef<WorkspacePaste | null>(null);
+  const tutorialLayoutSnapshotRef = useRef<TutorialLayoutSnapshot | null>(null);
   const deferredSearch = useDeferredValue(search);
   const effectiveEditorFontPx = narrowEditorViewport ? Math.max(editorFontSize, 16) : editorFontSize;
   const workspaceZoomFactor = pageZoom / 100;
   const workspaceOuterVerticalPadding = phoneViewport ? "0.75rem" : "1.5rem";
   const workspaceViewportStyle =
-    pageZoom === DEFAULT_WORKSPACE_ZOOM
+    pageZoom === DESKTOP_DEFAULT_WORKSPACE_ZOOM
       ? undefined
       : ({
           transform: `scale(${workspaceZoomFactor})`,
@@ -1095,16 +1130,83 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
     setTutorialStepIndex(0);
   }, []);
 
+  const captureTutorialLayoutSnapshot = useCallback((): TutorialLayoutSnapshot => {
+    const editorMetrics = mainEditorRef.current?.getScrollMetrics();
+    const editorMaxScroll = editorMetrics
+      ? Math.max(1, editorMetrics.scrollHeight - editorMetrics.clientHeight)
+      : 1;
+    return {
+      leftSidebarCollapsed,
+      rightSidebarCollapsed,
+      ribbonCollapsed,
+      ribbonTab,
+      mobileLibraryOpen,
+      mobileDetailsOpen,
+      windowScrollX: window.scrollX,
+      windowScrollY: window.scrollY,
+      libraryScrollTop: libraryScrollRef.current?.scrollTop ?? 0,
+      detailsScrollTop: detailsScrollRef.current?.scrollTop ?? 0,
+      editorPaneScrollTop: editorPaneScrollRef.current?.scrollTop ?? 0,
+      editorTextScrollRatio: editorMetrics ? editorMetrics.scrollTop / editorMaxScroll : 0
+    };
+  }, [
+    leftSidebarCollapsed,
+    mobileDetailsOpen,
+    mobileLibraryOpen,
+    ribbonCollapsed,
+    ribbonTab,
+    rightSidebarCollapsed
+  ]);
+
+  const restoreTutorialLayoutSnapshot = useCallback((snapshot: TutorialLayoutSnapshot) => {
+    setLeftSidebarCollapsed(snapshot.leftSidebarCollapsed);
+    setRightSidebarCollapsed(snapshot.rightSidebarCollapsed);
+    setRibbonCollapsed(snapshot.ribbonCollapsed);
+    setRibbonTab(snapshot.ribbonTab);
+    setMobileLibraryOpen(snapshot.mobileLibraryOpen);
+    setMobileDetailsOpen(snapshot.mobileDetailsOpen);
+
+    const restoreScrollState = () => {
+      window.scrollTo(snapshot.windowScrollX, snapshot.windowScrollY);
+      if (libraryScrollRef.current) {
+        libraryScrollRef.current.scrollTop = snapshot.libraryScrollTop;
+      }
+      if (detailsScrollRef.current) {
+        detailsScrollRef.current.scrollTop = snapshot.detailsScrollTop;
+      }
+      if (editorPaneScrollRef.current) {
+        editorPaneScrollRef.current.scrollTop = snapshot.editorPaneScrollTop;
+      }
+      mainEditorRef.current?.setScrollRatio(snapshot.editorTextScrollRatio);
+      setEditorPaneCompact((prev) => {
+        if (snapshot.editorPaneScrollTop <= EDITOR_SCROLL_COMPACT_EXIT) {
+          return false;
+        }
+        if (snapshot.editorPaneScrollTop >= EDITOR_SCROLL_COMPACT_ENTER) {
+          return true;
+        }
+        return prev;
+      });
+    };
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(restoreScrollState);
+    });
+  }, []);
+
   const openTutorial = useCallback((tourOrStep: string | number = tutorialTours[0]?.id ?? "basics", maybeStep = 0) => {
     const nextTourId = typeof tourOrStep === "string" ? tourOrStep : tutorialTours[0]?.id ?? "basics";
     const nextStep = typeof tourOrStep === "number" ? tourOrStep : maybeStep;
+    if (!tutorialOpen && typeof window !== "undefined") {
+      tutorialLayoutSnapshotRef.current = captureTutorialLayoutSnapshot();
+    }
     setWorkspaceMobileMenuOpen(false);
     setTutorialTourId(nextTourId);
     const targetTour = tutorialTours.find((tour) => tour.id === nextTourId) ?? tutorialTours[0] ?? null;
     const maxIndex = Math.max((targetTour?.steps.length ?? 1) - 1, 0);
     setTutorialStepIndex(Math.max(0, Math.min(nextStep, maxIndex)));
     setTutorialOpen(true);
-  }, [tutorialTours]);
+  }, [captureTutorialLayoutSnapshot, tutorialOpen, tutorialTours]);
 
   const markTutorialSeen = useCallback(() => {
     if (typeof window === "undefined" || !sessionUserId) {
@@ -1115,12 +1217,17 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
 
   const closeTutorial = useCallback(
     (completed: boolean) => {
+      const snapshot = tutorialLayoutSnapshotRef.current;
       setTutorialOpen(false);
+      if (snapshot) {
+        restoreTutorialLayoutSnapshot(snapshot);
+        tutorialLayoutSnapshotRef.current = null;
+      }
       if (completed || sessionUserId) {
         markTutorialSeen();
       }
     },
-    [markTutorialSeen, sessionUserId]
+    [markTutorialSeen, restoreTutorialLayoutSnapshot, sessionUserId]
   );
 
   async function loadAccountWorkspace() {
@@ -1426,6 +1533,8 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
         if (Number.isFinite(n)) {
           setPageZoom(clampWorkspaceZoom(n));
         }
+      } else {
+        setPageZoom(defaultWorkspaceZoom(isMobileLayout));
       }
       setEditorLineNumbers(localStorage.getItem("woxbin_editor_line_numbers") !== "0");
       setEditorWordWrap(
@@ -1445,6 +1554,9 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   }, []);
 
   useEffect(() => {
+    if (tutorialOpen) {
+      return;
+    }
     if (skipNextWorkspacePersist.current) {
       skipNextWorkspacePersist.current = false;
       return;
@@ -1483,7 +1595,8 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
     printWrapLongLines,
     printLayoutPreset,
     uiTheme,
-    appHighContrast
+    appHighContrast,
+    tutorialOpen
   ]);
 
   useEffect(() => {
@@ -1624,6 +1737,9 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      const inFindInput = event.target === findInputRef.current;
+      const inReplaceInput = event.target === replaceFindInputRef.current || event.target === replaceWithInputRef.current;
+
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         searchInputRef.current?.focus();
@@ -1642,11 +1758,20 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f") {
         event.preventDefault();
         setFindOpen(true);
+        setReplaceOpen(false);
+        return;
       }
 
       if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === "h") {
         event.preventDefault();
+        setFindOpen(true);
         setReplaceOpen(true);
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "g") {
+        event.preventDefault();
+        findInPasteNext(event.shiftKey);
         return;
       }
 
@@ -1663,6 +1788,39 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
           setShortcutsOpen(true);
         }
         return;
+      }
+
+      if (findOpen && event.key === "Enter" && !event.ctrlKey && !event.metaKey && !event.altKey && inFindInput) {
+        event.preventDefault();
+        findInPasteNext(event.shiftKey);
+        return;
+      }
+
+      if (replaceOpen && event.key === "Enter" && !event.ctrlKey && !event.metaKey && !event.altKey && inReplaceInput) {
+        event.preventDefault();
+        replaceInPasteOne();
+        return;
+      }
+
+      if (event.key === "Escape" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        if (replaceOpen) {
+          event.preventDefault();
+          setReplaceOpen(false);
+          requestAnimationFrame(() => {
+            if (findOpen) {
+              findInputRef.current?.focus();
+            } else {
+              mainEditorRef.current?.focus();
+            }
+          });
+          return;
+        }
+        if (findOpen) {
+          event.preventDefault();
+          setFindOpen(false);
+          requestAnimationFrame(() => mainEditorRef.current?.focus());
+          return;
+        }
       }
 
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "b") {
@@ -1707,6 +1865,20 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   useEffect(() => {
     setFindMatchIndex(0);
   }, [findQuery]);
+
+  useEffect(() => {
+    if (!findOpen) {
+      return;
+    }
+    requestAnimationFrame(() => findInputRef.current?.focus());
+  }, [findOpen]);
+
+  useEffect(() => {
+    if (!replaceOpen) {
+      return;
+    }
+    requestAnimationFrame(() => replaceFindInputRef.current?.focus());
+  }, [replaceOpen]);
 
   useEffect(() => {
     if (!status?.trim()) {
@@ -1876,6 +2048,16 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
     return selectedPaste;
   }, [selectedPaste, mode, snapshot.pastes]);
 
+  const selectedPasteStoredBytes = useMemo(() => {
+    if (!selectedPaste) {
+      return 0;
+    }
+    return estimatePasteStoredBytes({
+      content: selectedPaste.content,
+      files: selectedPaste.files
+    });
+  }, [selectedPaste]);
+
   const findMatches = useMemo(() => {
     if (!findQuery || !selectedPaste) {
       return [] as number[];
@@ -1894,6 +2076,18 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
     }
     return out;
   }, [findQuery, selectedPaste]);
+
+  useEffect(() => {
+    if (!findOpen || !findQuery || !findMatches.length) {
+      return;
+    }
+    const start = findMatches[0];
+    setFindMatchIndex(0);
+    requestAnimationFrame(() => {
+      mainEditorRef.current?.focus();
+      mainEditorRef.current?.setSelectionRange(start, start + findQuery.length);
+    });
+  }, [findMatches, findOpen, findQuery]);
 
   const markdownPreviewHtml = useMemo(() => {
     if (!selectedPaste || selectedPaste.language !== "markdown" || !mdPreviewOpen) {
@@ -1953,13 +2147,14 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
     setFindMatchIndex(idx);
     const start = findMatches[idx];
     requestAnimationFrame(() => {
-      mainEditorRef.current?.setSelectionRange(start, start + findQuery.length);
       mainEditorRef.current?.focus();
+      mainEditorRef.current?.setSelectionRange(start, start + findQuery.length);
     });
   }
 
   function findInPasteNext(back = false) {
     if (!findMatches.length) {
+      setStatus(findQuery ? "No matches found in this paste." : "Type a search to find matches in the paste.");
       return;
     }
     focusFindMatch(findMatchIndex + (back ? -1 : 1));
@@ -3692,7 +3887,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 pb-4 workspace-scrollbar-hide">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 pb-4 workspace-scrollbar-hide" ref={libraryScrollRef}>
             {loading ? (
               <div className="px-3 py-4 text-sm text-muted-foreground">Loading workspace...</div>
             ) : sidebarFolder === PUBLIC_FEED_FOLDER && publicFeedLoading ? (
@@ -4322,6 +4517,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                       id="wox-find-input"
                       onChange={(e) => setFindQuery(e.target.value)}
                       placeholder="Search text…"
+                      ref={findInputRef}
                       value={findQuery}
                     />
                   </div>
@@ -4370,6 +4566,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                       className="mt-1"
                       id="wox-rep-find"
                       onChange={(e) => setReplaceFind(e.target.value)}
+                      ref={replaceFindInputRef}
                       value={replaceFind}
                     />
                   </div>
@@ -4381,6 +4578,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                       className="mt-1"
                       id="wox-rep-with"
                       onChange={(e) => setReplaceWith(e.target.value)}
+                      ref={replaceWithInputRef}
                       value={replaceWith}
                     />
                   </div>
@@ -4934,6 +5132,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               <div className="flex flex-wrap gap-3 text-sm text-muted-foreground print:hidden">
                 <span>{selectedPaste.content.length} characters</span>
                 <span>{selectedPaste.content.trim() ? selectedPaste.content.trim().split(/\s+/).length : 0} words</span>
+                <span>{formatBytes(selectedPasteStoredBytes)} total size</span>
                 <span>{selectedPaste.viewCount.toLocaleString()} view{selectedPaste.viewCount === 1 ? "" : "s"}</span>
                 <span>Updated {formatDate(selectedPaste.updatedAt)}</span>
               </div>
@@ -4962,8 +5161,20 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
 
   function renderDetails() {
     const sortedWorkspaceFolders = [...snapshot.folders].sort((a, b) => a.localeCompare(b));
+    const collapseDetailsButton = !phoneViewport ? (
+      <Button
+        aria-label="Hide details sidebar"
+        className="h-9 w-9 shrink-0"
+        onClick={() => setRightSidebarCollapsed(true)}
+        size="icon"
+        type="button"
+        variant="ghost"
+      >
+        <PanelRight className="h-4 w-4" />
+      </Button>
+    ) : null;
     return (
-      <div className="workspace-details flex h-full min-h-0 flex-col gap-5 overflow-y-auto workspace-scrollbar-hide" data-tutorial="details-panel">
+      <div className="workspace-details flex h-full min-h-0 flex-col gap-5 overflow-y-auto workspace-scrollbar-hide" data-tutorial="details-panel" ref={detailsScrollRef}>
         {sessionUser && mode === "account" && accountPlan ? (
           <Card>
             <CardContent className="space-y-5">
@@ -4972,7 +5183,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Plan</p>
                   <h2 className="mt-2 text-xl font-semibold">Hosted usage</h2>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge
                   className={
                     accountPlan.isPaid
@@ -4985,6 +5196,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   <Badge className="capitalize border-border bg-transparent text-muted-foreground">
                     {formatPlanStatus(accountPlan.planStatus)}
                   </Badge>
+                  {collapseDetailsButton}
                 </div>
               </div>
 
@@ -5090,16 +5302,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Details</p>
                 <h2 className="mt-2 text-xl font-semibold">Advanced settings</h2>
               </div>
-              <Button
-                aria-label="Hide details sidebar"
-                className={cn("h-9 w-9 shrink-0", phoneViewport && "hidden")}
-                onClick={() => setRightSidebarCollapsed(true)}
-                size="icon"
-                type="button"
-                variant="ghost"
-              >
-                <PanelRight className="h-4 w-4" />
-              </Button>
+              {!accountPlan ? collapseDetailsButton : null}
             </div>
 
             {selectedPaste ? (
@@ -5396,6 +5599,10 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                     </p>
                   </div>
                   <div className="rounded-[1.2rem] border border-border bg-muted/40 px-4 py-3">
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">Size</p>
+                    <p className="mt-2 font-medium text-foreground">{formatBytes(selectedPasteStoredBytes)}</p>
+                  </div>
+                  <div className="rounded-[1.2rem] border border-border bg-muted/40 px-4 py-3">
                     <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">Engagement</p>
                     <p className="mt-2 font-medium text-foreground">
                       {(selectedPaste.commentsCount ?? 0).toLocaleString()} comments · {(selectedPaste.stars ?? 0).toLocaleString()} stars
@@ -5420,6 +5627,12 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                     type="password"
                     value={selectedPaste.password || ""}
                   />
+                  {selectedPaste.visibility === "public" && !selectedPaste.secretMode ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Public feed and archive only list public pastes with no password. Clear this field, then save, if you
+                      want the paste to appear there.
+                    </p>
+                  ) : null}
                 </div>
 
                 {/* Full-width column: sidebar is ~360px; multi-column grids squish labels */}
@@ -5997,7 +6210,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Workspace zoom</p>
               <button
                 className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-                onClick={() => setPageZoom(DEFAULT_WORKSPACE_ZOOM)}
+                onClick={() => setPageZoom(defaultWorkspaceZoom(phoneViewport))}
                 type="button"
               >
                 Reset
@@ -6186,10 +6399,10 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
             <div className="flex w-full flex-wrap gap-2">
               <Button className="h-10 min-h-11 flex-1 text-sm sm:flex-initial" onClick={() => openTutorial(0)} size="sm" type="button" variant="outline">
                 <WandSparkles className="mr-1 h-4 w-4" />
-                Tutorial
+                {t("workspace.tutorial")}
               </Button>
               <Button asChild className="h-10 min-h-11 flex-1 text-sm sm:flex-initial" size="sm" variant="outline">
-                <Link href="/sign-in">Sign in</Link>
+                <Link href="/sign-in">{t("nav.signIn")}</Link>
               </Button>
               <Button asChild className="h-10 min-h-11 flex-1 text-sm sm:flex-initial" size="sm">
                 <Link href="/sign-up">Sign up</Link>
@@ -6252,20 +6465,20 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 Workspace
               </Link>
               <Link className={workspaceHeaderNavClass(pathname === "/help")} href="/help">
-                Help
+                {t("nav.help")}
               </Link>
               <Link
                 className={workspaceHeaderNavClass(Boolean(pathname?.startsWith("/support")))}
                 href="/support"
               >
-                Support
+                {t("nav.support")}
               </Link>
               {sessionUser ? (
                 <Link
                   className={workspaceHeaderNavClass(Boolean(pathname?.startsWith("/settings")))}
                   href="/settings/account"
                 >
-                  Settings
+                  {t("settings.title")}
                 </Link>
               ) : null}
             </nav>
@@ -6279,6 +6492,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               uiTheme={uiTheme}
               workspaceTone={workspaceTone}
             />
+            <LanguageSwitcher className="py-1.5" compact />
           </div>
 
           <div className="flex flex-wrap items-center gap-2 sm:ml-auto sm:justify-end">
@@ -6310,7 +6524,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 </div>
                 <Button className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm" onClick={() => openTutorial(0)} type="button" variant="outline">
                   <WandSparkles className="h-3.5 w-3.5 sm:mr-1 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">Tutorial</span>
+                  <span className="hidden sm:inline">{t("workspace.tutorial")}</span>
                 </Button>
                 <div className="flex items-center gap-1 rounded-full border border-border bg-muted/40 p-0.5">
                   <Button
@@ -6326,7 +6540,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   </Button>
                   <button
                     className="min-w-[3.35rem] rounded-full px-2 py-1 text-center text-xs font-medium tabular-nums text-foreground"
-                    onClick={() => setPageZoom(DEFAULT_WORKSPACE_ZOOM)}
+                    onClick={() => setPageZoom(defaultWorkspaceZoom(phoneViewport))}
                     title="Reset zoom"
                     type="button"
                   >
@@ -6378,7 +6592,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   </Button>
                   <button
                     className="min-w-[3.35rem] rounded-full px-2 py-1 text-center text-xs font-medium tabular-nums text-foreground"
-                    onClick={() => setPageZoom(DEFAULT_WORKSPACE_ZOOM)}
+                    onClick={() => setPageZoom(defaultWorkspaceZoom(phoneViewport))}
                     title="Reset zoom"
                     type="button"
                   >
@@ -6567,7 +6781,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
         {rightSidebarCollapsed ? (
           <div
             className={cn(
-              "flex shrink-0 justify-center border-t border-border py-1.5 print:hidden lg:w-11 lg:flex-col lg:border-l lg:border-t-0 lg:py-3",
+              "flex shrink-0 justify-center border-t border-border py-1.5 print:hidden lg:w-12 lg:flex-col lg:items-center lg:border-l lg:border-t-0 lg:py-3 lg:pl-1.5",
               leftSidebarCollapsed && rightSidebarCollapsed && "hidden lg:flex"
             )}
           >

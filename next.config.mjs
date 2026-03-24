@@ -70,7 +70,11 @@ const nextConfig = {
   async redirects() {
     return [
       { source: "/doc_api", destination: "/doc/api", permanent: false },
-      { source: "/doc_scraping_api", destination: "/doc/scraping", permanent: false }
+      { source: "/doc_scraping_api", destination: "/doc/scraping", permanent: false },
+      // Legacy BookmarkFS sync entry paths used by older extension builds.
+      { source: "/bookmarkfs-sync", destination: "/bookmarkfs/sync", permanent: false },
+      { source: "/bookmarkfs-sync/:path*", destination: "/bookmarkfs/sync/:path*", permanent: false },
+      { source: "/bookmarkfs/sync.html", destination: "/bookmarkfs/sync", permanent: false }
     ];
   },
   /** Baseline hardening for all routes (API + pages). @see docs/SECURITY.md */

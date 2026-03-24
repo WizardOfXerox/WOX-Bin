@@ -25,16 +25,62 @@ import { getAppOriginFromHeaderRecord, getRequestIpFromHeaderRecord } from "@/li
 import { credentialsIdentifierSchema } from "@/lib/validators";
 import { getSmtpTransportOptions, isSmtpConfigured, sendMail, smtpFromAddress } from "@/lib/mail";
 import { sendSignupVerificationEmail } from "@/lib/email-verification";
+import { consumeMfaTicket, createMfaLoginTicket, isTotpEnabled } from "@/lib/totp-mfa";
 
 const providers: NonNullable<NextAuthOptions["providers"]> = [
   Credentials({
     name: "Credentials",
     credentials: {
       identifier: { label: "Username or email", type: "text" },
-      password: { label: "Password", type: "password" }
+      password: { label: "Password", type: "password" },
+      mfaTicket: { label: "MFA ticket", type: "text" },
+      totpCode: { label: "Authenticator code", type: "text" },
+      recoveryCode: { label: "Recovery code", type: "text" }
     },
     async authorize(credentials, req) {
       const ip = getRequestIpFromHeaderRecord(req.headers as Record<string, unknown> | undefined);
+      const mfaTicket = typeof credentials?.mfaTicket === "string" ? credentials.mfaTicket.trim() : "";
+      const totpCode = typeof credentials?.totpCode === "string" ? credentials.totpCode : "";
+      const recoveryCode = typeof credentials?.recoveryCode === "string" ? credentials.recoveryCode : "";
+
+      if (mfaTicket) {
+        const limit = await rateLimit("sign-in", `${ip}:mfa:${mfaTicket}`);
+        if (!limit.success) {
+          return null;
+        }
+
+        try {
+          const ticket = await consumeMfaTicket({
+            ticketId: mfaTicket,
+            code: totpCode,
+            recoveryCode
+          });
+          const user = await db.query.users.findFirst({
+            where: eq(users.id, ticket.userId)
+          });
+
+          if (!user) {
+            return null;
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name ?? user.displayName ?? user.username,
+            image: user.image,
+            username: user.username,
+            role: user.role,
+            plan: user.plan ?? "free",
+            planStatus: user.planStatus ?? "active",
+            onboardingComplete: user.onboardingComplete,
+            displayName: user.displayName,
+            mfaComplete: true
+          };
+        } catch {
+          return null;
+        }
+      }
+
       const identifier = credentialsIdentifierSchema.safeParse(credentials?.identifier);
       const password = typeof credentials?.password === "string" ? credentials.password : "";
 
@@ -349,6 +395,25 @@ export const authOptions: NextAuthOptions = {
           targetId: user.id
         });
         return "/sign-in?authError=emailNotVerified";
+      }
+
+      const needsMfaChallenge = (await isTotpEnabled(user.id)) && !user.mfaComplete;
+      if (needsMfaChallenge) {
+        const ticket = await createMfaLoginTicket({
+          userId: user.id,
+          provider: account?.provider ?? "credentials",
+          callbackUrl: "/app"
+        });
+        await logAudit({
+          actorUserId: user.id,
+          action: "auth.mfa_challenge_started",
+          targetType: "user",
+          targetId: user.id,
+          metadata: {
+            provider: account?.provider ?? "credentials"
+          }
+        });
+        return `/sign-in/mfa?ticket=${encodeURIComponent(ticket.id)}`;
       }
 
       if (account?.provider === "google" || account?.provider === "email") {

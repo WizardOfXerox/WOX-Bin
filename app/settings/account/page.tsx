@@ -10,6 +10,7 @@ import { db } from "@/lib/db";
 import { accounts, users } from "@/lib/db/schema";
 import { env } from "@/lib/env";
 import { isSmtpConfigured } from "@/lib/mail";
+import { getTotpStatus } from "@/lib/totp-mfa";
 
 export default async function AccountSettingsPage() {
   const session = await auth();
@@ -21,7 +22,7 @@ export default async function AccountSettingsPage() {
     redirect("/account/onboarding");
   }
 
-  const [row, googleAccount] = await Promise.all([
+  const [row, googleAccount, totpStatus] = await Promise.all([
     db.query.users.findFirst({
       where: eq(users.id, session.user.id),
       columns: {
@@ -36,7 +37,8 @@ export default async function AccountSettingsPage() {
       .select({ provider: accounts.provider })
       .from(accounts)
       .where(and(eq(accounts.userId, session.user.id), eq(accounts.provider, "google")))
-      .limit(1)
+      .limit(1),
+    getTotpStatus(session.user.id)
   ]);
 
   if (!row) {
@@ -51,7 +53,11 @@ export default async function AccountSettingsPage() {
     emailVerified: Boolean(row.emailVerified),
     smtpConfigured: isSmtpConfigured(),
     googleConnected: Boolean(googleAccount[0]),
-    googleOAuthAvailable: Boolean(env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET)
+    googleOAuthAvailable: Boolean(env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET),
+    totpAvailable: totpStatus.available,
+    totpEnabled: totpStatus.enabled,
+    totpEnabledAt: totpStatus.enabledAt?.toISOString() ?? null,
+    totpLastUsedAt: totpStatus.lastUsedAt?.toISOString() ?? null
   };
 
   return (

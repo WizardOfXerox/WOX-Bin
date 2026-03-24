@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { BookmarkFsSyncClient } from "@/components/bookmarkfs/bookmarkfs-sync-client";
+import { SiteHeader } from "@/components/site/site-header";
 
 export const metadata: Metadata = {
   title: "BookmarkFS Sync",
@@ -13,6 +14,7 @@ export default function BookmarkFsSyncPage() {
     <main className="min-h-screen bg-background">
       <div aria-hidden className="absolute inset-0 bg-hero-mesh opacity-35" />
       <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 md:py-14">
+        <SiteHeader className="mb-8" />
         <BookmarkFsSyncClient />
       </div>
     </main>

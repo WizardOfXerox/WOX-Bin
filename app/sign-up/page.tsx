@@ -6,9 +6,12 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { useUiLanguage } from "@/components/providers/ui-language-provider";
 import { readTurnstileToken, resetTurnstileFields, TurnstileField } from "@/components/turnstile-field";
 
 export default function SignUpPage() {
+  const { t } = useUiLanguage();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -49,17 +52,20 @@ export default function SignUpPage() {
     <main className="flex min-h-screen items-center justify-center px-6 py-16">
       <Card className="w-full max-w-xl">
         <CardContent className="space-y-6">
-          <div>
-            <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Join WOX-Bin</p>
-            <h1 className="mt-2 text-3xl font-semibold">Create your account</h1>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">{t("auth.signUp.eyebrow")}</p>
+              <h1 className="mt-2 text-3xl font-semibold">{t("auth.signUp.title")}</h1>
+            </div>
+            <LanguageSwitcher compact />
           </div>
           <form className="space-y-4" onSubmit={handleSubmit}>
-            <Input autoComplete="username" name="username" placeholder="Username" required />
-            <Input autoComplete="email" name="email" placeholder="Email" type="email" required />
+            <Input autoComplete="username" name="username" placeholder={t("auth.signUp.username")} required />
+            <Input autoComplete="email" name="email" placeholder={t("auth.signUp.email")} type="email" required />
             <p className="-mt-2 text-xs text-muted-foreground">
-              Email is required. You will need to verify it before you can sign in.
+              {t("auth.signUp.verifyHint")}
             </p>
-            <Input autoComplete="new-password" name="password" placeholder="Password" type="password" required />
+            <Input autoComplete="new-password" name="password" placeholder={t("auth.signUp.password")} type="password" required />
             <label className="flex cursor-pointer items-start gap-3 text-sm leading-snug text-muted-foreground">
               <input
                 required
@@ -69,27 +75,26 @@ export default function SignUpPage() {
                 type="checkbox"
               />
               <span>
-                I have read and agree to the{" "}
+                {t("auth.signUp.acceptTerms")}{" "}
                 <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/terms">
-                  Terms of Service
+                  Terms
                 </Link>{" "}
-                and{" "}
+                /{" "}
                 <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/privacy">
-                  Privacy Policy
+                  Privacy
                 </Link>
-                .
               </span>
             </label>
             <TurnstileField siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY} />
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
             <Button className="w-full" disabled={loading} type="submit">
-              {loading ? "Creating account..." : "Create account"}
+              {loading ? t("auth.signUp.submitting") : t("auth.signUp.submit")}
             </Button>
           </form>
           <p className="text-sm text-muted-foreground">
-            Already have an account?{" "}
+            {t("auth.signUp.haveAccount")}{" "}
             <Link className="text-primary" href="/sign-in">
-              Sign in
+              {t("auth.signUp.signIn")}
             </Link>
           </p>
         </CardContent>

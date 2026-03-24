@@ -250,6 +250,76 @@ export const authenticators = pgTable(
   })
 );
 
+export const userTotpFactors = pgTable("user_totp_factors", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  secretEncrypted: text("secret_encrypted").notNull(),
+  enabledAt: timestamp("enabled_at", { mode: "date" }).notNull().defaultNow(),
+  lastUsedAt: timestamp("last_used_at", { mode: "date" }),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow()
+});
+
+export const userTotpRecoveryCodes = pgTable(
+  "user_totp_recovery_codes",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    codeHash: text("code_hash").notNull(),
+    usedAt: timestamp("used_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow()
+  },
+  (table) => ({
+    userCodeUnique: uniqueIndex("user_totp_recovery_codes_user_code_unique").on(table.userId, table.codeHash),
+    userUsedIdx: index("user_totp_recovery_codes_user_used_idx").on(table.userId, table.usedAt)
+  })
+);
+
+export const userTotpSetupSessions = pgTable(
+  "user_totp_setup_sessions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    secretEncrypted: text("secret_encrypted").notNull(),
+    expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow()
+  },
+  (table) => ({
+    userIdx: index("user_totp_setup_sessions_user_idx").on(table.userId),
+    expiresIdx: index("user_totp_setup_sessions_expires_idx").on(table.expiresAt)
+  })
+);
+
+export const mfaLoginTickets = pgTable(
+  "mfa_login_tickets",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    callbackUrl: text("callback_url"),
+    expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
+    consumedAt: timestamp("consumed_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow()
+  },
+  (table) => ({
+    userIdx: index("mfa_login_tickets_user_idx").on(table.userId),
+    expiresIdx: index("mfa_login_tickets_expires_idx").on(table.expiresAt)
+  })
+);
+
 export const folders = pgTable("folders", {
   id: serial("id").primaryKey(),
   userId: text("user_id")

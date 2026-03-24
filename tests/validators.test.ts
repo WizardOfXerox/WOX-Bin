@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { accountPasswordSchema, registerSchema, supportTicketCreateSchema, supportTicketReplySchema } from "@/lib/validators";
+import {
+  accountPasswordSchema,
+  registerSchema,
+  supportTicketCreateSchema,
+  supportTicketReplySchema,
+  unverifiedAccountRecoverySchema
+} from "@/lib/validators";
 
 describe("registerSchema", () => {
   it("requires email for credentials sign-up", () => {
@@ -51,6 +57,30 @@ describe("accountPasswordSchema", () => {
 
     expect(createResult.success).toBe(true);
     expect(changeResult.success).toBe(true);
+  });
+});
+
+describe("unverifiedAccountRecoverySchema", () => {
+  it("accepts a corrected email", () => {
+    const result = unverifiedAccountRecoverySchema.safeParse({
+      identifier: "wizardofxerox",
+      password: "new-password-123",
+      email: "WizardOfXerox@Example.com"
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.email).toBe("wizardofxerox@example.com");
+    }
+  });
+
+  it("allows resending without changing the email", () => {
+    const result = unverifiedAccountRecoverySchema.safeParse({
+      identifier: "wizardofxerox@gmail.com",
+      password: "new-password-123"
+    });
+
+    expect(result.success).toBe(true);
   });
 });
 

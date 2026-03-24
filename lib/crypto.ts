@@ -1,5 +1,12 @@
 import bcrypt from "bcryptjs";
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  createHmac,
+  randomBytes,
+  timingSafeEqual
+} from "crypto";
 
 import { env, requireEnv } from "@/lib/env";
 
@@ -13,6 +20,36 @@ export async function verifyPassword(value: string, hash: string) {
 
 export function hashToken(value: string) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function deriveSensitiveValueKey() {
+  return createHash("sha256").update(requireEnv("AUTH_SECRET")).digest();
+}
+
+export function encryptSensitiveValue(value: string) {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", deriveSensitiveValueKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `${iv.toString("base64url")}.${tag.toString("base64url")}.${encrypted.toString("base64url")}`;
+}
+
+export function decryptSensitiveValue(value: string) {
+  const [ivRaw, tagRaw, payloadRaw] = value.split(".");
+  if (!ivRaw || !tagRaw || !payloadRaw) {
+    throw new Error("Invalid encrypted value format.");
+  }
+  const decipher = createDecipheriv(
+    "aes-256-gcm",
+    deriveSensitiveValueKey(),
+    Buffer.from(ivRaw, "base64url")
+  );
+  decipher.setAuthTag(Buffer.from(tagRaw, "base64url"));
+  const decrypted = Buffer.concat([
+    decipher.update(Buffer.from(payloadRaw, "base64url")),
+    decipher.final()
+  ]);
+  return decrypted.toString("utf8");
 }
 
 export function randomToken(prefix?: string) {

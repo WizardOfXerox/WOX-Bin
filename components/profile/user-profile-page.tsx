@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { SiteHeader } from "@/components/site/site-header";
 import { getPasteSharePath } from "@/lib/paste-links";
 import type { UserProfilePasteRow, UserProfileSnapshot } from "@/lib/profile-service";
 import { formatDate } from "@/lib/utils";
@@ -158,6 +159,7 @@ export function UserProfilePage({ snapshot }: Props) {
     <main className="relative min-h-screen overflow-hidden bg-background">
       <div aria-hidden className="absolute inset-0 bg-hero-mesh opacity-35" />
       <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 md:px-6 md:py-10">
+        <SiteHeader />
         <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
           <Link className="text-foreground hover:underline" href="/">
             Home

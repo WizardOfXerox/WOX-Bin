@@ -33,13 +33,16 @@ They share auth, deployment, and parts of the UI system, but they should be trea
 
 - `/` marketing landing page (footer links **API & docs** at `/doc` and **Terms** at `/terms`)
 - `/sign-in`, `/sign-up`, **`/forgot-password`**, **`/reset-password`** (password reset requires SMTP — see **[docs/SMTP.md](docs/SMTP.md)**)
+- `/sign-in/mfa` plus authenticator-app MFA in account settings (QR setup + recovery codes) — see **[docs/TOTP-MFA.md](docs/TOTP-MFA.md)**
 - `/doc`, `/doc/api`, `/doc/scraping`, `/doc/tools`, `/doc/faq` — developer documentation (redirects: `/doc_api`, `/doc_scraping_api`)
 - `/help`, `/support`, `/support/manage`, `/changelog` — user help, support tickets, staff queue, and shipped-change history
 - `/app` workspace with:
   - local drafts in IndexedDB
   - account-backed sync
+  - responsive zoom controls (desktop default `100%`, mobile default `70%`)
   - import/export JSON
   - first-run guided tutorial with a persistent Tutorial button
+  - per-account UI language selection on shared/auth/settings surfaces
   - **drag & drop** — library sidebar (JSON backup or text/code), paste **Files** section (images/videos), code editors (append first file as text), plus `/tools/pdf-extract` (PDFs); see `components/ui/file-drop-surface.tsx`
   - anonymous publish flow
   - API key management
@@ -53,6 +56,7 @@ They share auth, deployment, and parts of the UI system, but they should be trea
 - `/clipboard` and `/c/[slug]` — short-lived clipboard buckets with human-friendly keys
 - `/fragment` — client-side fragment-only sharing with no server storage
 - `/out` — privacy redirect used for external shared links
+- shared public-site header across the main routes, so Home, Workspace, Clipboard, Docs, Help, and the quick-share surfaces stay reachable outside `/app`
 - **CLI drops** — `/api/public/termbin`, `/api/public/upload`, `/t/[slug]`, `/x/[slug]/[[...filename]]`; see **[docs/CLI-DROPS.md](docs/CLI-DROPS.md)**
 - **`/tools`** — tools index
 - **`/tools/convert`** — converter hub (registry + Convertio index / pairs)
@@ -142,6 +146,10 @@ The new schema includes:
 - `sessions`
 - `verification_tokens`
 - `authenticators`
+- `user_totp_factors`
+- `user_totp_recovery_codes`
+- `user_totp_setup_sessions`
+- `mfa_login_tickets`
 - `folders`
 - `pastes`
 - `paste_files`

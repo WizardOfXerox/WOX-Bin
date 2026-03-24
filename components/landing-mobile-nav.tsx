@@ -17,6 +17,8 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog";
 import { accountLabelFromSession } from "@/lib/account-label";
+import { useUiLanguage } from "@/components/providers/ui-language-provider";
+import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { cn } from "@/lib/utils";
 
 /**
@@ -29,6 +31,7 @@ type Props = {
 export function LandingMobileNav({ initialSession = null }: Props) {
   const [open, setOpen] = useState(false);
   const { data: session, status } = useSession();
+  const { t } = useUiLanguage();
   const effectiveSession = session?.user ? session : initialSession;
   const showLoadingSkeleton = status === "loading" && !effectiveSession?.user;
 
@@ -56,44 +59,45 @@ export function LandingMobileNav({ initialSession = null }: Props) {
         )}
       >
         <DialogHeader className="text-left">
-          <DialogTitle className="text-base font-semibold">Menu</DialogTitle>
-          <DialogDescription>Archive, BookmarkFS, help, support, account, and workspace</DialogDescription>
+          <DialogTitle className="text-base font-semibold">{t("menu.title")}</DialogTitle>
+          <DialogDescription>{t("menu.description")}</DialogDescription>
         </DialogHeader>
+        <LanguageSwitcher />
         <nav aria-label="Primary" className="flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-3">
             <DialogClose asChild>
               <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
-                <Link href="/archive">Archive</Link>
+                <Link href="/archive">{t("nav.archive")}</Link>
               </Button>
             </DialogClose>
             <DialogClose asChild>
               <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
-                <Link href="/pricing">Pricing</Link>
+                <Link href="/pricing">{t("nav.pricing")}</Link>
               </Button>
             </DialogClose>
             <DialogClose asChild>
               <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
-                <Link href="/quick">Quick paste</Link>
+                <Link href="/quick">{t("nav.quickPaste")}</Link>
               </Button>
             </DialogClose>
             <DialogClose asChild>
               <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
-                <Link href="/help">Help</Link>
+                <Link href="/help">{t("nav.help")}</Link>
               </Button>
             </DialogClose>
             <DialogClose asChild>
               <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
-                <Link href="/bookmarkfs">BookmarkFS</Link>
+                <Link href="/bookmarkfs">{t("nav.bookmarkfs")}</Link>
               </Button>
             </DialogClose>
             <DialogClose asChild>
               <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
-                <Link href="/support">Support</Link>
+                <Link href="/support">{t("nav.support")}</Link>
               </Button>
             </DialogClose>
             <DialogClose asChild>
               <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
-                <Link href="/changelog">Changelog</Link>
+                <Link href="/changelog">{t("nav.changelog")}</Link>
               </Button>
             </DialogClose>
           </div>
@@ -116,19 +120,19 @@ export function LandingMobileNav({ initialSession = null }: Props) {
                 variant="outline"
               >
                 <LogOut className="h-4 w-4" />
-                Sign out
+                {t("nav.signOut")}
               </Button>
             </>
           ) : (
             <>
               <DialogClose asChild>
                 <Button asChild className="h-12 w-full justify-center text-base" variant="outline">
-                  <Link href="/sign-in">Sign in</Link>
+                  <Link href="/sign-in">{t("nav.signIn")}</Link>
                 </Button>
               </DialogClose>
               <DialogClose asChild>
                 <Button asChild className="h-12 w-full justify-center text-base" variant="secondary">
-                  <Link href="/sign-up">Create account</Link>
+                  <Link href="/sign-up">{t("nav.createAccount")}</Link>
                 </Button>
               </DialogClose>
             </>
@@ -136,7 +140,7 @@ export function LandingMobileNav({ initialSession = null }: Props) {
           <DialogClose asChild>
             <Button asChild className="h-12 w-full justify-center text-base">
               <Link href="/app">
-                Open workspace
+                {t("nav.openWorkspace")}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>

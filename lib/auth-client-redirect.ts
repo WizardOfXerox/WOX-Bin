@@ -66,6 +66,10 @@ export function getAuthNoticeRedirectUrl(url: string | null | undefined): string
 
   try {
     const parsed = new URL(normalized, window.location.origin);
+    if (parsed.pathname === "/sign-in/mfa" && parsed.searchParams.has("ticket")) {
+      return parsed.href;
+    }
+
     if (parsed.pathname !== "/sign-in") {
       return null;
     }

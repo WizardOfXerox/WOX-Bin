@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 
+import { SiteHeader } from "@/components/site/site-header";
 import { listFeedPastes } from "@/lib/paste-service";
 import { TOOLS_ENABLED } from "@/lib/tools/availability";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,7 @@ export default async function ArchivePage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-4 py-8 md:px-6 md:py-10">
+      <SiteHeader />
       <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
         <Link className="text-foreground hover:underline" href="/">
           Home

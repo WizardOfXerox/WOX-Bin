@@ -676,7 +676,14 @@ export async function savePasteForUser(userId: string, input: SavePasteInput) {
   });
   const secretMode = Boolean(input.secretMode);
   const visibility = secretMode ? "unlisted" : input.visibility;
-  const passwordHash = input.password ? await hashPassword(input.password) : existing?.passwordHash ?? null;
+  const normalizedPassword =
+    typeof input.password === "string" ? input.password.trim() : input.password;
+  const passwordHash =
+    normalizedPassword === undefined
+      ? existing?.passwordHash ?? null
+      : normalizedPassword
+        ? await hashPassword(normalizedPassword)
+        : null;
   const nextValues = {
     slug,
     title: input.title.trim() || "Untitled",

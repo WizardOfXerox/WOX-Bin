@@ -625,6 +625,9 @@ export async function mountWoxBinCompact(rootEl) {
     if (resolved.locked) {
       throw new Error("Profile is locked. Enter the passphrase and unlock it first.");
     }
+    if (!resolved.apiKey) {
+      throw new Error("This profile has no API key yet. Paste one and click Save.");
+    }
     if (passphrase) {
       passphraseInput.value = "";
     }

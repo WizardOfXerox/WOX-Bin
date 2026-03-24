@@ -8,6 +8,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    slug: "2026-03-25-mfa-language-and-site-shell",
+    date: "2026-03-25",
+    title: "Authenticator MFA, shared site navigation, and workspace polish",
+    summary: "WOX-Bin now supports TOTP MFA in account settings, a shared public-site header across the main product surfaces, stronger unverified-account recovery, and tighter workspace details/zoom behavior on desktop and mobile.",
+    bullets: [
+      "Added authenticator-app MFA with QR setup, recovery codes, sign-in challenge flow, and fail-safe handling while database schema updates are rolling out.",
+      "Added verification recovery so unverified users can resend the email or correct a mistyped address instead of losing the account.",
+      "Added UI language switching for the shared shell and core auth/settings surfaces.",
+      "Added a shared site header across quick-share, docs, feed/archive, help/support, profile, BookmarkFS, and public paste routes so Home, Workspace, Clipboard, and the other main surfaces stay one click away.",
+      "Polished the workspace right rail so the collapse control lives on the top card and the collapsed handle no longer hugs the divider.",
+      "Changed the mobile default workspace zoom to 70 percent and kept the desktop default at 100 percent.",
+      "Fixed hosted paste saves so clearing the password really removes it, which lets public pastes appear in the feed and archive again."
+    ]
+  },
+  {
     slug: "2026-03-23-hardening-and-ops",
     date: "2026-03-23",
     title: "Rate-limit hardening, ops runbooks, and BookmarkFS UI cleanup",

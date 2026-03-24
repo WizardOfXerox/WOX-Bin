@@ -1,10 +1,11 @@
 (function() {
-  const PAGE_PREFIX = "/bookmarkfs/sync";
+  const PAGE_PREFIXES = ["/bookmarkfs/sync", "/bookmarkfs-sync", "/bookmarkfs/sync.html"];
   const REQUEST_SOURCE = "woxbin-bookmarkfs-page";
   const RESPONSE_SOURCE = "bookmarkfs-extension";
 
   function isSyncPage() {
-    return window.location.pathname === PAGE_PREFIX || window.location.pathname.startsWith(`${PAGE_PREFIX}/`);
+    const path = window.location.pathname || "";
+    return PAGE_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
   }
 
   if (!isSyncPage()) {
@@ -28,7 +29,18 @@
     }
 
     const data = event.data;
-    if (!data || data.source !== REQUEST_SOURCE || data.target !== RESPONSE_SOURCE || data.type !== "bookmarkfs-request") {
+    if (!data || data.source !== REQUEST_SOURCE || data.target !== RESPONSE_SOURCE) {
+      return;
+    }
+
+    if (data.type === "bookmarkfs-handshake") {
+      post({
+        type: "bookmarkfs-ready"
+      });
+      return;
+    }
+
+    if (data.type !== "bookmarkfs-request") {
       return;
     }
 

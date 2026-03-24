@@ -6,8 +6,10 @@ import { signOut, useSession } from "next-auth/react";
 import { ArrowRight, LogOut } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { LanguageSwitcher } from "@/components/ui/language-switcher";
 
 import { accountLabelFromSession } from "@/lib/account-label";
+import { useUiLanguage } from "@/components/providers/ui-language-provider";
 
 /** Desktop header row on the marketing home — reflects real auth state (session is hydrated from the root layout). */
 type Props = {
@@ -16,28 +18,30 @@ type Props = {
 
 export function LandingDesktopAuthNav({ initialSession = null }: Props) {
   const { data: session, status } = useSession();
+  const { t } = useUiLanguage();
   const effectiveSession = session?.user ? session : initialSession;
   const showLoadingSkeleton = status === "loading" && !effectiveSession?.user;
 
   return (
     <div className="hidden items-center gap-2 sm:gap-3 md:flex">
+      <LanguageSwitcher compact />
       <Button asChild variant="ghost">
-        <Link href="/archive">Archive</Link>
+        <Link href="/archive">{t("nav.archive")}</Link>
       </Button>
       <Button asChild variant="ghost">
-        <Link href="/pricing">Pricing</Link>
+        <Link href="/pricing">{t("nav.pricing")}</Link>
       </Button>
       <Button asChild variant="ghost">
-        <Link href="/quick">Quick paste</Link>
+        <Link href="/quick">{t("nav.quickPaste")}</Link>
       </Button>
       <Button asChild variant="ghost">
-        <Link href="/help">Help</Link>
+        <Link href="/help">{t("nav.help")}</Link>
       </Button>
       <Button asChild variant="ghost">
-        <Link href="/support">Support</Link>
+        <Link href="/support">{t("nav.support")}</Link>
       </Button>
       <Button asChild variant="ghost">
-        <Link href="/changelog">Changelog</Link>
+        <Link href="/changelog">{t("nav.changelog")}</Link>
       </Button>
       {showLoadingSkeleton ? (
         <div
@@ -56,17 +60,17 @@ export function LandingDesktopAuthNav({ initialSession = null }: Props) {
             variant="outline"
           >
             <LogOut className="h-4 w-4" />
-            Sign out
+            {t("nav.signOut")}
           </Button>
         </>
       ) : (
         <Button asChild variant="ghost">
-          <Link href="/sign-in">Sign in</Link>
+          <Link href="/sign-in">{t("nav.signIn")}</Link>
         </Button>
       )}
       <Button asChild>
         <Link href="/app">
-          Open workspace
+          {t("nav.openWorkspace")}
           <ArrowRight className="h-4 w-4" />
         </Link>
       </Button>

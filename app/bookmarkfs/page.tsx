@@ -14,6 +14,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SiteHeader } from "@/components/site/site-header";
 
 const WORKFLOW = [
   {
@@ -80,6 +81,7 @@ export default function BookmarkFsPage() {
     <main className="min-h-screen bg-background">
       <div aria-hidden className="absolute inset-0 bg-hero-mesh opacity-40" />
       <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 md:py-14">
+        <SiteHeader className="mb-8" />
         <section className="overflow-hidden rounded-[2rem] border border-border/70 bg-card/60 backdrop-blur-sm">
           <div className="grid gap-10 px-5 py-6 sm:px-8 sm:py-8 lg:grid-cols-[minmax(0,1.08fr)_minmax(22rem,0.92fr)] lg:px-10 lg:py-10">
             <div className="space-y-6 motion-safe:animate-wox-fade-up">
