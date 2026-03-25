@@ -2118,3 +2118,447 @@ body.ext-afterdark-view {
     flex-direction: column;
   }
 }
+
+.darkbin-page {
+  background:
+    radial-gradient(90% 90% at 0% 0%, rgba(145, 23, 23, 0.22), transparent 52%),
+    radial-gradient(80% 70% at 100% 0%, rgba(123, 20, 20, 0.14), transparent 42%),
+    linear-gradient(180deg, #0a0c0f, #08090c 28%, #06070a 100%);
+}
+
+.darkbin-root {
+  width: min(1600px, calc(100vw - 28px));
+  margin: 0 auto;
+  padding: 18px 0 28px;
+}
+
+.darkbin-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.darkbin-hero,
+.darkbin-card,
+.darkbin-stat {
+  border: 1px solid rgba(158, 53, 53, 0.18);
+  background:
+    linear-gradient(180deg, rgba(32, 16, 18, 0.98), rgba(12, 13, 17, 0.98));
+  box-shadow:
+    0 24px 48px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+.darkbin-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px;
+  border-radius: 26px;
+  position: relative;
+  overflow: hidden;
+}
+
+.darkbin-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -10% -28% auto;
+  width: 320px;
+  height: 320px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(224, 75, 75, 0.26), transparent 62%);
+  pointer-events: none;
+}
+
+.darkbin-hero__copy {
+  position: relative;
+  z-index: 1;
+}
+
+.darkbin-hero__eyebrow,
+.darkbin-card__eyebrow {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 214, 214, 0.62);
+}
+
+.darkbin-hero h1 {
+  margin: 10px 0 0;
+  font-size: clamp(2.2rem, 4vw, 3.6rem);
+  line-height: 0.94;
+  letter-spacing: -0.06em;
+  text-transform: uppercase;
+}
+
+.darkbin-hero__text {
+  max-width: 72ch;
+  margin: 14px 0 0;
+  color: rgba(255, 236, 236, 0.72);
+  line-height: 1.65;
+}
+
+.darkbin-hero__actions,
+.darkbin-card__actions,
+.darkbin-evidence__actions,
+.darkbin-source__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.darkbin-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.darkbin-stat {
+  border-radius: 18px;
+  padding: 18px 18px 16px;
+}
+
+.darkbin-stat strong {
+  display: block;
+  font-size: 1.85rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+.darkbin-stat span {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255, 236, 236, 0.66);
+  font-size: 12px;
+}
+
+.darkbin-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr) minmax(300px, 360px);
+  gap: 18px;
+  align-items: start;
+}
+
+.darkbin-sidebar,
+.darkbin-main,
+.darkbin-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.darkbin-card {
+  border-radius: 22px;
+  padding: 18px;
+}
+
+.darkbin-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.darkbin-card__head h2 {
+  margin: 8px 0 0;
+  font-size: 1.18rem;
+  letter-spacing: -0.03em;
+}
+
+.darkbin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.darkbin-field:last-child {
+  margin-bottom: 0;
+}
+
+.darkbin-field > span {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 226, 226, 0.74);
+}
+
+.darkbin-case-list,
+.darkbin-profile-list,
+.darkbin-evidence-list,
+.darkbin-source-list,
+.darkbin-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.darkbin-case,
+.darkbin-profile,
+.darkbin-evidence,
+.darkbin-source,
+.darkbin-event,
+.darkbin-route {
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(10, 11, 15, 0.86);
+}
+
+.darkbin-case,
+.darkbin-profile,
+.darkbin-route {
+  width: 100%;
+  text-align: left;
+  color: hsl(var(--x-fg));
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+
+.darkbin-case:hover,
+.darkbin-profile:hover,
+.darkbin-route:hover {
+  transform: translateY(-1px);
+  border-color: rgba(230, 89, 89, 0.28);
+}
+
+.darkbin-case {
+  padding: 14px;
+}
+
+.darkbin-case.is-active,
+.darkbin-profile.is-active {
+  border-color: rgba(255, 97, 97, 0.42);
+  background: rgba(28, 12, 14, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(255, 97, 97, 0.08);
+}
+
+.darkbin-case__head,
+.darkbin-evidence__meta,
+.darkbin-case__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.darkbin-case strong,
+.darkbin-profile strong,
+.darkbin-evidence strong,
+.darkbin-source strong,
+.darkbin-event strong,
+.darkbin-route strong {
+  display: block;
+  font-size: 14px;
+}
+
+.darkbin-case p,
+.darkbin-evidence p,
+.darkbin-source p,
+.darkbin-event p {
+  margin: 6px 0 0;
+  color: rgba(255, 232, 232, 0.64);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.darkbin-case__meta,
+.darkbin-profile span,
+.darkbin-profile small,
+.darkbin-meta,
+.darkbin-hint {
+  color: rgba(255, 225, 225, 0.54);
+  font-size: 11px;
+}
+
+.darkbin-profile {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.darkbin-unlock {
+  margin-top: 12px;
+}
+
+.darkbin-editor-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.darkbin-editor-grid--compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.darkbin-textarea--summary {
+  min-height: 136px;
+}
+
+.darkbin-textarea--notes {
+  min-height: 260px;
+}
+
+.darkbin-textarea--event {
+  min-height: 110px;
+}
+
+.darkbin-editor-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.darkbin-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 232, 232, 0.72);
+}
+
+.darkbin-pill--draft {
+  background: rgba(71, 85, 105, 0.26);
+}
+
+.darkbin-pill--active {
+  background: rgba(220, 38, 38, 0.26);
+}
+
+.darkbin-pill--watch {
+  background: rgba(245, 158, 11, 0.22);
+}
+
+.darkbin-pill--sealed {
+  background: rgba(168, 85, 247, 0.24);
+}
+
+.darkbin-pill--closed {
+  background: rgba(34, 197, 94, 0.22);
+}
+
+.darkbin-pill--muted {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.darkbin-timeline-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.darkbin-event,
+.darkbin-evidence,
+.darkbin-source {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+}
+
+.darkbin-event__copy,
+.darkbin-evidence__copy,
+.darkbin-source__copy {
+  min-width: 0;
+}
+
+.darkbin-route-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.darkbin-route {
+  min-height: 88px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.darkbin-route small {
+  font-family: var(--x-mono);
+  font-size: 11px;
+  color: rgba(255, 232, 232, 0.58);
+}
+
+.darkbin-route:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.darkbin-empty {
+  margin: 0;
+  color: rgba(255, 229, 229, 0.58);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.darkbin-modal-pre {
+  margin: 0;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(3, 7, 13, 0.96);
+  border: 1px solid hsl(var(--x-border));
+  color: hsl(var(--x-fg));
+  font-family: var(--x-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.darkbin-modal-image,
+.darkbin-modal-video {
+  max-width: 100%;
+  display: block;
+  border-radius: 14px;
+}
+
+@media (max-width: 1280px) {
+  .darkbin-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .darkbin-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .darkbin-hero {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .darkbin-root {
+    width: calc(100vw - 16px);
+    padding-top: 10px;
+  }
+
+  .darkbin-stats,
+  .darkbin-route-grid,
+  .darkbin-editor-grid,
+  .darkbin-editor-grid--compact {
+    grid-template-columns: 1fr;
+  }
+
+  .darkbin-event,
+  .darkbin-evidence,
+  .darkbin-source {
+    flex-direction: column;
+  }
+}

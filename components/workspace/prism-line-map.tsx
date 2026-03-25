@@ -86,6 +86,8 @@ type Props = {
   showLineNumbers?: boolean;
   /** Default true. When false, removes horizontal rules between lines. */
   showLineSeparators?: boolean;
+  /** Default true. When false, preserves long lines and allows horizontal scrolling. */
+  wrapLongLines?: boolean;
   /** Public paste source view: convert visible URLs into clickable links. */
   linkifyUrls?: boolean;
 };
@@ -96,6 +98,7 @@ export function PrismLineMap({
   language,
   showLineNumbers = true,
   showLineSeparators = true,
+  wrapLongLines = true,
   linkifyUrls = false
 }: Props) {
   /**
@@ -122,17 +125,27 @@ export function PrismLineMap({
       }
       if (grammar === "plain" || !Prism.languages[grammar]) {
         el.className =
-          "block whitespace-pre-wrap break-words font-mono text-sm leading-7 [tab-size:2] text-muted-foreground";
+          wrapLongLines
+            ? "block whitespace-pre-wrap break-words font-mono text-sm leading-7 [tab-size:2] text-muted-foreground"
+            : "block whitespace-pre font-mono text-sm leading-7 [tab-size:2] text-muted-foreground";
         el.innerHTML = renderLineHtml(line, "plain", linkifyUrls);
         return;
       }
-      el.className = `language-${grammar} block whitespace-pre-wrap break-words font-mono text-sm leading-7 [tab-size:2]`;
+      el.className = wrapLongLines
+        ? `language-${grammar} block whitespace-pre-wrap break-words font-mono text-sm leading-7 [tab-size:2]`
+        : `language-${grammar} block whitespace-pre font-mono text-sm leading-7 [tab-size:2]`;
       el.innerHTML = renderLineHtml(line, grammar, linkifyUrls);
     });
-  }, [content, language, display, grammar, linkifyUrls]);
+  }, [content, language, display, grammar, linkifyUrls, wrapLongLines]);
 
   return (
-    <div className="rounded-[1.25rem] border border-border bg-muted/50 p-4 dark:bg-black/30">
+    <div
+      className={
+        wrapLongLines
+          ? "rounded-[1.25rem] border border-border bg-muted/50 p-4 dark:bg-black/30"
+          : "workspace-scrollbar-hide overflow-x-auto rounded-[1.25rem] border border-border bg-muted/50 p-4 dark:bg-black/30"
+      }
+    >
       {truncated ? (
         <p className="mb-3 text-xs text-amber-800 dark:text-amber-200/90">
           Showing first {MAX_LINES} lines (paste is very long). Use raw view for full text.

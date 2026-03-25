@@ -3,6 +3,7 @@ import { randomBytes } from "crypto";
 
 import { hashIp } from "@/lib/crypto";
 import { db, schema } from "@/lib/db";
+import { isPrivacyRedirectEligibleHref, parseOutboundTarget } from "@/lib/outbound-links";
 
 export const PRIVACY_EXPIRY_PRESETS = {
   "1-day": { label: "1 day", hours: 24 },
@@ -531,5 +532,76 @@ export async function addPrivacyChatMessage(input: {
     payloadCiphertext: message!.payloadCiphertext,
     payloadIv: message!.payloadIv,
     createdAt: message!.createdAt
+  };
+}
+
+export type PrivacyShortLinkRecord = {
+  slug: string;
+  destinationUrl: string;
+  visitCount: number;
+  createdAt: Date;
+  expiresAt: Date | null;
+};
+
+export async function createPrivacyShortLink(input: {
+  destinationUrl: string;
+  expiresPreset: PrivacyExpiryPreset;
+}) {
+  const rawTarget = input.destinationUrl.trim();
+  if (!isPrivacyRedirectEligibleHref(rawTarget)) {
+    throw new PrivacySuiteError("Enter a valid external http:// or https:// URL.", 400);
+  }
+
+  const target = parseOutboundTarget(rawTarget);
+  if (!target) {
+    throw new PrivacySuiteError("Enter a valid external http:// or https:// URL.", 400);
+  }
+
+  const slug = await createUniqueSlug(
+    (candidate) =>
+      db.query.privacyShortLinks.findFirst({
+        columns: { slug: true },
+        where: eq(schema.privacyShortLinks.slug, candidate)
+      }),
+    8
+  );
+
+  const [row] = await db
+    .insert(schema.privacyShortLinks)
+    .values({
+      slug,
+      destinationUrl: target.toString(),
+      expiresAt: expiresAtFromPreset(input.expiresPreset)
+    })
+    .returning();
+
+  return row!;
+}
+
+export async function resolvePrivacyShortLink(slug: string, recordVisit = false): Promise<PrivacyShortLinkRecord | null> {
+  const row = await db.query.privacyShortLinks.findFirst({
+    where: and(eq(schema.privacyShortLinks.slug, slug), activeExpiryFilter(schema.privacyShortLinks))
+  });
+
+  if (!row) {
+    return null;
+  }
+
+  if (recordVisit) {
+    await db
+      .update(schema.privacyShortLinks)
+      .set({
+        visitCount: sql`${schema.privacyShortLinks.visitCount} + 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(schema.privacyShortLinks.id, row.id));
+  }
+
+  return {
+    slug: row.slug,
+    destinationUrl: row.destinationUrl,
+    visitCount: row.visitCount + (recordVisit ? 1 : 0),
+    createdAt: row.createdAt,
+    expiresAt: row.expiresAt
   };
 }

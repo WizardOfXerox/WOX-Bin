@@ -3,6 +3,7 @@
 export const PUBLIC_PASTE_LS = {
   lineNumbers: "wox.bin.publicPaste.lineNumbers",
   lineGuides: "wox.bin.publicPaste.lineGuides",
+  wordWrap: "wox.bin.publicPaste.wordWrap",
   mdView: "wox.bin.publicPaste.mdView",
   htmlView: "wox.bin.publicPaste.htmlView"
 } as const;
@@ -48,6 +49,24 @@ export function readLineGuidesPref(): boolean {
   return true;
 }
 
+export function readWordWrapPref(): boolean {
+  if (typeof window === "undefined") {
+    return true;
+  }
+  try {
+    const v = window.localStorage.getItem(PUBLIC_PASTE_LS.wordWrap);
+    if (v === "0") {
+      return false;
+    }
+    if (v === "1") {
+      return true;
+    }
+  } catch {
+    /* ignore */
+  }
+  return true;
+}
+
 export function readMarkdownViewPref(): PublicPasteMdView {
   if (typeof window === "undefined") {
     return "source";
@@ -74,6 +93,14 @@ export function writeLineNumbersPref(value: boolean) {
 export function writeLineGuidesPref(value: boolean) {
   try {
     window.localStorage.setItem(PUBLIC_PASTE_LS.lineGuides, value ? "1" : "0");
+  } catch {
+    /* ignore */
+  }
+}
+
+export function writeWordWrapPref(value: boolean) {
+  try {
+    window.localStorage.setItem(PUBLIC_PASTE_LS.wordWrap, value ? "1" : "0");
   } catch {
     /* ignore */
   }

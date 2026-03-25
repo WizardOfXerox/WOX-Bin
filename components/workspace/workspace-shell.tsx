@@ -1755,6 +1755,21 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
         void handleSavePaste();
       }
 
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === "d") {
+        const paste = selectedPasteRef.current;
+        if (paste && snapshot.pastes.some((candidate) => candidate.id === paste.id)) {
+          event.preventDefault();
+          duplicatePasteById(paste.id);
+          return;
+        }
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "e") {
+        event.preventDefault();
+        void handleExportWorkspace();
+        return;
+      }
+
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f") {
         event.preventDefault();
         setFindOpen(true);
@@ -1780,6 +1795,49 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
         setLeftSidebarCollapsed(false);
         setQuickOpenOpen(true);
         return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "p") {
+        const paste = selectedPasteRef.current;
+        if (paste && snapshot.pastes.some((candidate) => candidate.id === paste.id)) {
+          event.preventDefault();
+          toggleWorkspacePasteFlag(paste.id, "pinned");
+          return;
+        }
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "f") {
+        const paste = selectedPasteRef.current;
+        if (paste && snapshot.pastes.some((candidate) => candidate.id === paste.id)) {
+          event.preventDefault();
+          toggleWorkspacePasteFlag(paste.id, "favorite");
+          return;
+        }
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "a") {
+        const paste = selectedPasteRef.current;
+        if (paste && snapshot.pastes.some((candidate) => candidate.id === paste.id)) {
+          event.preventDefault();
+          toggleWorkspacePasteFlag(paste.id, "archived");
+          return;
+        }
+      }
+
+      if (event.altKey && !event.ctrlKey && !event.metaKey) {
+        const tabMap: Record<string, RibbonTab> = {
+          "1": "home",
+          "2": "insert",
+          "3": "layout",
+          "4": "view"
+        };
+        const nextTab = tabMap[event.key];
+        if (nextTab) {
+          event.preventDefault();
+          setRibbonTab(nextTab);
+          setStatus(`Ribbon tab: ${nextTab}.`);
+          return;
+        }
       }
 
       if (event.key === "?" && !event.ctrlKey && !event.metaKey && !event.altKey) {
@@ -2133,6 +2191,47 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
         )
       })
     );
+  }
+
+  function updatePasteById(pasteId: string, recipe: (paste: WorkspacePaste) => WorkspacePaste) {
+    if (!snapshot.pastes.some((paste) => paste.id === pasteId)) {
+      return;
+    }
+
+    setSnapshot((current) =>
+      sanitizeSnapshot({
+        folders: current.folders,
+        pastes: current.pastes.map((paste) =>
+          paste.id === pasteId
+            ? recipe({
+                ...paste
+              })
+            : paste
+        )
+      })
+    );
+  }
+
+  function toggleWorkspacePasteFlag(pasteId: string, flag: "pinned" | "favorite" | "archived") {
+    const target = snapshot.pastes.find((paste) => paste.id === pasteId);
+    if (!target) {
+      return;
+    }
+    const nextValue = !Boolean(target[flag]);
+    updatePasteById(pasteId, (current) => ({
+      ...current,
+      [flag]: nextValue,
+      updatedAt: new Date().toISOString()
+    }));
+    if (flag === "pinned") {
+      setStatus(nextValue ? "Paste pinned." : "Paste unpinned.");
+      return;
+    }
+    if (flag === "favorite") {
+      setStatus(nextValue ? "Added to favorites." : "Removed from favorites.");
+      return;
+    }
+    setStatus(nextValue ? "Paste archived." : "Paste restored from archive.");
   }
 
   function escapeRegExp(text: string) {
@@ -4002,6 +4101,22 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                       <Copy className="mr-2 h-4 w-4" />
                       Copy all text
                     </ContextMenuItem>
+                    {snapshot.pastes.some((workspacePaste) => workspacePaste.id === paste.id) ? (
+                      <>
+                        <ContextMenuItem onSelect={() => toggleWorkspacePasteFlag(paste.id, "pinned")}>
+                          {paste.pinned ? "Unpin" : "Pin"}
+                        </ContextMenuItem>
+                        <ContextMenuItem onSelect={() => toggleWorkspacePasteFlag(paste.id, "favorite")}>
+                          <Star className="mr-2 h-4 w-4" />
+                          {paste.favorite ? "Remove favorite" : "Favorite"}
+                        </ContextMenuItem>
+                        <ContextMenuItem onSelect={() => toggleWorkspacePasteFlag(paste.id, "archived")}>
+                          <EyeOff className="mr-2 h-4 w-4" />
+                          {paste.archived ? "Restore from archive" : "Archive"}
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                      </>
+                    ) : null}
                     {paste.slug && !isAccountOnlyDraft(paste, mode) ? (
                       <>
                         <ContextMenuItem
@@ -7033,6 +7148,22 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 <FilePlus2 className="h-4 w-4" />
                 Open
               </Button>
+              {snapshot.pastes.some((paste) => paste.id === mobilePasteActionTarget.id) ? (
+                <Button
+                  className="justify-start"
+                  onClick={() => {
+                    setSelectedId(mobilePasteActionTarget.id);
+                    setMobilePasteActions({ open: false });
+                    setMobileLibraryOpen(false);
+                    window.setTimeout(() => setMobileDetailsOpen(true), 0);
+                  }}
+                  type="button"
+                  variant="outline"
+                >
+                  <PanelRight className="h-4 w-4" />
+                  Open details
+                </Button>
+              ) : null}
               <Button
                 className="justify-start"
                 onClick={() => {
@@ -7058,6 +7189,46 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 <Copy className="h-4 w-4" />
                 Copy all text
               </Button>
+              {snapshot.pastes.some((paste) => paste.id === mobilePasteActionTarget.id) ? (
+                <>
+                  <Button
+                    className="justify-start"
+                    onClick={() => {
+                      toggleWorkspacePasteFlag(mobilePasteActionTarget.id, "pinned");
+                      setMobilePasteActions({ open: false });
+                    }}
+                    type="button"
+                    variant="outline"
+                  >
+                    <Save className="h-4 w-4" />
+                    {mobilePasteActionTarget.pinned ? "Unpin" : "Pin"}
+                  </Button>
+                  <Button
+                    className="justify-start"
+                    onClick={() => {
+                      toggleWorkspacePasteFlag(mobilePasteActionTarget.id, "favorite");
+                      setMobilePasteActions({ open: false });
+                    }}
+                    type="button"
+                    variant="outline"
+                  >
+                    <Star className="h-4 w-4" />
+                    {mobilePasteActionTarget.favorite ? "Remove favorite" : "Favorite"}
+                  </Button>
+                  <Button
+                    className="justify-start"
+                    onClick={() => {
+                      toggleWorkspacePasteFlag(mobilePasteActionTarget.id, "archived");
+                      setMobilePasteActions({ open: false });
+                    }}
+                    type="button"
+                    variant="outline"
+                  >
+                    <EyeOff className="h-4 w-4" />
+                    {mobilePasteActionTarget.archived ? "Restore from archive" : "Archive"}
+                  </Button>
+                </>
+              ) : null}
               {mobilePasteActionTarget.slug &&
               !isAccountOnlyDraft(mobilePasteActionTarget, mode) &&
               mobilePasteActionTarget.visibility !== "private" ? (
@@ -7347,6 +7518,14 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               paste
             </li>
             <li>
+              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + D</kbd> — Duplicate
+              current paste
+            </li>
+            <li>
+              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + Shift + E</kbd>{" "}
+              — Export workspace backup
+            </li>
+            <li>
               <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + F</kbd> — Find
               in editor
             </li>
@@ -7361,6 +7540,22 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
             <li>
               <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + P</kbd> — Quick
               open paste (library picker)
+            </li>
+            <li>
+              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + Shift + P</kbd>{" "}
+              — Toggle pin on current paste
+            </li>
+            <li>
+              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + Shift + F</kbd>{" "}
+              — Toggle favorite on current paste
+            </li>
+            <li>
+              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + Shift + A</kbd>{" "}
+              — Toggle archive on current paste
+            </li>
+            <li>
+              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">Alt + 1..4</kbd> — Switch
+              ribbon tabs
             </li>
             <li>
               <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">?</kbd> — Shortcuts (when

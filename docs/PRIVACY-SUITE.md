@@ -7,6 +7,7 @@ Public routes:
 
 - `/privacy-tools` — hub for all privacy helpers
 - `/noref` — generate privacy-preserving redirect links backed by `/out`
+- `/shorten` and `/go/[slug]` — short privacy redirects stored on WOX-Bin
 - `/scrub` — strip image metadata in the browser
 - `/proof` and `/proof/[slug]` — create and verify SHA-256 proof receipts
 - `/snapshot` and `/snapshot/[slug]` — client-side encrypted text snapshots
@@ -23,6 +24,13 @@ surface because the broader `/tools` platform can still be disabled in some depl
 - creates a share link that routes through `/out`
 - helps hide the referring page when opening an external URL
 - only accepts normal `http` / `https` destinations
+
+### Shortener
+
+- creates a short redirect slug on WOX-Bin
+- sends visitors through `/go/[slug]`
+- pairs well with the NoRef flow when you want a shorter share URL
+- stores only the destination and expiry metadata, not analytics-heavy tracking data
 
 ### Scrub
 
@@ -65,6 +73,7 @@ Current model:
 - `proof` stores only the digest/receipt, not the original plaintext
 - `scrub` is browser-only
 - `noref` uses an internal redirect
+- `shorten` stores a simple redirect record and can expire it
 - `poll` is public by design, so do not treat it as secret content
 
 ## Operational notes

@@ -40,10 +40,12 @@ import {
   readLineGuidesPref,
   readLineNumbersPref,
   readMarkdownViewPref,
+  readWordWrapPref,
   writeHtmlViewPref,
   writeLineGuidesPref,
   writeLineNumbersPref,
   writeMarkdownViewPref,
+  writeWordWrapPref,
   type PublicPasteHtmlView,
   type PublicPasteMdView
 } from "@/lib/public-paste-view-prefs";
@@ -143,11 +145,13 @@ function SandboxedHtmlPreviewFrame({ html, className }: { html: string; classNam
 function MarkupAttachmentViewer({
   file,
   showLineNumbers,
-  showLineSeparators
+  showLineSeparators,
+  wrapLongLines
 }: {
   file: PasteFileDraft;
   showLineNumbers: boolean;
   showLineSeparators: boolean;
+  wrapLongLines: boolean;
 }) {
   const [view, setView] = useState<PublicPasteHtmlView>("source");
   return (
@@ -187,6 +191,7 @@ function MarkupAttachmentViewer({
           linkifyUrls
           showLineNumbers={showLineNumbers}
           showLineSeparators={showLineSeparators}
+          wrapLongLines={wrapLongLines}
         />
       )}
     </div>
@@ -233,6 +238,7 @@ export function PublicPasteShell({
 
   const [showLineNumbers, setShowLineNumbers] = useState(true);
   const [showLineSeparators, setShowLineSeparators] = useState(true);
+  const [wrapLongLines, setWrapLongLines] = useState(true);
   const [mdView, setMdView] = useState<PublicPasteMdView>("source");
   const [htmlView, setHtmlView] = useState<PublicPasteHtmlView>("source");
   const [viewerPrefsReady, setViewerPrefsReady] = useState(false);
@@ -244,6 +250,7 @@ export function PublicPasteShell({
     void Promise.resolve().then(() => {
       setShowLineNumbers(readLineNumbersPref());
       setShowLineSeparators(readLineGuidesPref());
+      setWrapLongLines(readWordWrapPref());
       setMdView(readMarkdownViewPref());
       setHtmlView(readHtmlViewPref());
       setViewerPrefsReady(true);
@@ -263,6 +270,13 @@ export function PublicPasteShell({
     }
     writeLineGuidesPref(showLineSeparators);
   }, [showLineSeparators, viewerPrefsReady]);
+
+  useEffect(() => {
+    if (!viewerPrefsReady) {
+      return;
+    }
+    writeWordWrapPref(wrapLongLines);
+  }, [wrapLongLines, viewerPrefsReady]);
 
   useEffect(() => {
     if (locked) {
@@ -767,6 +781,16 @@ export function PublicPasteShell({
                       />
                       Line guides
                     </label>
+                    <label className="flex cursor-pointer items-center gap-2 select-none">
+                      <input
+                        type="checkbox"
+                        checked={wrapLongLines}
+                        onChange={(e) => setWrapLongLines(e.target.checked)}
+                        className="h-3.5 w-3.5 rounded border-input accent-primary"
+                        aria-label="Wrap long lines"
+                      />
+                      Word wrap
+                    </label>
                   </div>
                 </div>
 
@@ -786,6 +810,7 @@ export function PublicPasteShell({
                     linkifyUrls
                     showLineNumbers={showLineNumbers}
                     showLineSeparators={showLineSeparators}
+                    wrapLongLines={wrapLongLines}
                   />
                 )}
               </div>
@@ -849,6 +874,7 @@ export function PublicPasteShell({
                             file={file}
                             showLineNumbers={showLineNumbers}
                             showLineSeparators={showLineSeparators}
+                            wrapLongLines={wrapLongLines}
                           />
                         ) : (
                           <PrismLineMap
@@ -857,6 +883,7 @@ export function PublicPasteShell({
                             linkifyUrls
                             showLineNumbers={showLineNumbers}
                             showLineSeparators={showLineSeparators}
+                            wrapLongLines={wrapLongLines}
                           />
                         )}
                       </div>

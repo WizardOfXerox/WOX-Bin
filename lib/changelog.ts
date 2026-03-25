@@ -8,6 +8,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    slug: "2026-03-25-darkbin-shortener-and-workspace-shortcuts",
+    date: "2026-03-25",
+    title: "Dark-Bin casefiles, privacy short links, and workspace shortcut polish",
+    summary:
+      "WOX-Bin now includes an extension-only Dark-Bin casefile surface, privacy short links, reply-ready encrypted chat polish, public-paste word wrap controls, and a broader shortcut/action sweep in the workspace.",
+    bullets: [
+      "Added `/shorten` plus `/go/[slug]` for short privacy redirect links alongside the existing NoRef flow.",
+      "Added reply-aware encrypted chat room UI polish and fixed the room hydration path so invite links load cleanly again.",
+      "Added word-wrap controls on public paste pages so long source lines can be toggled between wrapped and horizontal-scroll views.",
+      "Added a new extension-only Dark-Bin casefile surface that reuses BookmarkFS profiles, offline cache, and local-vault references without turning it into a public route.",
+      "Expanded workspace productivity controls with more keyboard shortcuts, richer paste context actions, and stronger mobile action dialogs.",
+      "Added focused regression tests for Dark-Bin imports and public-paste view preferences."
+    ]
+  },
+  {
     slug: "2026-03-25-privacy-suite-and-noref",
     date: "2026-03-25",
     title: "Privacy suite, NoRef links, and encrypted helper routes",

@@ -44,7 +44,8 @@ const defaultSiteUrl =
 module.exports = {
   entry: {
     bundle: "./src/index.js",
-    afterdark: "./src/afterdark.js"
+    afterdark: "./src/afterdark.js",
+    darkbin: "./src/darkbin.js"
   },
   mode: "production",
   devtool: false,
@@ -70,6 +71,7 @@ module.exports = {
       patterns: [
         { from: "src/ui/index.html", to: "index.html" },
         { from: "src/ui/afterdark.html", to: "afterdark.html" },
+        { from: "src/ui/darkbin.html", to: "darkbin.html" },
         { from: "src/ui/style.css", to: "style.css" },
         { from: "src/ui/afterdark-inject.css", to: "afterdark-inject.css" },
         { from: "node_modules/node-unrar-js/dist/js/unrar.wasm", to: "unrar.wasm" }

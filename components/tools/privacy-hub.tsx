@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Link2, MessageCircleMore, ScanSearch, ShieldCheck, ShieldEllipsis, Vote } from "lucide-react";
+import { ArrowRight, Link as LinkIcon, Link2, MessageCircleMore, ScanSearch, ShieldCheck, ShieldEllipsis, Vote } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -35,6 +35,12 @@ const TOOLS = [
     title: "Chat",
     description: "Spin up an encrypted temporary room where the server only sees ciphertext.",
     icon: MessageCircleMore
+  },
+  {
+    href: "/shorten",
+    title: "Short link",
+    description: "Store a compact redirect slug that opens the destination through a no-referrer handoff.",
+    icon: LinkIcon
   },
   {
     href: "/noref",

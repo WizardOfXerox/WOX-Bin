@@ -35,7 +35,7 @@
         "run_at": "document_start"
     }],
     "web_accessible_resources": [{
-        "resources": ["dist/unrar.wasm", "dist/afterdark.html", "dist/afterdark.js", "dist/style.css"],
+        "resources": ["dist/unrar.wasm", "dist/afterdark.html", "dist/afterdark.js", "dist/darkbin.html", "dist/darkbin.js", "dist/style.css"],
         "matches": ["https://*/*", "http://localhost/*", "http://127.0.0.1/*"]
     }],
     "content_security_policy": {

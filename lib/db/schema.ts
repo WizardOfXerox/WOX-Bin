@@ -573,6 +573,25 @@ export const privacyChatMessages = pgTable(
   })
 );
 
+export const privacyShortLinks = pgTable(
+  "privacy_short_links",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    slug: text("slug").notNull(),
+    destinationUrl: text("destination_url").notNull(),
+    visitCount: integer("visit_count").notNull().default(0),
+    expiresAt: timestamp("expires_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow()
+  },
+  (table) => ({
+    slugUnique: uniqueIndex("privacy_short_links_slug_unique").on(table.slug),
+    activeExpiresIdx: index("privacy_short_links_active_expires_idx").on(table.expiresAt, table.updatedAt)
+  })
+);
+
 export const comments = pgTable("comments", {
   id: serial("id").primaryKey(),
   pasteId: text("paste_id")

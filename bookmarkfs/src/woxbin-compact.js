@@ -241,6 +241,7 @@ export async function mountWoxBinCompact(rootEl) {
       </div>
       <div class="wb-shell-head__actions">
         <span class="wb-shell-head__badge">${viewBadge}</span>
+        <button type="button" class="wb-btn wb-btn-secondary wb-btn-tiny" id="wb-shell-open-darkbin">Dark-Bin ↗</button>
         <button type="button" class="wb-btn wb-btn-secondary wb-btn-tiny" id="wb-shell-open-afterdark">Afterdark ↗</button>
         <button type="button" class="wb-btn wb-btn-secondary wb-btn-tiny" id="wb-shell-open-sync">Hosted sync ↗</button>
       </div>
@@ -461,6 +462,7 @@ export async function mountWoxBinCompact(rootEl) {
   const attachSummary = $("wb-attach-summary");
   const btnOpenSync = $("wb-shell-open-sync");
   const btnOpenAfterdark = $("wb-shell-open-afterdark");
+  const btnOpenDarkbin = $("wb-shell-open-darkbin");
   const ephemeralApiKeyTokens = new Map();
 
   btnOpenAfterdark?.addEventListener("click", async () => {
@@ -470,6 +472,10 @@ export async function mountWoxBinCompact(rootEl) {
       return;
     }
     setStatus("Opened detached Afterdark because the active tab is not a supported WOX-Bin page.", "ok");
+  });
+
+  btnOpenDarkbin?.addEventListener("click", () => {
+    window.open(chrome.runtime.getURL("dist/darkbin.html"), "_blank");
   });
 
   btnOpenSync?.addEventListener("click", async () => {
