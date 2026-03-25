@@ -30,6 +30,7 @@
             "http://localhost/*",
             "http://127.0.0.1/*"
         ],
+        "css": ["dist/afterdark-inject.css"],
         "js": ["content-script.js"],
         "run_at": "document_start"
     }],

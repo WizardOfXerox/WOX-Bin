@@ -1,0 +1,118 @@
+#woxbin-afterdark-launcher {
+  all: initial;
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 2147483646;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(94, 234, 212, 0.28);
+  background: linear-gradient(180deg, rgba(9, 17, 31, 0.96), rgba(6, 11, 23, 0.94));
+  color: #d1fae5;
+  font: 600 12px/1.2 "Space Grotesk", system-ui, sans-serif;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  letter-spacing: 0.04em;
+}
+
+#woxbin-afterdark-overlay,
+#woxbin-afterdark-overlay * {
+  box-sizing: border-box;
+}
+
+#woxbin-afterdark-overlay {
+  all: initial;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(10px);
+  font-family: "Space Grotesk", system-ui, sans-serif;
+}
+
+#woxbin-afterdark-overlay .woxbin-afterdark-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  background: linear-gradient(180deg, rgba(8, 16, 27, 0.96), rgba(5, 11, 19, 0.94));
+  border-bottom: 1px solid rgba(120, 167, 223, 0.18);
+  color: #ecfeff;
+  font: 600 13px/1.2 "Space Grotesk", system-ui, sans-serif;
+}
+
+#woxbin-afterdark-overlay .woxbin-afterdark-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+#woxbin-afterdark-overlay .woxbin-afterdark-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(171, 226, 255, 0.62);
+}
+
+#woxbin-afterdark-overlay .woxbin-afterdark-title {
+  font-size: 13px;
+  color: #f0fdfa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#woxbin-afterdark-overlay .woxbin-afterdark-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+#woxbin-afterdark-overlay .woxbin-afterdark-button {
+  appearance: none;
+  border: 1px solid rgba(118, 138, 163, 0.26);
+  background: rgba(8, 16, 27, 0.94);
+  color: #dbeafe;
+  padding: 9px 13px;
+  border-radius: 999px;
+  font: 600 12px/1 "Space Grotesk", system-ui, sans-serif;
+  cursor: pointer;
+}
+
+#woxbin-afterdark-overlay .woxbin-afterdark-button--primary {
+  background: linear-gradient(180deg, #33d4ff, #16a8e8);
+  color: #03111b;
+  border-color: rgba(22, 168, 232, 0.56);
+}
+
+#woxbin-afterdark-overlay .woxbin-afterdark-frame {
+  flex: 1 1 auto;
+  width: 100%;
+  border: none;
+  background: transparent;
+}
+
+html.woxbin-afterdark-open,
+body.woxbin-afterdark-open {
+  overflow: hidden !important;
+}
+
+@media (max-width: 720px) {
+  #woxbin-afterdark-overlay .woxbin-afterdark-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  #woxbin-afterdark-overlay .woxbin-afterdark-actions {
+    justify-content: flex-start;
+  }
+}

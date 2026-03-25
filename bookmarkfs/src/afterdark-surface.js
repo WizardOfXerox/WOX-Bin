@@ -31,6 +31,9 @@ const LANGUAGES = [
   ["json", "JSON"]
 ];
 
+const searchParams = new URLSearchParams(window.location.search || "");
+const EMBEDDED = searchParams.get("embed") === "1";
+
 function joinUrl(base, path) {
   const normalized = normalizeBaseUrl(base);
   if (!normalized) {
@@ -81,6 +84,19 @@ function dataBase64ToBlob(base64, mimeType = "application/octet-stream") {
     bytes[i] = raw.charCodeAt(i);
   }
   return new Blob([bytes], { type: mimeType });
+}
+
+function postParent(message) {
+  if (!EMBEDDED || !window.parent || window.parent === window) {
+    return;
+  }
+  window.parent.postMessage(
+    {
+      source: "bookmarkfs-afterdark",
+      ...message
+    },
+    "*"
+  );
 }
 
 async function vaultRpc(action, payload = {}) {
@@ -188,20 +204,27 @@ export async function mountAfterdarkSurface(rootEl) {
   }
 
   rootEl.innerHTML = `
-    <div class="afterdark-shell">
+    <div class="afterdark-shell${EMBEDDED ? " afterdark-shell--embedded" : ""}">
       <header class="afterdark-hero">
         <div class="afterdark-hero__copy">
-          <p class="afterdark-hero__eyebrow">Extension-only mode</p>
+          <p class="afterdark-hero__eyebrow">${EMBEDDED ? "Injected takeover mode" : "Extension-only mode"}</p>
           <h1>WOX-Bin Afterdark</h1>
           <p class="afterdark-hero__text">
-            A separate extension-hosted control surface for your selected WOX-Bin profile, local BookmarkFS vault, cached
-            pastes, and privacy routes. This page lives inside the extension, not the Vercel app.
+            ${
+              EMBEDDED
+                ? "The extension is replacing the current WOX-Bin page shell with an extension-owned control surface while keeping your selected profile, local BookmarkFS vault, and cached hosted data connected."
+                : "A separate extension-hosted control surface for your selected WOX-Bin profile, local BookmarkFS vault, cached pastes, and privacy routes. This page lives inside the extension, not the Vercel app."
+            }
           </p>
         </div>
         <div class="afterdark-hero__actions">
           <button type="button" class="afterdark-btn afterdark-btn--primary" id="afterdark-open-app">Open workspace</button>
           <button type="button" class="afterdark-btn afterdark-btn--secondary" id="afterdark-open-sync">Open sync</button>
-          <button type="button" class="afterdark-btn afterdark-btn--ghost" id="afterdark-open-companion">Back to companion</button>
+          ${
+            EMBEDDED
+              ? '<button type="button" class="afterdark-btn afterdark-btn--secondary" id="afterdark-open-detached">Open detached</button><button type="button" class="afterdark-btn afterdark-btn--ghost" id="afterdark-open-companion">Return to page</button>'
+              : '<button type="button" class="afterdark-btn afterdark-btn--ghost" id="afterdark-open-companion">Back to companion</button>'
+          }
         </div>
       </header>
 
@@ -343,11 +366,19 @@ export async function mountAfterdarkSurface(rootEl) {
   }
 
   function openRoute(path) {
-    if (!currentCreds.baseUrl) {
+    const href = currentCreds.baseUrl ? joinUrl(currentCreds.baseUrl, path) : "";
+    if (!href) {
       setStatus("Select a profile first.", "err");
       return;
     }
-    window.open(joinUrl(currentCreds.baseUrl, path), "_blank", "noopener,noreferrer");
+    if (EMBEDDED) {
+      postParent({
+        type: "woxbin-afterdark-navigate",
+        href
+      });
+      return;
+    }
+    window.open(href, "_blank", "noopener,noreferrer");
   }
 
   function renderRoutes() {
@@ -627,7 +658,22 @@ export async function mountAfterdarkSurface(rootEl) {
   rootEl.querySelector("#afterdark-open-app")?.addEventListener("click", () => openRoute("/app"));
   rootEl.querySelector("#afterdark-open-sync")?.addEventListener("click", () => openRoute("/bookmarkfs/sync"));
   rootEl.querySelector("#afterdark-open-companion")?.addEventListener("click", () => {
+    if (EMBEDDED) {
+      postParent({
+        type: "woxbin-afterdark-close"
+      });
+      return;
+    }
     window.open(chrome.runtime.getURL("dist/index.html"), "_blank");
+  });
+  rootEl.querySelector("#afterdark-open-detached")?.addEventListener("click", () => {
+    if (EMBEDDED) {
+      postParent({
+        type: "woxbin-afterdark-detach"
+      });
+    } else {
+      window.open(chrome.runtime.getURL("dist/afterdark.html"), "_blank");
+    }
   });
   rootEl.querySelector("#afterdark-refresh-hosted")?.addEventListener("click", () => void refreshAll());
   rootEl.querySelector("#afterdark-refresh-vault")?.addEventListener("click", () => void refreshAll());

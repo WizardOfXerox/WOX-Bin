@@ -175,6 +175,42 @@ function detectExtensionViewMode() {
   });
 }
 
+async function openAfterdarkFromExtensionUi() {
+  const detachedUrl = chrome.runtime.getURL("dist/afterdark.html");
+  try {
+    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    const activeTab = Array.isArray(tabs) ? tabs[0] : null;
+    if (!activeTab?.id || !activeTab.url) {
+      window.open(detachedUrl, "_blank");
+      return { mode: "detached" };
+    }
+
+    const tabUrl = String(activeTab.url);
+    const supported =
+      /^https:\/\/wox-bin\.vercel\.app(\/|$)/i.test(tabUrl) ||
+      /^http:\/\/localhost(\/|:)/i.test(tabUrl) ||
+      /^http:\/\/127\.0\.0\.1(\/|:)/i.test(tabUrl);
+
+    if (!supported) {
+      window.open(detachedUrl, "_blank");
+      return { mode: "detached" };
+    }
+
+    const response = await chrome.tabs.sendMessage(activeTab.id, {
+      type: "woxbin-open-afterdark"
+    });
+
+    if (response?.ok) {
+      return { mode: "takeover" };
+    }
+  } catch {
+    // Fall back to the detached extension page below.
+  }
+
+  window.open(detachedUrl, "_blank");
+  return { mode: "detached" };
+}
+
 export async function mountWoxBinCompact(rootEl) {
   if (!rootEl) return;
 
@@ -213,7 +249,7 @@ export async function mountWoxBinCompact(rootEl) {
     <div class="wb-onboard" id="wb-onboard" hidden>
       <div class="wb-onboard__inner">
         <strong>WOX-Bin companion</strong>
-        <p class="wb-hint" style="margin:6px 0 0">Save multiple site profiles, manage API keys, cache cloud pastes locally, and use <span class="wb-font-mono">Ctrl+Enter</span> to publish.</p>
+        <p class="wb-hint wb-hint--compact">Save multiple site profiles, manage API keys, cache cloud pastes locally, and use <span class="wb-font-mono">Ctrl+Enter</span> to publish.</p>
         <button type="button" class="wb-btn wb-btn-ghost wb-btn-tiny" id="wb-onboard-dismiss">Dismiss</button>
       </div>
     </div>
@@ -241,7 +277,7 @@ export async function mountWoxBinCompact(rootEl) {
       </div>
       <div class="wb-field wb-presets-row">
         <span class="wb-muted">Presets</span>
-        <div class="wb-btns" style="margin:0;flex-wrap:wrap">
+        <div class="wb-btns wb-btns--flush">
           <button type="button" class="wb-btn wb-btn-secondary wb-btn-tiny" id="wb-preset-add" title="Save current URL as preset">Save URL preset</button>
           <button type="button" class="wb-btn wb-btn-ghost wb-btn-tiny" id="wb-preset-clear" title="Remove all presets">Clear presets</button>
         </div>
@@ -292,7 +328,7 @@ export async function mountWoxBinCompact(rootEl) {
         <input type="search" id="wb-search" class="wb-input wb-font-mono" placeholder="Title or slug…" autocomplete="off" spellcheck="false" />
       </div>
       <div class="wb-list-head">
-        <div class="wb-btns" style="margin:0">
+        <div class="wb-btns wb-btns--flush">
           <button type="button" class="wb-btn wb-btn-secondary wb-btn-tiny" id="wb-refresh">Refresh</button>
           <button type="button" class="wb-btn wb-btn-secondary wb-btn-tiny" id="wb-open-workspace">Workspace ↗</button>
           <button type="button" class="wb-btn wb-btn-ghost wb-btn-tiny" id="wb-open-app">Open site ↗</button>
@@ -327,7 +363,7 @@ export async function mountWoxBinCompact(rootEl) {
         <input type="text" id="wb-title" class="wb-input" maxlength="500" placeholder="Note title" />
       </div>
       <div class="wb-row2">
-        <div class="wb-field" style="margin:0">
+        <div class="wb-field wb-field--flush">
           <label for="wb-vis">Visibility</label>
           <select id="wb-vis" class="wb-select">
             <option value="private">Private</option>
@@ -335,13 +371,13 @@ export async function mountWoxBinCompact(rootEl) {
             <option value="public">Public</option>
           </select>
         </div>
-        <div class="wb-field" style="margin:0">
+        <div class="wb-field wb-field--flush">
           <label for="wb-lang">Syntax</label>
           <select id="wb-lang" class="wb-select">${langOpts}</select>
         </div>
       </div>
       <div class="wb-row2">
-        <div class="wb-field" style="margin:0">
+        <div class="wb-field wb-field--flush">
           <label for="wb-folder"><span>Folder</span></label>
           <div class="wb-inline-row">
             <select id="wb-folder" class="wb-select">
@@ -350,7 +386,7 @@ export async function mountWoxBinCompact(rootEl) {
             <button type="button" class="wb-btn wb-btn-secondary wb-btn-tiny" id="wb-folder-create">New folder</button>
           </div>
         </div>
-        <div class="wb-field" style="margin:0">
+        <div class="wb-field wb-field--flush">
           <label for="wb-tags">Tags</label>
           <input type="text" id="wb-tags" class="wb-input" maxlength="240" placeholder="comma, separated, tags" />
         </div>
@@ -427,8 +463,13 @@ export async function mountWoxBinCompact(rootEl) {
   const btnOpenAfterdark = $("wb-shell-open-afterdark");
   const ephemeralApiKeyTokens = new Map();
 
-  btnOpenAfterdark?.addEventListener("click", () => {
-    window.open(chrome.runtime.getURL("dist/afterdark.html"), "_blank");
+  btnOpenAfterdark?.addEventListener("click", async () => {
+    const result = await openAfterdarkFromExtensionUi();
+    if (result.mode === "takeover") {
+      setStatus("Afterdark takeover opened in the current WOX-Bin tab.", "ok");
+      return;
+    }
+    setStatus("Opened detached Afterdark because the active tab is not a supported WOX-Bin page.", "ok");
   });
 
   btnOpenSync?.addEventListener("click", async () => {
@@ -999,7 +1040,7 @@ export async function mountWoxBinCompact(rootEl) {
     cacheMeta.textContent = `${entries.length} cached`;
     cacheList.innerHTML = "";
     if (!entries.length) {
-      cacheList.innerHTML = `<p class="wb-hint" style="margin:0">Use <strong>Cache local</strong> on a cloud paste to keep an offline copy in the extension.</p>`;
+      cacheList.innerHTML = `<p class="wb-hint wb-hint--flush">Use <strong>Cache local</strong> on a cloud paste to keep an offline copy in the extension.</p>`;
       return;
     }
 
@@ -1080,7 +1121,7 @@ export async function mountWoxBinCompact(rootEl) {
       currentKeyId = data?.currentKeyId || null;
       const keys = Array.isArray(data?.keys) ? data.keys : [];
       if (!keys.length) {
-        keyList.innerHTML = `<p class="wb-hint" style="margin:0">No API keys found for this account.</p>`;
+        keyList.innerHTML = `<p class="wb-hint wb-hint--flush">No API keys found for this account.</p>`;
         return;
       }
 
@@ -1165,7 +1206,7 @@ export async function mountWoxBinCompact(rootEl) {
         keyList.appendChild(item);
       });
     } catch (error) {
-      keyList.innerHTML = `<p class="wb-hint" style="margin:0">${escapeHtml(
+      keyList.innerHTML = `<p class="wb-hint wb-hint--flush">${escapeHtml(
         error instanceof Error ? error.message : String(error)
       )}</p>`;
     }
@@ -1568,7 +1609,7 @@ export async function mountWoxBinCompact(rootEl) {
     const { baseUrl, apiKey } = await getCreds();
     if (!baseUrl || !apiKey) {
       setStatus("Complete Setup above, then save.", "err");
-      listWrap.innerHTML = `<p class="wb-hint" style="margin:0">No connection yet.</p>`;
+      listWrap.innerHTML = `<p class="wb-hint wb-hint--flush">No connection yet.</p>`;
       loadMoreBtn.disabled = true;
       return;
     }
@@ -1592,7 +1633,7 @@ export async function mountWoxBinCompact(rootEl) {
       }
 
       if (!append && !pastes.length) {
-        listWrap.innerHTML = `<p class="wb-hint" style="margin:0">No pastes yet. Create one in <strong>Composer</strong> below.</p>`;
+        listWrap.innerHTML = `<p class="wb-hint wb-hint--flush">No pastes yet. Create one in <strong>Composer</strong> below.</p>`;
         listMeta.textContent = `${listTotal} total`;
         listOffset = 0;
         setStatus("Connected.", "ok");

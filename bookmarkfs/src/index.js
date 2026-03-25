@@ -248,13 +248,16 @@ export function handleZip(bytes) {
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;");
         const snippet = safe.slice(0, 120) || "(empty)";
+        const lines = (snippet.match(/.{1,32}/g) || [snippet]).slice(0, 4);
+        const textNodes = lines.map((line, index) => {
+            const y = 46 + (index * 15);
+            return `<text x="12" y="${y}" fill="#d6deeb" font-size="10" font-family="monospace">${line}</text>`;
+        }).join("");
         return "data:image/svg+xml;base64," + btoa(`
 <svg xmlns="http://www.w3.org/2000/svg" width="240" height="120">
   <rect width="240" height="120" fill="#1f2430"/>
   <text x="12" y="24" fill="#9ecbff" font-size="11" font-family="monospace">TXT</text>
-  <foreignObject x="10" y="32" width="220" height="78">
-    <div xmlns="http://www.w3.org/1999/xhtml" style="color:#d6deeb;font-size:10px;line-height:1.2;font-family:monospace;white-space:pre-wrap;overflow:hidden;">${snippet}</div>
-  </foreignObject>
+  ${textNodes}
 </svg>`);
     }
 
@@ -298,7 +301,7 @@ export function handleZip(bytes) {
 
         const popup = document.createElement("div");
         popup.id = "settings-popup";
-        popup.style.display = "none";
+        popup.hidden = true;
 
         const box = document.createElement("div");
         box.className = "bfs-settings-card";
@@ -328,7 +331,9 @@ export function handleZip(bytes) {
         document.body.appendChild(popup);
 
         // Close logic
-        qs("#settings-close").onclick = () => popup.style.display = "none";
+        qs("#settings-close").onclick = () => {
+            popup.hidden = true;
+        };
 
         // Save logic
         qs("#settings-save").onclick = () => {
@@ -344,7 +349,7 @@ export function handleZip(bytes) {
             };
 
             setSettings(settings);
-            qs("#settings-popup").style.display = "none";
+            qs("#settings-popup").hidden = true;
 
             applySettings(); // apply right away
         };
@@ -413,8 +418,10 @@ export function handleZip(bytes) {
             const th = qs(`#table thead th:nth-child(${idx+1})`);
             const cells = document.querySelectorAll(`#table tbody tr td:nth-child(${idx+1})`);
             const show = cols.includes(col);
-            if (th) th.style.display = show ? "" : "none";
-            cells.forEach(td => td.style.display = show ? "" : "none");
+            if (th) th.hidden = !show;
+            cells.forEach(td => {
+                td.hidden = !show;
+            });
         });
     }
 
@@ -468,7 +475,7 @@ export function handleZip(bytes) {
                 // create popup if missing
                 if (!qs("#settings-popup")) createSettingsPopup();
 
-                qs("#settings-popup").style.display = "flex";
+                qs("#settings-popup").hidden = false;
                 loadSettingsIntoPopup();
             };
 
@@ -486,9 +493,6 @@ export function handleZip(bytes) {
 
             const analyticsBar = document.createElement("div");
             analyticsBar.id = "analytics-bar";
-            analyticsBar.style.whiteSpace = "nowrap";
-            analyticsBar.style.overflow = "hidden";
-            analyticsBar.style.textOverflow = "ellipsis";
 
             const upBtn = document.createElement("button");
             upBtn.id = "up-path-btn";
@@ -525,7 +529,7 @@ export function handleZip(bytes) {
             importInput.type = "file";
             importInput.id = "import-input";
             importInput.accept = "application/json";
-            importInput.style.display = "none";
+            importInput.hidden = true;
 
             const uploadLabel = document.createElement("label");
             uploadLabel.className = "button";
@@ -535,7 +539,7 @@ export function handleZip(bytes) {
             const uploadInput = document.createElement("input");
             uploadInput.type = "file";
             uploadInput.id = "file-input";
-            uploadInput.style.display = "none";
+            uploadInput.hidden = true;
             uploadInput.multiple = true;
 
             const prevBtn = document.createElement("button");
@@ -552,16 +556,11 @@ export function handleZip(bytes) {
             nextBtn.textContent = "Next";
 
             // Progress container
-            const prog = document.createElement("div");
+            const prog = document.createElement("progress");
             prog.id = "progress-container";
-            prog.style.height = "8px";
-            prog.style.overflow = "hidden";
-            prog.style.display = "none";
-            const progBar = document.createElement("div");
-            progBar.id = "progress-bar";
-            progBar.style.width = "0%";
-            progBar.style.height = "100%";
-            prog.appendChild(progBar);
+            prog.max = 100;
+            prog.value = 0;
+            prog.hidden = true;
 
             const rowSearch = document.createElement("div");
             rowSearch.className = "bfs-tool-row bfs-tool-row--search";
@@ -633,15 +632,13 @@ export function handleZip(bytes) {
 
     function setProgress(p) {
         const prog = qs("#progress-container");
-        const bar = qs("#progress-bar");
-        if (!prog || !bar) return;
-        // show only when 0 < p < 1, hide otherwise (1 triggers completion animation then hidden)
-        prog.style.display = (p > 0 && p < 1) ? "block" : "none";
+        if (!prog) return;
+        prog.hidden = !(p > 0 && p < 1);
         const pct = Math.max(0, Math.min(1, p || 0)) * 100;
-        bar.style.width = pct.toFixed(1) + "%";
+        prog.value = pct;
         if (p >= 1) setTimeout(() => {
-            bar.style.width = "0%";
-            prog.style.display = "none";
+            prog.value = 0;
+            prog.hidden = true;
         }, 400);
     }
 
@@ -1319,8 +1316,7 @@ export function handleZip(bytes) {
 
             const tdPreview = document.createElement("td");
             const img = document.createElement("img");
-            img.className = "bfs-thumb";
-            img.style.cursor = "pointer";
+            img.className = "bfs-thumb bfs-thumb--interactive";
             img.alt = name;
             const thumbFallback = () => {
                 const ext = (name.split(".").pop() || "FILE").toUpperCase().slice(0, 6);
@@ -1389,7 +1385,6 @@ export function handleZip(bytes) {
 
                     const popup = document.createElement("div");
                     popup.className = "bfs-preview-overlay";
-                    popup.style.display = "flex";
 
                     const inner = document.createElement("div");
                     inner.className = "bfs-preview-inner";
@@ -1835,7 +1830,6 @@ export function handleZip(bytes) {
         return new Promise((resolve) => {
             const overlay = document.createElement("div");
             overlay.className = "bfs-preview-overlay";
-            overlay.style.display = "flex";
 
             const close = (confirmed) => {
                 overlay.remove();

@@ -39,6 +39,10 @@ body.dark-mode {
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 html {
   min-width: 380px;
 }
@@ -276,15 +280,26 @@ body.ext-options-view .ext-tabs__track {
 }
 
 #progress-container {
+  appearance: none;
   width: 100% !important;
   max-width: 100% !important;
   height: 6px !important;
-  background: hsl(var(--x-surface2)) !important;
   border: none !important;
+  border-radius: 99px !important;
+  overflow: hidden !important;
+}
+
+#progress-container::-webkit-progress-bar {
+  background: hsl(var(--x-surface2)) !important;
   border-radius: 99px !important;
 }
 
-#progress-bar {
+#progress-container::-webkit-progress-value {
+  background: linear-gradient(90deg, hsl(var(--x-accent)), hsl(172 66% 48%)) !important;
+  border-radius: 99px !important;
+}
+
+#progress-container::-moz-progress-bar {
   background: linear-gradient(90deg, hsl(var(--x-accent)), hsl(172 66% 48%)) !important;
   border-radius: 99px !important;
 }
@@ -318,6 +333,11 @@ body.ext-options-view .ext-tabs__track {
   color: hsl(var(--x-muted)) !important;
   min-width: 5.5rem;
   text-align: center;
+}
+
+#import-input,
+#file-input {
+  display: none !important;
 }
 
 .button {
@@ -482,6 +502,10 @@ body.ext-app .rwd-table.bfs-file-table img {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
+body.ext-app .rwd-table.bfs-file-table .bfs-thumb--interactive {
+  cursor: pointer;
+}
+
 body.ext-app .rwd-table.bfs-file-table tbody tr.bfs-row--folder td:nth-child(2) .button {
   text-align: left;
 }
@@ -584,7 +608,7 @@ body:not(.ext-app) .rwd-table td {
   position: fixed;
   inset: 0;
   z-index: 10000;
-  display: none;
+  display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
@@ -1203,6 +1227,10 @@ body:not(.ext-app) .rwd-table td {
   margin-top: 6px;
 }
 
+#woxbin-root .wb-btns--flush {
+  margin-top: 0;
+}
+
 #woxbin-root .wb-btn {
   cursor: pointer;
   border-radius: var(--x-radius-sm);
@@ -1449,6 +1477,14 @@ body:not(.ext-app) .rwd-table td {
   margin-top: 12px;
 }
 
+#woxbin-root .wb-hint--flush {
+  margin-top: 0;
+}
+
+#woxbin-root .wb-hint--compact {
+  margin: 6px 0 0;
+}
+
 #woxbin-root .wb-hint strong {
   color: hsl(var(--x-muted));
 }
@@ -1463,6 +1499,10 @@ body:not(.ext-app) .rwd-table td {
   margin: 10px 0 0;
   font-size: 12px;
   color: hsl(var(--x-muted));
+}
+
+#woxbin-root .wb-field--flush {
+  margin-bottom: 0;
 }
 
 #woxbin-root .wb-onboard {
@@ -1604,6 +1644,13 @@ body:not(.ext-app) .rwd-table td {
   color: hsl(var(--x-fg));
 }
 
+body.ext-afterdark-embedded #afterdark-root {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 16px;
+}
+
 body.ext-afterdark-view {
   background:
     radial-gradient(120% 90% at 0% -10%, rgba(0, 163, 108, 0.18), transparent 40%),
@@ -1615,6 +1662,10 @@ body.ext-afterdark-view {
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+.afterdark-shell--embedded {
+  min-height: calc(100vh - 32px);
 }
 
 .afterdark-hero,
@@ -2053,6 +2104,10 @@ body.ext-afterdark-view {
 }
 
 @media (max-width: 640px) {
+  body.ext-afterdark-embedded #afterdark-root {
+    padding: 10px;
+  }
+
   .afterdark-stats,
   .afterdark-route-grid,
   .afterdark-compose__row {

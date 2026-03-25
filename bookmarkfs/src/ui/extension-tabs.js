@@ -45,7 +45,7 @@ export function setupExtensionTabs({ mountCloud, onShowLocal }) {
 
   const woxRoot = document.createElement("div");
   woxRoot.id = "woxbin-root";
-  woxRoot.style.display = "none";
+  woxRoot.hidden = true;
   parent.appendChild(woxRoot);
 
   let cloudMounted = false;
@@ -68,14 +68,14 @@ export function setupExtensionTabs({ mountCloud, onShowLocal }) {
 
   function showLocal() {
     ensureLocalInitialized();
-    fsPanel.style.display = "";
-    woxRoot.style.display = "none";
+    fsPanel.hidden = false;
+    woxRoot.hidden = true;
     styleActive(false);
   }
 
   function showCloud() {
-    fsPanel.style.display = "none";
-    woxRoot.style.display = "block";
+    fsPanel.hidden = true;
+    woxRoot.hidden = false;
     styleActive(true);
     if (!cloudMounted) {
       cloudMounted = true;

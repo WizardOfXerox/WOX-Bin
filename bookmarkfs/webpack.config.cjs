@@ -71,6 +71,7 @@ module.exports = {
         { from: "src/ui/index.html", to: "index.html" },
         { from: "src/ui/afterdark.html", to: "afterdark.html" },
         { from: "src/ui/style.css", to: "style.css" },
+        { from: "src/ui/afterdark-inject.css", to: "afterdark-inject.css" },
         { from: "node_modules/node-unrar-js/dist/js/unrar.wasm", to: "unrar.wasm" }
       ]
     })
