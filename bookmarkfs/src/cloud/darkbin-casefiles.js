@@ -214,16 +214,16 @@ export async function importDarkBinExport(text) {
   try {
     parsed = JSON.parse(String(text || ""));
   } catch {
-    throw new Error("Dark-Bin import must be valid JSON.");
+    throw new Error("Afterdark casefile import must be valid JSON.");
   }
 
   if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.casefiles)) {
-    throw new Error("Dark-Bin import is missing its casefiles array.");
+    throw new Error("Afterdark casefile import is missing its casefiles array.");
   }
 
   const imported = sortCasefiles(parsed.casefiles.map(normalizeCasefile).filter(Boolean));
   if (!imported.length) {
-    throw new Error("Dark-Bin import did not contain any valid casefiles.");
+    throw new Error("Afterdark casefile import did not contain any valid casefiles.");
   }
 
   const state = await loadDarkBinState();
@@ -299,8 +299,8 @@ export function buildCasefileComposePayload(casefile) {
     content: sections.join("\n").trim(),
     language: "markdown",
     visibility: "private",
-    tags: [...normalized.tags, "dark-bin"].slice(0, 50),
+    tags: [...normalized.tags, "afterdark-casefile"].slice(0, 50),
     sourceType: "extension",
-    sourceTitle: "Dark-Bin"
+    sourceTitle: "Afterdark"
   };
 }

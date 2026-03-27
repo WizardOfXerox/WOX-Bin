@@ -130,6 +130,12 @@ html.theme-light ::placeholder {
   color: hsl(var(--muted-foreground) / 0.88);
 }
 
+select option,
+select optgroup {
+  background-color: hsl(var(--card));
+  color: hsl(var(--foreground));
+}
+
 a {
   @apply text-inherit no-underline;
 }

@@ -94,7 +94,8 @@ test("buildCasefileComposePayload converts a casefile into markdown handoff text
   assert.ok(payload.content.includes("## Timeline"));
   assert.ok(payload.content.includes("Observed event"));
   assert.ok(payload.content.includes("Cached paste"));
-  assert.ok(payload.tags.includes("dark-bin"));
+  assert.ok(payload.tags.includes("afterdark-casefile"));
+  assert.equal(payload.sourceTitle, "Afterdark");
 });
 
 test("importDarkBinExport merges imported casefiles into extension storage", async () => {

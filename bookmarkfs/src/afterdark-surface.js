@@ -1,5 +1,15 @@
 import { loadOfflineCacheEntries } from "./cloud/offline-cache.js";
 import {
+  buildCasefileComposePayload,
+  createEmptyCasefile,
+  deleteDarkBinCasefile,
+  importDarkBinExport,
+  loadDarkBinState,
+  saveDarkBinCasefile,
+  serializeDarkBinExport,
+  setSelectedDarkBinCaseId
+} from "./cloud/darkbin-casefiles.js";
+import {
   WOXBIN_STORAGE,
   getSelectedProfile,
   loadProfiles,
@@ -75,6 +85,67 @@ function safeTextPreview(text, limit = 220) {
     return "(empty)";
   }
   return normalized.length > limit ? `${normalized.slice(0, limit)}…` : normalized;
+}
+
+function parseTagsInput(raw) {
+  return String(raw || "")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .slice(0, 16);
+}
+
+function countAllTimelineEntries(casefiles) {
+  return (Array.isArray(casefiles) ? casefiles : []).reduce(
+    (sum, casefile) => sum + (Array.isArray(casefile.timeline) ? casefile.timeline.length : 0),
+    0
+  );
+}
+
+function countAllEvidenceEntries(casefiles) {
+  return (Array.isArray(casefiles) ? casefiles : []).reduce(
+    (sum, casefile) => sum + (Array.isArray(casefile.evidence) ? casefile.evidence.length : 0),
+    0
+  );
+}
+
+function buildDownload(filename, text, mimeType = "application/json") {
+  const blob = new Blob([text], { type: mimeType });
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+}
+
+function guessLanguageFromFilename(filename) {
+  const ext = String(filename || "")
+    .split(".")
+    .pop()
+    ?.toLowerCase();
+  switch (ext) {
+    case "md":
+      return "markdown";
+    case "js":
+    case "mjs":
+    case "cjs":
+      return "javascript";
+    case "ts":
+    case "tsx":
+      return "typescript";
+    case "py":
+      return "python";
+    case "sh":
+    case "bash":
+      return "bash";
+    case "json":
+      return "json";
+    default:
+      return "none";
+  }
 }
 
 function dataBase64ToBlob(base64, mimeType = "application/octet-stream") {
@@ -212,8 +283,8 @@ export async function mountAfterdarkSurface(rootEl) {
           <p class="afterdark-hero__text">
             ${
               EMBEDDED
-                ? "The extension is replacing the current WOX-Bin page shell with an extension-owned control surface while keeping your selected profile, local BookmarkFS vault, and cached hosted data connected."
-                : "A separate extension-hosted control surface for your selected WOX-Bin profile, local BookmarkFS vault, cached pastes, and privacy routes. This page lives inside the extension, not the Vercel app."
+                ? "The extension is replacing the current WOX-Bin page shell with an extension-owned privacy desk while keeping your selected profile, local BookmarkFS vault, cached hosted data, and casefiles connected."
+                : "A private extension-owned workspace for quick publish, local casefiles, BookmarkFS vault handoff, cached hosted references, and the main WOX-Bin routes. This surface lives in the extension, not in the public app."
             }
           </p>
         </div>
@@ -263,6 +334,26 @@ export async function mountAfterdarkSurface(rootEl) {
             </div>
             <div class="afterdark-route-grid" id="afterdark-route-grid"></div>
           </section>
+
+          <section class="afterdark-card">
+            <div class="afterdark-card__head">
+              <div>
+                <p class="afterdark-card__eyebrow">Registry</p>
+                <h2>Casefiles</h2>
+              </div>
+              <div class="afterdark-card__actions">
+                <button type="button" class="afterdark-btn afterdark-btn--secondary afterdark-btn--tiny" id="afterdark-new-case">New</button>
+                <button type="button" class="afterdark-btn afterdark-btn--ghost afterdark-btn--tiny" id="afterdark-import-case">Import</button>
+                <button type="button" class="afterdark-btn afterdark-btn--ghost afterdark-btn--tiny" id="afterdark-export-cases">Export all</button>
+              </div>
+            </div>
+            <label class="afterdark-field">
+              <span>Search casefiles</span>
+              <input type="search" id="afterdark-search-case" class="afterdark-input" placeholder="Alias, title, tag…" />
+            </label>
+            <div id="afterdark-case-list" class="afterdark-case-list"></div>
+            <input type="file" id="afterdark-import-file" accept="application/json" hidden />
+          </section>
         </aside>
 
         <main class="afterdark-main">
@@ -296,6 +387,117 @@ export async function mountAfterdarkSurface(rootEl) {
           <section class="afterdark-card">
             <div class="afterdark-card__head">
               <div>
+                <p class="afterdark-card__eyebrow">Casefile editor</p>
+                <h2 id="afterdark-editor-title">Casefile editor</h2>
+              </div>
+              <div class="afterdark-card__actions">
+                <button type="button" class="afterdark-btn afterdark-btn--secondary afterdark-btn--tiny" id="afterdark-duplicate-case">Duplicate</button>
+                <button type="button" class="afterdark-btn afterdark-btn--ghost afterdark-btn--tiny" id="afterdark-export-case">Export JSON</button>
+              </div>
+            </div>
+
+            <div class="afterdark-editor-grid">
+              <label class="afterdark-field">
+                <span>Case title</span>
+                <input type="text" class="afterdark-input" id="afterdark-case-title" maxlength="180" />
+              </label>
+              <label class="afterdark-field">
+                <span>Alias</span>
+                <input
+                  type="text"
+                  class="afterdark-input"
+                  id="afterdark-case-alias"
+                  maxlength="120"
+                  placeholder="Neutral codename or handle"
+                />
+              </label>
+            </div>
+
+            <div class="afterdark-editor-grid afterdark-editor-grid--compact">
+              <label class="afterdark-field">
+                <span>Status</span>
+                <select class="afterdark-input" id="afterdark-case-status">
+                  <option value="draft">Draft</option>
+                  <option value="active">Active</option>
+                  <option value="watch">Watch</option>
+                  <option value="sealed">Sealed</option>
+                  <option value="closed">Closed</option>
+                </select>
+              </label>
+              <label class="afterdark-field">
+                <span>Classification</span>
+                <select class="afterdark-input" id="afterdark-case-classification">
+                  <option value="private">Private</option>
+                  <option value="sensitive">Sensitive</option>
+                  <option value="sealed">Sealed</option>
+                </select>
+              </label>
+              <label class="afterdark-field">
+                <span>Retention</span>
+                <select class="afterdark-input" id="afterdark-case-retention">
+                  <option value="manual">Manual delete</option>
+                  <option value="24h">24 hours</option>
+                  <option value="7d">7 days</option>
+                  <option value="30d">30 days</option>
+                  <option value="90d">90 days</option>
+                </select>
+              </label>
+            </div>
+
+            <label class="afterdark-field">
+              <span>Tags</span>
+              <input type="text" class="afterdark-input" id="afterdark-case-tags" placeholder="private, incident, follow-up" />
+            </label>
+
+            <label class="afterdark-field">
+              <span>Summary</span>
+              <textarea
+                class="afterdark-textarea afterdark-textarea--summary"
+                id="afterdark-case-summary"
+                placeholder="High-level context, scope, and handling notes."
+              ></textarea>
+            </label>
+
+            <label class="afterdark-field">
+              <span>Notes</span>
+              <textarea
+                class="afterdark-textarea afterdark-textarea--notes"
+                id="afterdark-case-notes"
+                placeholder="Local private notes. Keep personal data out unless you truly need it."
+              ></textarea>
+            </label>
+
+            <div class="afterdark-editor-footer">
+              <div class="afterdark-meta" id="afterdark-case-meta"></div>
+              <div class="afterdark-card__actions">
+                <button type="button" class="afterdark-btn afterdark-btn--primary" id="afterdark-save-case">Save casefile</button>
+                <button type="button" class="afterdark-btn afterdark-btn--secondary" id="afterdark-queue-case">Queue to workspace</button>
+                <button type="button" class="afterdark-btn afterdark-btn--ghost" id="afterdark-delete-case">Delete</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="afterdark-card">
+            <div class="afterdark-card__head">
+              <div>
+                <p class="afterdark-card__eyebrow">Timeline</p>
+                <h2>Events</h2>
+              </div>
+            </div>
+            <div class="afterdark-timeline-composer">
+              <textarea
+                class="afterdark-textarea afterdark-textarea--event"
+                id="afterdark-event-body"
+                placeholder="Add a local event note, handoff, or observation."
+              ></textarea>
+              <button type="button" class="afterdark-btn afterdark-btn--secondary" id="afterdark-add-event">Add event</button>
+            </div>
+            <div class="afterdark-timeline" id="afterdark-timeline"></div>
+          </section>
+
+          <section class="afterdark-card">
+            <div class="afterdark-card__head">
+              <div>
                 <p class="afterdark-card__eyebrow">Hosted</p>
                 <h2>Recent hosted pastes</h2>
               </div>
@@ -306,6 +508,16 @@ export async function mountAfterdarkSurface(rootEl) {
         </main>
 
         <aside class="afterdark-rail">
+          <section class="afterdark-card">
+            <div class="afterdark-card__head">
+              <div>
+                <p class="afterdark-card__eyebrow">Evidence</p>
+                <h2>Attached references</h2>
+              </div>
+            </div>
+            <div id="afterdark-evidence-list" class="afterdark-list"></div>
+          </section>
+
           <section class="afterdark-card">
             <div class="afterdark-card__head">
               <div>
@@ -337,17 +549,36 @@ export async function mountAfterdarkSurface(rootEl) {
   const statsEl = rootEl.querySelector("#afterdark-stats");
   const profileListEl = rootEl.querySelector("#afterdark-profile-list");
   const routeGridEl = rootEl.querySelector("#afterdark-route-grid");
+  const caseListEl = rootEl.querySelector("#afterdark-case-list");
   const hostedListEl = rootEl.querySelector("#afterdark-hosted-list");
+  const evidenceListEl = rootEl.querySelector("#afterdark-evidence-list");
   const vaultListEl = rootEl.querySelector("#afterdark-vault-list");
   const cacheListEl = rootEl.querySelector("#afterdark-cache-list");
   const launcherToggle = rootEl.querySelector("#afterdark-page-launcher");
   const unlockWrap = rootEl.querySelector("#afterdark-unlock-wrap");
   const unlockPassphrase = rootEl.querySelector("#afterdark-passphrase");
+  const importFileEl = rootEl.querySelector("#afterdark-import-file");
+  const searchCaseEl = rootEl.querySelector("#afterdark-search-case");
+  const eventBodyEl = rootEl.querySelector("#afterdark-event-body");
+  const timelineEl = rootEl.querySelector("#afterdark-timeline");
+  const metaEl = rootEl.querySelector("#afterdark-case-meta");
+  const editorTitleEl = rootEl.querySelector("#afterdark-editor-title");
 
   const titleInput = rootEl.querySelector("#afterdark-title");
   const bodyInput = rootEl.querySelector("#afterdark-body");
   const visibilityInput = rootEl.querySelector("#afterdark-vis");
   const languageInput = rootEl.querySelector("#afterdark-lang");
+
+  const formEls = {
+    title: rootEl.querySelector("#afterdark-case-title"),
+    alias: rootEl.querySelector("#afterdark-case-alias"),
+    status: rootEl.querySelector("#afterdark-case-status"),
+    classification: rootEl.querySelector("#afterdark-case-classification"),
+    retention: rootEl.querySelector("#afterdark-case-retention"),
+    tags: rootEl.querySelector("#afterdark-case-tags"),
+    summary: rootEl.querySelector("#afterdark-case-summary"),
+    notes: rootEl.querySelector("#afterdark-case-notes")
+  };
 
   let currentProfile = null;
   let currentCreds = { baseUrl: "", apiKey: "", locked: true };
@@ -355,6 +586,9 @@ export async function mountAfterdarkSurface(rootEl) {
   let vaultItems = [];
   let cacheItems = [];
   let profileCount = 0;
+  let caseState = { casefiles: [], selectedCaseId: null };
+  let currentCase = null;
+  let caseSearchQuery = "";
 
   function setStatus(message, kind = "") {
     if (!statusEl) {
@@ -368,7 +602,7 @@ export async function mountAfterdarkSurface(rootEl) {
   function openRoute(path) {
     const href = currentCreds.baseUrl ? joinUrl(currentCreds.baseUrl, path) : "";
     if (!href) {
-      setStatus("Select a profile first.", "err");
+      setStatus("Select an unlocked profile first.", "err");
       return;
     }
     if (EMBEDDED) {
@@ -381,13 +615,88 @@ export async function mountAfterdarkSurface(rootEl) {
     window.open(href, "_blank", "noopener,noreferrer");
   }
 
+  function syncFormFromCasefile() {
+    if (!currentCase) {
+      return;
+    }
+    if (editorTitleEl) {
+      editorTitleEl.textContent = currentCase.title;
+    }
+    formEls.title.value = currentCase.title;
+    formEls.alias.value = currentCase.alias || "";
+    formEls.status.value = currentCase.status;
+    formEls.classification.value = currentCase.classification;
+    formEls.retention.value = currentCase.retention;
+    formEls.tags.value = currentCase.tags.join(", ");
+    formEls.summary.value = currentCase.summary || "";
+    formEls.notes.value = currentCase.notes || "";
+    if (metaEl) {
+      metaEl.textContent = `Created ${formatDate(currentCase.createdAt)} · Updated ${formatDate(currentCase.updatedAt)}`;
+    }
+  }
+
+  function buildFormCasefile() {
+    if (!currentCase) {
+      return createEmptyCasefile();
+    }
+    return {
+      ...currentCase,
+      title: formEls.title.value || "Untitled casefile",
+      alias: formEls.alias.value || "",
+      status: formEls.status.value,
+      classification: formEls.classification.value,
+      retention: formEls.retention.value,
+      tags: parseTagsInput(formEls.tags.value),
+      summary: formEls.summary.value || "",
+      notes: formEls.notes.value || ""
+    };
+  }
+
+  async function ensureCaseSelection() {
+    if (!caseState.casefiles.length) {
+      const saved = await saveDarkBinCasefile(createEmptyCasefile());
+      caseState = {
+        casefiles: saved.casefiles,
+        selectedCaseId: saved.selectedCaseId
+      };
+    }
+    currentCase =
+      caseState.casefiles.find((casefile) => casefile.id === caseState.selectedCaseId) || caseState.casefiles[0] || null;
+    if (currentCase && caseState.selectedCaseId !== currentCase.id) {
+      caseState.selectedCaseId = currentCase.id;
+      await setSelectedDarkBinCaseId(currentCase.id);
+    }
+  }
+
+  async function attachEvidence(evidence) {
+    if (!currentCase) {
+      setStatus("Select a casefile first.", "err");
+      return;
+    }
+    const nextCase = {
+      ...buildFormCasefile(),
+      evidence: [evidence, ...currentCase.evidence.filter((item) => item.ref !== evidence.ref || item.label !== evidence.label)].slice(0, 200)
+    };
+    const saved = await saveDarkBinCasefile(nextCase);
+    caseState = {
+      casefiles: saved.casefiles,
+      selectedCaseId: saved.selectedCaseId
+    };
+    currentCase = saved.casefile;
+    syncFormFromCasefile();
+    renderStats();
+    renderCaseList();
+    renderEvidence();
+    setStatus(`Attached "${evidence.label}" to ${currentCase.title}.`, "ok");
+  }
+
   function renderRoutes() {
     if (!routeGridEl) {
       return;
     }
     routeGridEl.innerHTML = DEFAULT_ROUTE_LABELS.map(
       ([path, label]) => `
-        <button type="button" class="afterdark-route" data-route="${escapeHtml(path)}">
+        <button type="button" class="afterdark-route" data-route="${escapeHtml(path)}" ${currentCreds.baseUrl ? "" : "disabled"}>
           <span>${escapeHtml(label)}</span>
           <small>${escapeHtml(path)}</small>
         </button>
@@ -404,9 +713,9 @@ export async function mountAfterdarkSurface(rootEl) {
     }
     const stats = [
       ["Profiles", String(profileCount)],
-      ["Hosted recent", String(hostedItems.length)],
-      ["Vault files", String(vaultItems.length)],
-      ["Cached pastes", String(cacheItems.length)]
+      ["Casefiles", String(caseState.casefiles.length)],
+      ["Evidence refs", String(countAllEvidenceEntries(caseState.casefiles))],
+      ["Local sources", String(vaultItems.length + cacheItems.length)]
     ];
     statsEl.innerHTML = stats
       .map(
@@ -450,6 +759,214 @@ export async function mountAfterdarkSurface(rootEl) {
     });
   }
 
+  function renderCaseList() {
+    if (!caseListEl) {
+      return;
+    }
+    const filtered = caseState.casefiles.filter((casefile) => {
+      const haystack = `${casefile.title} ${casefile.alias} ${casefile.tags.join(" ")} ${casefile.summary}`.toLowerCase();
+      return !caseSearchQuery || haystack.includes(caseSearchQuery);
+    });
+
+    if (!filtered.length) {
+      caseListEl.innerHTML = `<p class="afterdark-empty">No casefiles match this search yet.</p>`;
+      return;
+    }
+
+    caseListEl.innerHTML = filtered
+      .map(
+        (casefile) => `
+          <button type="button" class="afterdark-case${casefile.id === currentCase?.id ? " is-active" : ""}" data-case-id="${escapeHtml(casefile.id)}">
+            <div class="afterdark-case__head">
+              <strong>${escapeHtml(casefile.title)}</strong>
+              <span class="afterdark-pill afterdark-pill--${escapeHtml(casefile.status)}">${escapeHtml(casefile.status)}</span>
+            </div>
+            <p>${escapeHtml(casefile.alias || safeTextPreview(casefile.summary, 90))}</p>
+            <div class="afterdark-case__meta">
+              <span>${escapeHtml(casefile.classification)}</span>
+              <span>${escapeHtml(formatDate(casefile.updatedAt))}</span>
+            </div>
+          </button>
+        `
+      )
+      .join("");
+
+    caseListEl.querySelectorAll("[data-case-id]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const nextId = button.getAttribute("data-case-id");
+        if (!nextId || nextId === currentCase?.id) {
+          return;
+        }
+        currentCase = caseState.casefiles.find((casefile) => casefile.id === nextId) || currentCase;
+        if (!currentCase) {
+          return;
+        }
+        caseState.selectedCaseId = currentCase.id;
+        await setSelectedDarkBinCaseId(currentCase.id);
+        syncFormFromCasefile();
+        renderCaseList();
+        renderTimeline();
+        renderEvidence();
+      });
+    });
+  }
+
+  function renderTimeline() {
+    if (!timelineEl) {
+      return;
+    }
+    if (!currentCase?.timeline?.length) {
+      timelineEl.innerHTML = `<p class="afterdark-empty">No local events yet. Add a handoff note, observation, or scrub reminder.</p>`;
+      return;
+    }
+
+    timelineEl.innerHTML = currentCase.timeline
+      .map(
+        (event) => `
+          <article class="afterdark-event">
+            <div class="afterdark-event__copy">
+              <strong>${escapeHtml(formatDate(event.createdAt))}</strong>
+              <p>${escapeHtml(event.body)}</p>
+            </div>
+            <button type="button" class="afterdark-btn afterdark-btn--ghost afterdark-btn--tiny" data-remove-event="${escapeHtml(event.id)}">Remove</button>
+          </article>
+        `
+      )
+      .join("");
+
+    timelineEl.querySelectorAll("[data-remove-event]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const eventId = button.getAttribute("data-remove-event");
+        if (!eventId || !currentCase) {
+          return;
+        }
+        const nextCase = {
+          ...buildFormCasefile(),
+          timeline: currentCase.timeline.filter((event) => event.id !== eventId)
+        };
+        const saved = await saveDarkBinCasefile(nextCase);
+        caseState = {
+          casefiles: saved.casefiles,
+          selectedCaseId: saved.selectedCaseId
+        };
+        currentCase = saved.casefile;
+        syncFormFromCasefile();
+        renderStats();
+        renderCaseList();
+        renderTimeline();
+      });
+    });
+  }
+
+  function renderEvidence() {
+    if (!evidenceListEl) {
+      return;
+    }
+    if (!currentCase?.evidence?.length) {
+      evidenceListEl.innerHTML = `<p class="afterdark-empty">Attach vault files, cached hosted pastes, or private links to the active casefile.</p>`;
+      return;
+    }
+
+    evidenceListEl.innerHTML = currentCase.evidence
+      .map(
+        (item) => `
+          <article class="afterdark-item">
+            <div class="afterdark-item__copy">
+              <strong>${escapeHtml(item.label)}</strong>
+              <p>${escapeHtml(item.excerpt || item.ref || item.href || "local reference")}</p>
+              <span>${escapeHtml(item.kind)} · ${escapeHtml(formatDate(item.addedAt))}</span>
+            </div>
+            <div class="afterdark-item__actions">
+              <button type="button" class="afterdark-btn afterdark-btn--secondary afterdark-btn--tiny" data-open-evidence="${escapeHtml(item.id)}">Open</button>
+              <button type="button" class="afterdark-btn afterdark-btn--ghost afterdark-btn--tiny" data-remove-evidence="${escapeHtml(item.id)}">Remove</button>
+            </div>
+          </article>
+        `
+      )
+      .join("");
+
+    evidenceListEl.querySelectorAll("[data-remove-evidence]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const evidenceId = button.getAttribute("data-remove-evidence");
+        if (!evidenceId || !currentCase) {
+          return;
+        }
+        const nextCase = {
+          ...buildFormCasefile(),
+          evidence: currentCase.evidence.filter((item) => item.id !== evidenceId)
+        };
+        const saved = await saveDarkBinCasefile(nextCase);
+        caseState = {
+          casefiles: saved.casefiles,
+          selectedCaseId: saved.selectedCaseId
+        };
+        currentCase = saved.casefile;
+        syncFormFromCasefile();
+        renderStats();
+        renderCaseList();
+        renderEvidence();
+      });
+    });
+
+    evidenceListEl.querySelectorAll("[data-open-evidence]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const evidenceId = button.getAttribute("data-open-evidence");
+        const item = currentCase?.evidence.find((entry) => entry.id === evidenceId);
+        if (!item) {
+          return;
+        }
+        if (item.kind === "link" && item.href) {
+          window.open(item.href, "_blank", "noopener,noreferrer");
+          return;
+        }
+        if (item.kind === "cache") {
+          const href =
+            item.href || (item.ref && currentCreds.baseUrl ? joinUrl(currentCreds.baseUrl, `/p/${encodeURIComponent(item.ref)}`) : "");
+          if (href) {
+            window.open(href, "_blank", "noopener,noreferrer");
+            return;
+          }
+        }
+        if (item.kind === "vault" && item.ref) {
+          try {
+            const file = await vaultRpc("vault.read", { fullName: item.ref });
+            if (file.textLike) {
+              openModal(item.label, `<pre class="afterdark-preview">${escapeHtml(file.textContent || "")}</pre>`);
+              return;
+            }
+            const mimeType = file.mimeType || "application/octet-stream";
+            if (mimeType.startsWith("image/")) {
+              openModal(
+                item.label,
+                `<img class="afterdark-preview__media" src="data:${escapeHtml(mimeType)};base64,${file.dataBase64}" alt="${escapeHtml(item.label)}" />`
+              );
+              return;
+            }
+            if (mimeType.startsWith("video/")) {
+              openModal(
+                item.label,
+                `<video class="afterdark-preview__media" src="data:${escapeHtml(mimeType)};base64,${file.dataBase64}" controls autoplay playsinline></video>`
+              );
+              return;
+            }
+            const blob = dataBase64ToBlob(file.dataBase64, mimeType);
+            const objectUrl = URL.createObjectURL(blob);
+            openModal(
+              item.label,
+              `<div class="afterdark-preview__actions"><a class="afterdark-btn afterdark-btn--primary" href="${objectUrl}" download="${escapeHtml(
+                item.label
+              )}">Download file</a></div>`
+            );
+          } catch (error) {
+            setStatus(error instanceof Error ? error.message : String(error), "err");
+          }
+          return;
+        }
+        openModal(item.label, `<p class="afterdark-empty">${escapeHtml(item.excerpt || item.ref || item.href || "No preview available.")}</p>`);
+      });
+    });
+  }
+
   function renderHosted() {
     if (!hostedListEl) {
       return;
@@ -468,9 +985,12 @@ export async function mountAfterdarkSurface(rootEl) {
                   <button type="button" class="afterdark-btn afterdark-btn--secondary afterdark-btn--tiny" data-open-slug="${escapeHtml(
                     item.slug || ""
                   )}">Open</button>
-                  <button type="button" class="afterdark-btn afterdark-btn--ghost afterdark-btn--tiny" data-copy-slug="${escapeHtml(
+                  <button type="button" class="afterdark-btn afterdark-btn--ghost afterdark-btn--tiny" data-queue-slug="${escapeHtml(
                     item.slug || ""
                   )}">Queue</button>
+                  <button type="button" class="afterdark-btn afterdark-btn--ghost afterdark-btn--tiny" data-attach-hosted="${escapeHtml(
+                    item.slug || ""
+                  )}">Attach</button>
                 </div>
               </article>
             `
@@ -487,9 +1007,9 @@ export async function mountAfterdarkSurface(rootEl) {
       });
     });
 
-    hostedListEl.querySelectorAll("[data-copy-slug]").forEach((button) => {
+    hostedListEl.querySelectorAll("[data-queue-slug]").forEach((button) => {
       button.addEventListener("click", async () => {
-        const slug = button.getAttribute("data-copy-slug");
+        const slug = button.getAttribute("data-queue-slug");
         if (!slug) {
           return;
         }
@@ -513,6 +1033,23 @@ export async function mountAfterdarkSurface(rootEl) {
         }
       });
     });
+
+    hostedListEl.querySelectorAll("[data-attach-hosted]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const slug = button.getAttribute("data-attach-hosted");
+        const entry = hostedItems.find((item) => item.slug === slug);
+        if (!entry) {
+          return;
+        }
+        await attachEvidence({
+          kind: "link",
+          label: entry.title || entry.slug || "Hosted paste",
+          ref: entry.slug || "",
+          href: currentCreds.baseUrl && entry.slug ? joinUrl(currentCreds.baseUrl, `/p/${entry.slug}`) : "",
+          excerpt: safeTextPreview(entry.content || "", 140)
+        });
+      });
+    });
   }
 
   function renderVault() {
@@ -534,6 +1071,12 @@ export async function mountAfterdarkSurface(rootEl) {
                   <button type="button" class="afterdark-btn afterdark-btn--secondary afterdark-btn--tiny" data-preview-vault="${escapeHtml(
                     entry.fullName || entry.name || ""
                   )}">Preview</button>
+                  <button type="button" class="afterdark-btn afterdark-btn--ghost afterdark-btn--tiny" data-queue-vault="${escapeHtml(
+                    entry.fullName || entry.name || ""
+                  )}">Queue</button>
+                  <button type="button" class="afterdark-btn afterdark-btn--ghost afterdark-btn--tiny" data-attach-vault="${escapeHtml(
+                    entry.fullName || entry.name || ""
+                  )}">Attach</button>
                 </div>
               </article>
             `
@@ -572,6 +1115,67 @@ export async function mountAfterdarkSurface(rootEl) {
         }
       });
     });
+
+    vaultListEl.querySelectorAll("[data-queue-vault]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const fullName = button.getAttribute("data-queue-vault");
+        if (!fullName) {
+          return;
+        }
+        try {
+          const file = await vaultRpc("vault.read", { fullName });
+          if (file.textLike) {
+            await setPendingCompose({
+              title: file.displayName || fullName,
+              content: file.textContent || "",
+              visibility: "private",
+              language: guessLanguageFromFilename(file.displayName || fullName)
+            });
+            openRoute("/app");
+            return;
+          }
+          const mimeType = file.mimeType || "application/octet-stream";
+          if (mimeType.startsWith("image/") || mimeType.startsWith("video/")) {
+            await setPendingCompose({
+              title: file.displayName || fullName,
+              content: "",
+              visibility: "private",
+              language: "none",
+              attachments: [
+                {
+                  filename: file.displayName || fullName,
+                  content: file.dataBase64,
+                  language: "none",
+                  mediaKind: mimeType.startsWith("image/") ? "image" : "video",
+                  mimeType
+                }
+              ]
+            });
+            openRoute("/app");
+            return;
+          }
+          setStatus("Only text, image, and video vault files can be queued directly into the workspace.", "err");
+        } catch (error) {
+          setStatus(error instanceof Error ? error.message : String(error), "err");
+        }
+      });
+    });
+
+    vaultListEl.querySelectorAll("[data-attach-vault]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const fullName = button.getAttribute("data-attach-vault");
+        const entry = vaultItems.find((item) => item.fullName === fullName);
+        if (!entry) {
+          return;
+        }
+        await attachEvidence({
+          kind: "vault",
+          label: entry.displayName || entry.fullName,
+          ref: entry.fullName,
+          excerpt: entry.dir ? `/${entry.dir}` : "vault root"
+        });
+      });
+    });
   }
 
   function renderCache() {
@@ -589,21 +1193,69 @@ export async function mountAfterdarkSurface(rootEl) {
                   <p>${escapeHtml(safeTextPreview(entry.content || ""))}</p>
                   <span>${escapeHtml(entry.visibility || "private")} · ${escapeHtml(formatRelativeSize((entry.content || "").length))}</span>
                 </div>
+                <div class="afterdark-item__actions">
+                  <button type="button" class="afterdark-btn afterdark-btn--secondary afterdark-btn--tiny" data-queue-cache="${escapeHtml(
+                    entry.slug || entry.title || ""
+                  )}">Queue</button>
+                  <button type="button" class="afterdark-btn afterdark-btn--ghost afterdark-btn--tiny" data-attach-cache="${escapeHtml(
+                    entry.slug || entry.title || ""
+                  )}">Attach</button>
+                </div>
               </article>
             `
           )
           .join("")
       : `<p class="afterdark-empty">No cached hosted pastes yet.</p>`;
+
+    cacheListEl.querySelectorAll("[data-queue-cache]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const key = button.getAttribute("data-queue-cache");
+        const entry = cacheItems.find((item) => (item.slug || item.title || "") === key);
+        if (!entry) {
+          return;
+        }
+        await setPendingCompose({
+          title: entry.title || entry.slug || "Cached paste",
+          content: entry.content || "",
+          visibility: entry.visibility || "private",
+          language: entry.language || "none",
+          folderName: entry.folderName || "",
+          tags: Array.isArray(entry.tags) ? entry.tags : [],
+          pinned: Boolean(entry.pinned),
+          favorite: Boolean(entry.favorite),
+          attachments: Array.isArray(entry.files) ? entry.files : []
+        });
+        openRoute("/app");
+      });
+    });
+
+    cacheListEl.querySelectorAll("[data-attach-cache]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const key = button.getAttribute("data-attach-cache");
+        const entry = cacheItems.find((item) => (item.slug || item.title || "") === key);
+        if (!entry) {
+          return;
+        }
+        await attachEvidence({
+          kind: "cache",
+          label: entry.title || entry.slug || "Cached paste",
+          ref: entry.slug || "",
+          href: currentCreds.baseUrl && entry.slug ? joinUrl(currentCreds.baseUrl, `/p/${entry.slug}`) : "",
+          excerpt: safeTextPreview(entry.content || "", 140)
+        });
+      });
+    });
   }
 
   async function refreshAll() {
     setStatus("Refreshing Afterdark…");
     try {
-      const [{ profiles, selectedProfileId }, launcherState, cacheResult, vaultResult] = await Promise.all([
+      const [{ profiles, selectedProfileId }, launcherState, cacheResult, vaultResult, loadedCaseState] = await Promise.all([
         loadProfiles(),
         storageLocalGet([WOXBIN_STORAGE.afterdarkLauncherEnabled]),
         loadOfflineCacheEntries(),
-        vaultRpc("vault.list")
+        vaultRpc("vault.list"),
+        loadDarkBinState()
       ]);
 
       currentProfile = profiles.find((profile) => profile.id === selectedProfileId) || profiles[0] || null;
@@ -611,11 +1263,17 @@ export async function mountAfterdarkSurface(rootEl) {
       currentCreds = await resolveProfileCredentials(currentProfile);
       cacheItems = cacheResult || [];
       vaultItems = Array.isArray(vaultResult?.entries) ? vaultResult.entries : [];
+      caseState = loadedCaseState || { casefiles: [], selectedCaseId: null };
+      await ensureCaseSelection();
 
       renderProfiles(profiles, currentProfile?.id || "");
+      renderRoutes();
+      renderCaseList();
+      syncFormFromCasefile();
+      renderTimeline();
+      renderEvidence();
       renderCache();
       renderVault();
-      renderRoutes();
 
       if (launcherToggle) {
         launcherToggle.checked = Boolean(launcherState[WOXBIN_STORAGE.afterdarkLauncherEnabled]);
@@ -729,6 +1387,177 @@ export async function mountAfterdarkSurface(rootEl) {
       language: languageInput?.value || "none"
     });
     openRoute("/app");
+  });
+
+  rootEl.querySelector("#afterdark-new-case")?.addEventListener("click", async () => {
+    const saved = await saveDarkBinCasefile(createEmptyCasefile({ title: "New casefile" }));
+    caseState = {
+      casefiles: saved.casefiles,
+      selectedCaseId: saved.selectedCaseId
+    };
+    currentCase = saved.casefile;
+    syncFormFromCasefile();
+    renderStats();
+    renderCaseList();
+    renderTimeline();
+    renderEvidence();
+  });
+
+  rootEl.querySelector("#afterdark-import-case")?.addEventListener("click", () => {
+    importFileEl?.click();
+  });
+
+  importFileEl?.addEventListener("change", async () => {
+    const file = importFileEl.files?.[0];
+    importFileEl.value = "";
+    if (!file) {
+      return;
+    }
+    try {
+      const text = await file.text();
+      const imported = await importDarkBinExport(text);
+      caseState = {
+        casefiles: imported.casefiles,
+        selectedCaseId: imported.selectedCaseId
+      };
+      await ensureCaseSelection();
+      syncFormFromCasefile();
+      renderStats();
+      renderCaseList();
+      renderTimeline();
+      renderEvidence();
+      setStatus(`Imported ${imported.importedCount} casefile(s) into Afterdark.`, "ok");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error), "err");
+    }
+  });
+
+  rootEl.querySelector("#afterdark-export-cases")?.addEventListener("click", () => {
+    buildDownload(
+      `afterdark-casefiles-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`,
+      serializeDarkBinExport(caseState.casefiles)
+    );
+  });
+
+  rootEl.querySelector("#afterdark-export-case")?.addEventListener("click", () => {
+    if (!currentCase) {
+      return;
+    }
+    buildDownload(
+      `${currentCase.title.replace(/[<>:\"/\\\\|?*]+/g, "-").slice(0, 80) || "afterdark-casefile"}.json`,
+      serializeDarkBinExport([buildFormCasefile()])
+    );
+  });
+
+  rootEl.querySelector("#afterdark-duplicate-case")?.addEventListener("click", async () => {
+    if (!currentCase) {
+      return;
+    }
+    const draft = buildFormCasefile();
+    const duplicate = createEmptyCasefile({
+      ...draft,
+      id: undefined,
+      title: `${draft.title} copy`
+    });
+    const saved = await saveDarkBinCasefile(duplicate);
+    caseState = {
+      casefiles: saved.casefiles,
+      selectedCaseId: saved.selectedCaseId
+    };
+    currentCase = saved.casefile;
+    syncFormFromCasefile();
+    renderStats();
+    renderCaseList();
+    renderTimeline();
+    renderEvidence();
+  });
+
+  rootEl.querySelector("#afterdark-save-case")?.addEventListener("click", async () => {
+    const saved = await saveDarkBinCasefile(buildFormCasefile());
+    caseState = {
+      casefiles: saved.casefiles,
+      selectedCaseId: saved.selectedCaseId
+    };
+    currentCase = saved.casefile;
+    syncFormFromCasefile();
+    renderStats();
+    renderCaseList();
+    renderTimeline();
+    renderEvidence();
+    setStatus(`Saved ${currentCase?.title || "casefile"}.`, "ok");
+  });
+
+  rootEl.querySelector("#afterdark-delete-case")?.addEventListener("click", async () => {
+    if (!currentCase) {
+      return;
+    }
+    if (!confirm(`Delete "${currentCase.title}" from Afterdark?`)) {
+      return;
+    }
+    caseState = await deleteDarkBinCasefile(currentCase.id);
+    await ensureCaseSelection();
+    syncFormFromCasefile();
+    renderStats();
+    renderCaseList();
+    renderTimeline();
+    renderEvidence();
+    setStatus("Casefile deleted.", "ok");
+  });
+
+  rootEl.querySelector("#afterdark-queue-case")?.addEventListener("click", async () => {
+    try {
+      const saved = await saveDarkBinCasefile(buildFormCasefile());
+      caseState = {
+        casefiles: saved.casefiles,
+        selectedCaseId: saved.selectedCaseId
+      };
+      currentCase = saved.casefile;
+      syncFormFromCasefile();
+      renderStats();
+      renderCaseList();
+      renderTimeline();
+      renderEvidence();
+      await setPendingCompose(buildCasefileComposePayload(currentCase));
+      openRoute("/app");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error), "err");
+    }
+  });
+
+  rootEl.querySelector("#afterdark-add-event")?.addEventListener("click", async () => {
+    const body = String(eventBodyEl?.value || "").trim();
+    if (!body || !currentCase) {
+      return;
+    }
+    const nextCase = {
+      ...buildFormCasefile(),
+      timeline: [
+        {
+          id: `event_${Date.now().toString(36)}`,
+          body,
+          createdAt: new Date().toISOString()
+        },
+        ...currentCase.timeline
+      ].slice(0, 200)
+    };
+    const saved = await saveDarkBinCasefile(nextCase);
+    caseState = {
+      casefiles: saved.casefiles,
+      selectedCaseId: saved.selectedCaseId
+    };
+    currentCase = saved.casefile;
+    if (eventBodyEl) {
+      eventBodyEl.value = "";
+    }
+    syncFormFromCasefile();
+    renderStats();
+    renderCaseList();
+    renderTimeline();
+  });
+
+  searchCaseEl?.addEventListener("input", () => {
+    caseSearchQuery = String(searchCaseEl.value || "").trim().toLowerCase();
+    renderCaseList();
   });
 
   await refreshAll();
