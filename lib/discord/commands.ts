@@ -95,10 +95,20 @@ export async function registerDiscordCommands(config: DiscordBotConfig) {
   const body = getDiscordCommandData();
 
   if (config.devGuildId) {
-    await rest.put(Routes.applicationGuildCommands(config.applicationId, config.devGuildId), {
-      body
-    });
-    return "guild";
+    try {
+      await rest.put(Routes.applicationGuildCommands(config.applicationId, config.devGuildId), {
+        body
+      });
+      return "guild";
+    } catch (error) {
+      const discordError = error as { code?: number; status?: number };
+      if (discordError?.code !== 50001 && discordError?.status !== 403) {
+        throw error;
+      }
+      console.warn(
+        `[discord-bot] missing access to dev guild ${config.devGuildId}; falling back to global command registration`
+      );
+    }
   }
 
   await rest.put(Routes.applicationCommands(config.applicationId), {

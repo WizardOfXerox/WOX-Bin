@@ -1,10 +1,13 @@
-import "dotenv/config";
+import { config as loadEnv } from "dotenv";
 
 import { Client, Events, GatewayIntentBits } from "discord.js";
 
 import { readDiscordBotConfig } from "@/lib/discord/bot-env";
 import { handleDiscordCommand, registerDiscordCommands } from "@/lib/discord/commands";
 import { ensureDiscordGuildSetup } from "@/lib/discord/setup";
+
+loadEnv({ path: ".env.local", override: false });
+loadEnv({ path: ".env", override: false });
 
 async function main() {
   const config = readDiscordBotConfig();

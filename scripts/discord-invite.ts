@@ -1,8 +1,11 @@
-import "dotenv/config";
+import { config as loadEnv } from "dotenv";
 
 import { PermissionFlagsBits } from "discord.js";
 
 import { readDiscordBotConfig } from "@/lib/discord/bot-env";
+
+loadEnv({ path: ".env.local", override: false });
+loadEnv({ path: ".env", override: false });
 
 function main() {
   const config = readDiscordBotConfig();
