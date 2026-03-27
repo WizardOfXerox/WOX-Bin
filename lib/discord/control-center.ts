@@ -1,5 +1,6 @@
 import { listDiscordGuildIntegrations, type DiscordGuildIntegrationRecord } from "@/lib/discord/guilds";
 import {
+  buildDiscordInteractionEndpointUrl,
   buildDiscordBotInviteUrl,
   summarizeDiscordGuildIntegrations,
   type DiscordGuildSummary
@@ -10,9 +11,11 @@ import { resolveDiscordBotSiteBaseUrl } from "@/lib/discord/site-client";
 export type DiscordControlSnapshot = {
   inviteUrl: string | null;
   siteBaseUrl: string;
+  interactionEndpointUrl: string | null;
   config: {
     hasApplicationId: boolean;
     hasToken: boolean;
+    hasPublicKey: boolean;
     hasDevGuildId: boolean;
     operatorCount: number;
     hasSiteApiKey: boolean;
@@ -28,13 +31,16 @@ export async function getDiscordControlSnapshot(): Promise<DiscordControlSnapsho
     .map((value) => value.trim())
     .filter(Boolean);
   const integrations = await listDiscordGuildIntegrations();
+  const siteBaseUrl = resolveDiscordBotSiteBaseUrl();
 
   return {
     inviteUrl: buildDiscordBotInviteUrl(applicationId),
-    siteBaseUrl: resolveDiscordBotSiteBaseUrl(),
+    siteBaseUrl,
+    interactionEndpointUrl: buildDiscordInteractionEndpointUrl(siteBaseUrl),
     config: {
       hasApplicationId: Boolean(applicationId),
       hasToken: Boolean(String(process.env.DISCORD_BOT_TOKEN ?? "").trim()),
+      hasPublicKey: Boolean(String(process.env.DISCORD_PUBLIC_KEY ?? "").trim()),
       hasDevGuildId: Boolean(String(process.env.DISCORD_GUILD_DEV_ID ?? "").trim()),
       operatorCount: operatorIds.length,
       hasSiteApiKey: hasDiscordBotSiteApiKey()

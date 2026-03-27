@@ -7,6 +7,15 @@ export type DiscordGuildSummary = {
   readyGuilds: number;
 };
 
+export function buildDiscordInteractionEndpointUrl(baseUrl: string) {
+  const trimmed = baseUrl.trim().replace(/\/+$/, "");
+  if (!trimmed) {
+    return null;
+  }
+
+  return `${trimmed}/api/discord/interactions`;
+}
+
 export type DiscordGuildSummaryInput = {
   announcementWebhookUrl: string | null;
   announcementsChannelId: string | null;

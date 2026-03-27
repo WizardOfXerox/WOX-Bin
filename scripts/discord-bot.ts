@@ -1,9 +1,9 @@
 import { config as loadEnv } from "dotenv";
 
-import { Client, Events, GatewayIntentBits } from "discord.js";
+import { ActivityType, Client, Events, GatewayIntentBits } from "discord.js";
 
 import { readDiscordBotConfig } from "@/lib/discord/bot-env";
-import { handleDiscordCommand, registerDiscordCommands } from "@/lib/discord/commands";
+import { registerDiscordCommands } from "@/lib/discord/commands";
 import { ensureDiscordGuildSetup } from "@/lib/discord/setup";
 
 loadEnv({ path: ".env.local", override: false });
@@ -17,8 +17,18 @@ async function main() {
 
   client.once(Events.ClientReady, async (readyClient) => {
     const mode = await registerDiscordCommands(config);
+    readyClient.user.setPresence({
+      status: "online",
+      activities: [
+        {
+          type: ActivityType.Watching,
+          name: "WOX-Bin /wox help"
+        }
+      ]
+    });
     console.log(`[discord-bot] logged in as ${readyClient.user.tag}`);
     console.log(`[discord-bot] commands registered in ${mode} mode`);
+    console.log("[discord-bot] gateway companion active for presence and guild lifecycle events");
   });
 
   client.on(Events.GuildCreate, async (guild) => {
@@ -27,23 +37,6 @@ async function main() {
       console.log(`[discord-bot] setup completed for ${guild.name}: ${result.createdChannels.length} channels created`);
     } catch (error) {
       console.error("[discord-bot] guild setup failed", error);
-    }
-  });
-
-  client.on(Events.InteractionCreate, async (interaction) => {
-    if (!interaction.isChatInputCommand()) {
-      return;
-    }
-
-    try {
-      await handleDiscordCommand(interaction, config);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown Discord bot error.";
-      if (interaction.deferred || interaction.replied) {
-        await interaction.editReply({ content: message }).catch(() => null);
-      } else {
-        await interaction.reply({ content: message, ephemeral: true }).catch(() => null);
-      }
     }
   });
 

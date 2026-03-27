@@ -1,8 +1,4 @@
 import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  EmbedBuilder,
   PermissionFlagsBits,
   REST,
   Routes,
@@ -11,11 +7,9 @@ import {
   type ChatInputCommandInteraction
 } from "discord.js";
 
-import { createAnnouncement } from "@/lib/announcements";
-import { isDiscordOperator, type DiscordBotConfig } from "@/lib/discord/bot-env";
-import { getDiscordGuildIntegration, setDiscordGuildSiteOps } from "@/lib/discord/guilds";
-import { fetchDiscordBotPublicFeed, fetchDiscordBotSiteHealth, getDiscordBotSiteLinks, createDiscordBotQuickPaste } from "@/lib/discord/site-client";
-import { ensureDiscordGuildSetup, summarizeDiscordGuildSetup } from "@/lib/discord/setup";
+import { type DiscordBotConfig } from "@/lib/discord/bot-env";
+import { createDiscordCommandPlan, type DiscordCommandMessage } from "@/lib/discord/command-core";
+import { ensureDiscordGuildSetup } from "@/lib/discord/setup";
 
 function buildWoxCommand() {
   return new SlashCommandBuilder()
@@ -117,224 +111,62 @@ export async function registerDiscordCommands(config: DiscordBotConfig) {
   return "global";
 }
 
-function buildLinksComponents() {
-  const links = getDiscordBotSiteLinks();
-  return [
-    new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder().setLabel("Workspace").setStyle(ButtonStyle.Link).setURL(links.workspace),
-      new ButtonBuilder().setLabel("Quick paste").setStyle(ButtonStyle.Link).setURL(links.quick),
-      new ButtonBuilder().setLabel("Feed").setStyle(ButtonStyle.Link).setURL(links.feed),
-      new ButtonBuilder().setLabel("Privacy").setStyle(ButtonStyle.Link).setURL(links.privacy),
-      new ButtonBuilder().setLabel("Support").setStyle(ButtonStyle.Link).setURL(links.support)
-    )
-  ];
-}
-
-function requireOperator(config: DiscordBotConfig, interaction: ChatInputCommandInteraction<CacheType>) {
-  if (!isDiscordOperator(config, interaction.user.id)) {
-    throw new Error("This command is restricted to configured WOX-Bin Discord operators.");
-  }
-}
-
-function requireGuildManager(interaction: ChatInputCommandInteraction<CacheType>) {
-  if (!interaction.inGuild()) {
-    throw new Error("This command must be used inside a server.");
-  }
-
-  const canManageGuild = interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild);
-  if (!canManageGuild) {
-    throw new Error("You need Manage Server permission to run setup in this guild.");
-  }
+function toGatewayMessage(message: DiscordCommandMessage, ephemeral: boolean) {
+  return {
+    ...message,
+    ephemeral
+  };
 }
 
 export async function handleDiscordCommand(
   interaction: ChatInputCommandInteraction<CacheType>,
   config: DiscordBotConfig
 ) {
-  if (interaction.commandName !== "wox") {
-    return;
-  }
+  const plan = createDiscordCommandPlan(
+    {
+      commandName: interaction.commandName,
+      subcommand: interaction.options.getSubcommand(),
+      userId: interaction.user.id,
+      guildId: interaction.guildId ?? null,
+      guildName: interaction.guild?.name ?? null,
+      canManageGuild: interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild) ?? false,
+      guild: interaction.guild ?? null,
+      options: {
+        count: interaction.options.getInteger("count") ?? undefined,
+        enabled: interaction.options.getBoolean("enabled") ?? undefined,
+        title: interaction.options.getString("title") ?? undefined,
+        body: interaction.options.getString("body") ?? undefined,
+        tone: (interaction.options.getString("tone") as "info" | "success" | "warning" | "critical" | null) ?? undefined,
+        ctaLabel: interaction.options.getString("cta_label"),
+        ctaHref: interaction.options.getString("cta_href"),
+        content: interaction.options.getString("content") ?? undefined,
+        visibility:
+          (interaction.options.getString("visibility") as "private" | "unlisted" | "public" | null) ?? undefined
+      }
+    },
+    config,
+    {
+      runGuildSetup: async (input) => {
+        if (!input.guild) {
+          throw new Error("This command must be used inside a server.");
+        }
 
-  const subcommand = interaction.options.getSubcommand();
-
-  if (subcommand === "help") {
-    await interaction.reply({
-      ephemeral: true,
-      embeds: [
-        new EmbedBuilder()
-          .setTitle("WOX-Bin bot help")
-          .setColor(0x38bdf8)
-          .setDescription(
-            "Use this bot to bootstrap a WOX-Bin server, mirror live site announcements, check site health, pull the public feed, and create operator-only quick pastes."
-          )
-          .addFields(
-            {
-              name: "Public commands",
-              value: "`/wox links`, `/wox feed`, `/wox status`, `/wox help`"
-            },
-            {
-              name: "Guild setup",
-              value: "`/wox setup` creates the WOX-Bin channels, roles, and announcement webhook."
-            },
-            {
-              name: "Operator commands",
-              value: "`/wox siteops`, `/wox announce`, `/wox quickpaste`"
-            }
-          )
-      ],
-      components: buildLinksComponents()
-    });
-    return;
-  }
-
-  if (subcommand === "links") {
-    const links = getDiscordBotSiteLinks();
-    await interaction.reply({
-      embeds: [
-        new EmbedBuilder()
-          .setTitle("WOX-Bin links")
-          .setDescription(
-            [`Workspace: ${links.workspace}`, `Quick paste: ${links.quick}`, `Feed: ${links.feed}`, `Support: ${links.support}`].join(
-              "\n"
-            )
-          )
-          .setColor(0x38bdf8)
-      ],
-      components: buildLinksComponents()
-    });
-    return;
-  }
-
-  if (subcommand === "feed") {
-    await interaction.deferReply();
-    const count = interaction.options.getInteger("count") ?? 5;
-    const items = await fetchDiscordBotPublicFeed(count);
-    const links = getDiscordBotSiteLinks();
-    await interaction.editReply({
-      embeds: [
-        new EmbedBuilder()
-          .setTitle("Latest public WOX-Bin pastes")
-          .setColor(0x38bdf8)
-          .setDescription(
-            items.length
-              ? items
-                  .map((item) => `• **${item.title || "Untitled"}** — ${item.language} — ${links.home}p/${item.slug}`)
-                  .join("\n")
-              : "No public pastes are available right now."
-          )
-      ],
-      components: buildLinksComponents()
-    });
-    return;
-  }
-
-  if (subcommand === "status") {
-    await interaction.deferReply({ ephemeral: true });
-    const health = await fetchDiscordBotSiteHealth();
-    await interaction.editReply({
-      embeds: [
-        new EmbedBuilder()
-          .setTitle("WOX-Bin status")
-          .setColor(health.ok ? 0x22c55e : 0xdc2626)
-          .addFields(
-            { name: "Health", value: health.ok ? "OK" : "Degraded", inline: true },
-            { name: "Database", value: health.db, inline: true },
-            { name: "Checked at", value: health.time, inline: false }
-          )
-      ]
-    });
-    return;
-  }
-
-  if (subcommand === "setup") {
-    requireGuildManager(interaction);
-    await interaction.deferReply({ ephemeral: true });
-    const { result } = await ensureDiscordGuildSetup(interaction.guild!);
-    await interaction.editReply({
-      embeds: [
-        new EmbedBuilder()
-          .setTitle("WOX-Bin server setup complete")
-          .setColor(0x22c55e)
-          .setDescription(summarizeDiscordGuildSetup(result))
-      ]
-    });
-    return;
-  }
-
-  if (subcommand === "siteops") {
-    requireOperator(config, interaction);
-    requireGuildManager(interaction);
-    await interaction.deferReply({ ephemeral: true });
-    const enabled = interaction.options.getBoolean("enabled", true);
-    const existing = await getDiscordGuildIntegration(interaction.guildId!);
-    if (!existing) {
-      throw new Error("Run `/wox setup` first so the guild is registered before toggling site ops.");
+        return ensureDiscordGuildSetup(input.guild);
+      }
     }
-    const updated = await setDiscordGuildSiteOps(interaction.guildId!, enabled);
-    await interaction.editReply({
-      embeds: [
-        new EmbedBuilder()
-          .setTitle("WOX-Bin site ops updated")
-          .setColor(enabled ? 0x22c55e : 0xf59e0b)
-          .setDescription(
-            `${updated?.guildName ?? interaction.guild!.name} will ${enabled ? "now" : "no longer"} receive live site announcements via the Discord webhook.`
-          )
-      ]
-    });
+  );
+
+  if (!plan) {
     return;
   }
 
-  if (subcommand === "announce") {
-    requireOperator(config, interaction);
-    await interaction.deferReply({ ephemeral: true });
-    const title = interaction.options.getString("title", true);
-    const body = interaction.options.getString("body", true);
-    const tone = (interaction.options.getString("tone") ?? "info") as "info" | "success" | "warning" | "critical";
-    const ctaLabel = interaction.options.getString("cta_label");
-    const ctaHref = interaction.options.getString("cta_href");
-    const announcement = await createAnnouncement(
-      {
-        title,
-        body,
-        tone,
-        ctaLabel,
-        ctaHref,
-        published: true,
-        startsAt: null,
-        endsAt: null
-      },
-      null
-    );
-
-    await interaction.editReply({
-      embeds: [
-        new EmbedBuilder()
-          .setTitle("Live site announcement published")
-          .setColor(0x22c55e)
-          .setDescription(`${announcement.title}\n\n${announcement.body}`)
-      ]
-    });
+  if (plan.deferred) {
+    await interaction.deferReply({ ephemeral: plan.ephemeral });
+    const message = await plan.execute();
+    await interaction.editReply(message);
     return;
   }
 
-  if (subcommand === "quickpaste") {
-    requireOperator(config, interaction);
-    await interaction.deferReply({ ephemeral: true });
-    const title = interaction.options.getString("title", true);
-    const content = interaction.options.getString("content", true);
-    const visibility = (interaction.options.getString("visibility") ?? "unlisted") as "private" | "unlisted" | "public";
-    const created = await createDiscordBotQuickPaste({
-      title,
-      content,
-      visibility
-    });
-    await interaction.editReply({
-      embeds: [
-        new EmbedBuilder()
-          .setTitle("Hosted paste created")
-          .setColor(0x22c55e)
-          .setDescription(created.url ? `Open: ${created.url}` : `Slug: ${created.slug ?? "unknown"}`)
-      ]
-    });
-  }
+  const message = await plan.execute();
+  await interaction.reply(toGatewayMessage(message, plan.ephemeral));
 }

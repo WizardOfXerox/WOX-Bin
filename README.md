@@ -40,6 +40,7 @@ They share auth, deployment, and parts of the UI system, but they should be trea
 - `/help`, `/support`, `/support/manage`, `/changelog` — user help, support tickets, staff queue, and shipped-change history
 - `npm run discord:bot` / `npm run discord:invite` — WOX-Bin Discord bot runtime and install URL helper
 - `/discord` — public Discord bot landing page with install/setup overview
+- `/api/discord/interactions` — hosted Discord slash-command endpoint for hybrid bot mode
 - `/app` workspace with:
   - local drafts in IndexedDB
   - account-backed sync
@@ -85,6 +86,7 @@ They share auth, deployment, and parts of the UI system, but they should be trea
 - `/admin` with overview, deployment readiness, user management, paste moderation, audit export, and SMTP test hooks
 - `/admin/discord` with Discord bot invite readiness, guild linkage, webhook coverage, and rollout health
 - `DISCORD_BOT_SITE_API_KEY` is now a site-owned bot secret for Discord quickpaste, not a user account API key
+- `DISCORD_PUBLIC_KEY` lets the hosted interactions endpoint verify Discord request signatures before running commands
 
 ## Stack
 

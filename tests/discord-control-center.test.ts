@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DISCORD_BOT_REQUIRED_PERMISSIONS,
+  buildDiscordInteractionEndpointUrl,
   buildDiscordBotInviteUrl,
   summarizeDiscordGuildIntegrations
 } from "@/lib/discord/control-center-shared";
@@ -17,6 +18,12 @@ describe("discord control center", () => {
     expect(parsed.searchParams.get("client_id")).toBe("123456789012345678");
     expect(parsed.searchParams.get("scope")).toBe("bot applications.commands");
     expect(parsed.searchParams.get("permissions")).toBe(DISCORD_BOT_REQUIRED_PERMISSIONS.toString());
+  });
+
+  it("builds the hosted interactions endpoint from the site base url", () => {
+    expect(buildDiscordInteractionEndpointUrl("https://wox-bin.vercel.app/")).toBe(
+      "https://wox-bin.vercel.app/api/discord/interactions"
+    );
   });
 
   it("summarizes linked guild coverage for the dashboard", () => {

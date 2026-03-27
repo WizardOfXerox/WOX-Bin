@@ -33,6 +33,7 @@ export default async function AdminDiscordPage() {
   const envCards = [
     { label: "Application ID", enabled: snapshot.config.hasApplicationId },
     { label: "Bot token", enabled: snapshot.config.hasToken },
+    { label: "Public key", enabled: snapshot.config.hasPublicKey },
     { label: "Dev guild", enabled: snapshot.config.hasDevGuildId },
     { label: "Bot site API key", enabled: snapshot.config.hasSiteApiKey }
   ];
@@ -176,6 +177,10 @@ export default async function AdminDiscordPage() {
                 <p>
                   Site base URL: <span className="font-mono text-foreground">{snapshot.siteBaseUrl}</span>
                 </p>
+                <p>
+                  Interactions endpoint:{" "}
+                  <span className="font-mono text-foreground">{snapshot.interactionEndpointUrl ?? "Unavailable"}</span>
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -188,7 +193,11 @@ export default async function AdminDiscordPage() {
                 <li>2. Run <code>/wox setup</code> once so the bot can create channels, roles, and the announcement webhook.</li>
                 <li>3. Run <code>/wox siteops enabled:true</code> in the one guild that should mirror live site notices.</li>
                 <li>
-                  4. Keep a dedicated <code>DISCORD_BOT_SITE_API_KEY</code> as a site-owned secret in env, not as a normal
+                  4. Set Discord’s Interactions Endpoint URL to <code>{snapshot.interactionEndpointUrl ?? "/api/discord/interactions"}</code>{" "}
+                  so slash commands run from the Vercel app without your PC.
+                </li>
+                <li>
+                  5. Keep a dedicated <code>DISCORD_BOT_SITE_API_KEY</code> as a site-owned secret in env, not as a normal
                   user account API key, so bot quickpaste access is easy to rotate.
                 </li>
               </ol>
@@ -206,8 +215,8 @@ export default async function AdminDiscordPage() {
                   <code>npm run discord:bot</code>
                 </p>
                 <p className="leading-7">
-                  The invite script prints the OAuth URL, and the bot process should run on an always-on worker or VPS,
-                  not on Vercel serverless functions.
+                  Slash commands can run through the interactions endpoint on Vercel, while the gateway companion should
+                  stay on an always-on worker or VPS for presence and guild lifecycle events.
                 </p>
               </div>
             </CardContent>

@@ -12,6 +12,7 @@ export type DiscordBotConfig = {
   applicationId: string;
   devGuildId: string | null;
   operatorUserIds: Set<string>;
+  publicKey: string | null;
 };
 
 export function readDiscordBotConfig(): DiscordBotConfig {
@@ -31,7 +32,8 @@ export function readDiscordBotConfig(): DiscordBotConfig {
         .split(",")
         .map((value) => value.trim())
         .filter(Boolean)
-    )
+    ),
+    publicKey: String(process.env.DISCORD_PUBLIC_KEY ?? "").trim() || null
   };
 }
 

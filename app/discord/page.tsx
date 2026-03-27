@@ -91,6 +91,9 @@ export default async function DiscordBotPage() {
                 <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5">
                   {snapshot.config.hasSiteApiKey ? "Quickpaste ready" : "Quickpaste disabled"}
                 </span>
+                <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5">
+                  {snapshot.config.hasPublicKey ? "Webhook commands ready" : "Webhook commands pending"}
+                </span>
               </div>
             </div>
 
@@ -114,8 +117,8 @@ export default async function DiscordBotPage() {
                     Live site bridge
                   </div>
                   <p className="text-sm leading-7 text-muted-foreground">
-                    Published site announcements can fan out to configured guild webhooks, and operators can create quick
-                    hosted notes directly from Discord.
+                    Published site announcements can fan out to configured guild webhooks, operators can create quick
+                    hosted notes directly from Discord, and slash commands can run from the Vercel interactions endpoint.
                   </p>
                 </CardContent>
               </Card>
@@ -199,8 +202,9 @@ export default async function DiscordBotPage() {
               </div>
               <ol className="space-y-2 text-sm leading-7 text-muted-foreground">
                 <li>1. Invite the bot to your server.</li>
-                <li>2. Run <code>/wox setup</code> once.</li>
-                <li>3. Use <code>/wox siteops enabled:true</code> in the one ops guild that should mirror site notices.</li>
+                <li>2. Set Discord’s Interactions Endpoint URL to <code>{snapshot.interactionEndpointUrl ?? "/api/discord/interactions"}</code>.</li>
+                <li>3. Run <code>/wox setup</code> once.</li>
+                <li>4. Use <code>/wox siteops enabled:true</code> in the one ops guild that should mirror site notices.</li>
               </ol>
             </CardContent>
           </Card>

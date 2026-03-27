@@ -8,6 +8,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    slug: "2026-03-27-discord-hybrid-interactions-and-gateway",
+    date: "2026-03-27",
+    title: "Discord hybrid bot mode with hosted interactions and a live gateway companion",
+    summary:
+      "WOX-Bin’s Discord bot can now run slash commands from the hosted Vercel app through a signed interactions endpoint, while the optional gateway worker keeps bot presence and guild lifecycle automation online.",
+    bullets: [
+      "Added `/api/discord/interactions` so Discord slash commands can run through the site without relying on a locally running PC.",
+      "Added signed Discord request verification using `DISCORD_PUBLIC_KEY` and deferred follow-up handling for heavier commands like setup and quickpaste.",
+      "Refactored the command layer into a shared transport-agnostic core so the hosted endpoint and the gateway companion use the same command behavior.",
+      "Extended guild setup so `/wox setup` can bootstrap channels, roles, and the announcement webhook through Discord REST as well as the live gateway client.",
+      "Changed `npm run discord:bot` into a gateway companion role for presence, command registration, and guild lifecycle work instead of handling command transport directly."
+    ]
+  },
+  {
     slug: "2026-03-27-discord-landing-and-control-dashboard",
     date: "2026-03-27",
     title: "Discord bot landing page and Vercel control dashboard",
