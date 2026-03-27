@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Bot, Command, Link2, MessageSquareMore, ShieldCheck, Sparkles } from "lucide-react";
 
 import { auth } from "@/auth";
+import { DiscordInstallFunnel } from "@/components/discord/discord-install-funnel";
 import { SiteHeader } from "@/components/site/site-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -144,6 +145,17 @@ export default async function DiscordBotPage() {
           ))}
         </section>
 
+        <DiscordInstallFunnel
+          interactionEndpointUrl={snapshot.interactionEndpointUrl}
+          inviteUrl={snapshot.inviteUrl}
+          landingUrl={snapshot.landingUrl}
+          linkedRolesVerificationUrl={snapshot.linkedRolesVerificationUrl}
+          privacyUrl={snapshot.privacyUrl}
+          termsUrl={snapshot.termsUrl}
+          viewerIsAdmin={viewerIsAdmin}
+          webhookEventsUrl={snapshot.webhookEventsUrl}
+        />
+
         <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)]">
           <Card className="border-white/10 bg-white/[0.03]">
             <CardContent className="space-y-4 pt-6">
@@ -244,63 +256,6 @@ export default async function DiscordBotPage() {
               ) : (
                 <p className="text-xs text-muted-foreground">The control dashboard is only available to signed-in admins.</p>
               )}
-            </CardContent>
-          </Card>
-        </section>
-
-        <section className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-          <Card className="border-white/10 bg-white/[0.03]">
-            <CardContent className="space-y-4 pt-6">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <Link2 className="h-4 w-4 text-primary" />
-                Discord portal URLs
-              </div>
-              <div className="space-y-3 text-sm text-muted-foreground">
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-3">
-                  <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Linked Roles Verification URL</p>
-                  <p className="mt-2 break-all font-mono text-xs text-foreground">
-                    {snapshot.linkedRolesVerificationUrl ?? "Unavailable"}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-3">
-                  <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Terms of Service URL</p>
-                  <p className="mt-2 break-all font-mono text-xs text-foreground">{snapshot.termsUrl ?? "Unavailable"}</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-3">
-                  <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Privacy Policy URL</p>
-                  <p className="mt-2 break-all font-mono text-xs text-foreground">
-                    {snapshot.privacyUrl ?? "Unavailable"}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-3">
-                  <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Webhook Events Endpoint URL</p>
-                  <p className="mt-2 break-all font-mono text-xs text-foreground">
-                    {snapshot.webhookEventsUrl ?? "Unavailable"}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-white/10 bg-white/[0.03]">
-            <CardContent className="space-y-4 pt-6">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <ShieldCheck className="h-4 w-4 text-primary" />
-                Recommended Discord app settings
-              </div>
-              <ol className="space-y-2 text-sm leading-7 text-muted-foreground">
-                <li>1. Keep <strong>Guild Install</strong> enabled so the bot can be added to servers.</li>
-                <li>2. Leave <strong>User Install</strong> off unless you later build user-scoped Discord app flows.</li>
-                <li>
-                  3. Use Discord’s own invite URL for the main add-app flow, or set the optional custom install link to{" "}
-                  <code>{snapshot.landingUrl ?? "/discord"}</code> if you want users to land on WOX-Bin’s bot page first.
-                </li>
-                <li>
-                  4. Paste <code>{snapshot.interactionEndpointUrl ?? "/api/discord/interactions"}</code> into Interactions
-                  Endpoint URL and <code>{snapshot.webhookEventsUrl ?? "/api/discord/events"}</code> into Webhooks Endpoint
-                  URL.
-                </li>
-              </ol>
             </CardContent>
           </Card>
         </section>
