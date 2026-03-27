@@ -15,7 +15,12 @@ export async function GET(request: Request, { params }: Params) {
     return NextResponse.redirect(new URL("/privacy-tools", request.url));
   }
 
-  const response = NextResponse.redirect(link.destinationUrl, 307);
+  const handoffUrl = new URL("/out", request.url);
+  handoffUrl.searchParams.set("to", link.destinationUrl);
+  handoffUrl.searchParams.set("via", "short-link");
+  handoffUrl.searchParams.set("slug", slug);
+
+  const response = NextResponse.redirect(handoffUrl, 307);
   response.headers.set("Cache-Control", "no-store");
   response.headers.set("Referrer-Policy", "no-referrer");
   response.headers.set("X-Robots-Tag", "noindex, nofollow");

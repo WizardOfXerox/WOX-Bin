@@ -13,6 +13,7 @@ These Markdown files live **in the repository**. They are **not** automatically 
 | **[CONVERSION-WORKER.md](./CONVERSION-WORKER.md)** | Local/worker: MinIO, Docker, `npm run worker:convert` |
 | **[CONVERSION-PLATFORM.md](./CONVERSION-PLATFORM.md)** | Hybrid converter architecture (browser vs worker) |
 | **[TOOLS.md](./TOOLS.md)** | `/tools` routes, APIs, registry layout |
+| **[DISCORD-BOT.md](./DISCORD-BOT.md)** | Discord bot runtime, `/discord` landing page, `/admin/discord` control dashboard, slash commands, guild bootstrap, and site-announcement mirroring |
 | **[TOOLS-HANDOFF.md](./TOOLS-HANDOFF.md)** | Current tools status, disable switch, resume instructions for another AI |
 | **[MARKDOWN-RENTY-SUBSET.md](./MARKDOWN-RENTY-SUBSET.md)** | Rentry-inspired extras on top of `marked` (preview + Markdown→HTML) |
 | **[LOCAL-DATABASE.md](./LOCAL-DATABASE.md)** | Postgres locally |

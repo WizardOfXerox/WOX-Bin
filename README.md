@@ -38,6 +38,8 @@ They share auth, deployment, and parts of the UI system, but they should be trea
 - `/sign-in/mfa` plus authenticator-app MFA in account settings (QR setup + recovery codes) — see **[docs/TOTP-MFA.md](docs/TOTP-MFA.md)**
 - `/doc`, `/doc/api`, `/doc/scraping`, `/doc/tools`, `/doc/faq` — developer documentation (redirects: `/doc_api`, `/doc_scraping_api`)
 - `/help`, `/support`, `/support/manage`, `/changelog` — user help, support tickets, staff queue, and shipped-change history
+- `npm run discord:bot` / `npm run discord:invite` — WOX-Bin Discord bot runtime and install URL helper
+- `/discord` — public Discord bot landing page with install/setup overview
 - `/app` workspace with:
   - local drafts in IndexedDB
   - account-backed sync
@@ -81,6 +83,8 @@ They share auth, deployment, and parts of the UI system, but they should be trea
 - Password-protected pastes, burn-after-read, burn-after-views, secret links, comments, stars, reports, moderation hooks, clickable shared hyperlinks, and visible view counts
 - `/settings` → `/settings/account` (profile), plus `/settings/billing`, `/settings/usage`, `/settings/sessions`, `/settings/webhooks`, `/settings/team`, and `/settings/team/pastes` (teammates’ public/unlisted pastes)
 - `/admin` with overview, deployment readiness, user management, paste moderation, audit export, and SMTP test hooks
+- `/admin/discord` with Discord bot invite readiness, guild linkage, webhook coverage, and rollout health
+- `DISCORD_BOT_SITE_API_KEY` is now a site-owned bot secret for Discord quickpaste, not a user account API key
 
 ## Stack
 

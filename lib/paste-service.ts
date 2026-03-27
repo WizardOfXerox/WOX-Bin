@@ -29,6 +29,7 @@ import { normalizeTagList, slugify } from "@/lib/utils";
 import type { PasteFileDraft, PasteFileMediaKind, PublicPasteRecord } from "@/lib/types";
 import { dispatchUserWebhook } from "@/lib/webhooks";
 import { buildStarterAccountPasteSeed } from "@/lib/example-data";
+import { isPublicFeedEligible } from "@/lib/public-feed-view";
 
 type Viewer = {
   id?: string | null;
@@ -1073,7 +1074,7 @@ export async function listFeedPastes(limit = 50) {
     .orderBy(desc(pastes.updatedAt))
     .limit(limit);
 
-  return Promise.all(rows.map((row) => hydratePaste(row, null)));
+  return Promise.all(rows.filter(isPublicFeedEligible).map((row) => hydratePaste(row, null)));
 }
 
 export async function listCommentsForPaste(

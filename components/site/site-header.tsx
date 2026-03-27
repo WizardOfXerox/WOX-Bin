@@ -8,7 +8,9 @@ import { ArrowRight, LogOut, Menu } from "lucide-react";
 
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { Button } from "@/components/ui/button";
+import { PwaInstallButton } from "@/components/ui/pwa-install-button";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { SiteAnnouncementBar } from "@/components/site/site-announcement-bar";
 import {
   Dialog,
   DialogClose,
@@ -81,6 +83,7 @@ export function SiteHeader({ className }: Props) {
   const desktopActions = (
     <>
       <LanguageSwitcher compact />
+      <PwaInstallButton compact />
       {showLoadingSkeleton ? (
         <div aria-hidden className="h-9 w-28 animate-pulse rounded-full bg-muted/40" />
       ) : sessionUser ? (
@@ -116,100 +119,98 @@ export function SiteHeader({ className }: Props) {
   );
 
   return (
-    <header className={cn("glass-panel flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5 lg:gap-4", className)}>
-      <Link className="shrink-0 text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground" href="/">
-        WOX-Bin
-      </Link>
+    <header className={cn("glass-panel flex flex-col gap-3 px-4 py-3 sm:px-5 lg:gap-4", className)}>
+      <SiteAnnouncementBar />
+      <div className="flex w-full flex-wrap items-center gap-3">
+        <Link className="shrink-0 text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground" href="/">
+          WOX-Bin
+        </Link>
 
-      <div className="hidden shrink-0 items-center gap-2 md:ml-auto md:flex 2xl:ml-0 2xl:hidden">{desktopActions}</div>
+        <div className="hidden min-w-0 flex-1 items-center justify-end gap-2 md:flex md:flex-wrap">{desktopActions}</div>
 
-      <nav className="order-3 hidden w-full flex-wrap items-center gap-1 md:flex 2xl:order-none 2xl:min-w-0 2xl:flex-1 2xl:w-auto 2xl:flex-nowrap 2xl:overflow-x-auto 2xl:whitespace-nowrap workspace-scrollbar-hide">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button
+              aria-label="Open site navigation"
+              className="ml-auto shrink-0 md:hidden"
+              size="icon"
+              type="button"
+              variant="outline"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="w-[calc(100vw-1rem)] max-w-md rounded-[1.5rem] p-5">
+            <DialogHeader className="text-left">
+              <DialogTitle>{t("menu.title")}</DialogTitle>
+              <DialogDescription>{t("menu.description")}</DialogDescription>
+            </DialogHeader>
+            <LanguageSwitcher />
+            <PwaInstallButton className="h-12 justify-center text-base" />
+            <div className="grid grid-cols-2 gap-3">
+              {SITE_NAV_ITEMS.map((item) => (
+                <DialogClose asChild key={item.href}>
+                  <Button asChild className="h-12 justify-center text-sm" variant={item.matches(pathname) ? "secondary" : "outline"}>
+                    <Link href={item.href}>{t(item.labelKey)}</Link>
+                  </Button>
+                </DialogClose>
+              ))}
+            </div>
+            <div className="flex flex-col gap-3 pt-1">
+              {showLoadingSkeleton ? (
+                <div aria-hidden className="h-12 w-full animate-pulse rounded-full bg-muted/40" />
+              ) : sessionUser ? (
+                <>
+                  <DialogClose asChild>
+                    <Button asChild className="h-12 justify-center text-base" variant="outline">
+                      <Link className="inline-flex items-center gap-2" href="/settings/account">
+                        <UserAvatar
+                          image={sessionUser.image}
+                          label={sessionUser.displayName || sessionUser.name || sessionUser.email}
+                          size="sm"
+                          username={sessionUser.username}
+                        />
+                        <span>{accountLabelFromSession(session)}</span>
+                      </Link>
+                    </Button>
+                  </DialogClose>
+                  <Button
+                    className="h-12 justify-center gap-2 text-base"
+                    onClick={() => void signOut({ callbackUrl: "/" })}
+                    type="button"
+                    variant="outline"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    {t("nav.signOut")}
+                  </Button>
+                </>
+              ) : (
+                <DialogClose asChild>
+                  <Button asChild className="h-12 justify-center text-base" variant="outline">
+                    <Link href="/sign-in">{t("nav.signIn")}</Link>
+                  </Button>
+                </DialogClose>
+              )}
+              <DialogClose asChild>
+                <Button asChild className="h-12 justify-center text-base">
+                  <Link href="/app">
+                    {t("nav.openWorkspace")}
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </DialogClose>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <nav className="hidden w-full flex-wrap items-center gap-1 border-t border-border/60 pt-3 md:flex">
         {SITE_NAV_ITEMS.map((item) => (
-          <Link
-            key={item.href}
-            className={navItemClass(item.matches(pathname))}
-            href={item.href}
-          >
+          <Link key={item.href} className={navItemClass(item.matches(pathname))} href={item.href}>
             {t(item.labelKey)}
           </Link>
         ))}
       </nav>
-
-      <div className="hidden shrink-0 items-center gap-2 2xl:flex">{desktopActions}</div>
-
-      <Dialog>
-        <DialogTrigger asChild>
-          <Button
-            aria-label="Open site navigation"
-            className="ml-auto shrink-0 md:hidden"
-            size="icon"
-            type="button"
-            variant="outline"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="w-[calc(100vw-1rem)] max-w-md rounded-[1.5rem] p-5">
-          <DialogHeader className="text-left">
-            <DialogTitle>{t("menu.title")}</DialogTitle>
-            <DialogDescription>{t("menu.description")}</DialogDescription>
-          </DialogHeader>
-          <LanguageSwitcher />
-          <div className="grid grid-cols-2 gap-3">
-            {SITE_NAV_ITEMS.map((item) => (
-              <DialogClose asChild key={item.href}>
-                <Button asChild className="h-12 justify-center text-sm" variant={item.matches(pathname) ? "secondary" : "outline"}>
-                  <Link href={item.href}>{t(item.labelKey)}</Link>
-                </Button>
-              </DialogClose>
-            ))}
-          </div>
-          <div className="flex flex-col gap-3 pt-1">
-            {showLoadingSkeleton ? (
-              <div aria-hidden className="h-12 w-full animate-pulse rounded-full bg-muted/40" />
-        ) : sessionUser ? (
-              <>
-              <DialogClose asChild>
-                <Button asChild className="h-12 justify-center text-base" variant="outline">
-                  <Link className="inline-flex items-center gap-2" href="/settings/account">
-                    <UserAvatar
-                      image={sessionUser.image}
-                      label={sessionUser.displayName || sessionUser.name || sessionUser.email}
-                      size="sm"
-                      username={sessionUser.username}
-                    />
-                    <span>{accountLabelFromSession(session)}</span>
-                  </Link>
-                </Button>
-              </DialogClose>
-                <Button
-                  className="h-12 justify-center gap-2 text-base"
-                  onClick={() => void signOut({ callbackUrl: "/" })}
-                  type="button"
-                  variant="outline"
-                >
-                  <LogOut className="h-4 w-4" />
-                  {t("nav.signOut")}
-                </Button>
-              </>
-            ) : (
-              <DialogClose asChild>
-                <Button asChild className="h-12 justify-center text-base" variant="outline">
-                  <Link href="/sign-in">{t("nav.signIn")}</Link>
-                </Button>
-              </DialogClose>
-            )}
-            <DialogClose asChild>
-              <Button asChild className="h-12 justify-center text-base">
-                <Link href="/app">
-                  {t("nav.openWorkspace")}
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </DialogClose>
-          </div>
-        </DialogContent>
-      </Dialog>
     </header>
   );
 }

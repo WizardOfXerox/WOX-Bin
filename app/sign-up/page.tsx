@@ -9,9 +9,11 @@ import { Input } from "@/components/ui/input";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { useUiLanguage } from "@/components/providers/ui-language-provider";
 import { readTurnstileToken, resetTurnstileFields, TurnstileField } from "@/components/turnstile-field";
+import { AUTH_PAGE_COPY } from "@/lib/auth-page-copy";
 
 export default function SignUpPage() {
-  const { t } = useUiLanguage();
+  const { language, t } = useUiLanguage();
+  const authCopy = AUTH_PAGE_COPY[language];
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -39,7 +41,7 @@ export default function SignUpPage() {
 
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as { error?: string } | null;
-      setError(body?.error ?? "Registration failed.");
+      setError(body?.error ?? authCopy.registrationFailed);
       resetTurnstileFields(event.currentTarget);
       setLoading(false);
       return;
@@ -77,11 +79,11 @@ export default function SignUpPage() {
               <span>
                 {t("auth.signUp.acceptTerms")}{" "}
                 <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/terms">
-                  Terms
+                  {t("common.terms")}
                 </Link>{" "}
                 /{" "}
                 <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/privacy">
-                  Privacy
+                  {t("common.privacy")}
                 </Link>
               </span>
             </label>

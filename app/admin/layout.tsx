@@ -7,8 +7,10 @@ import { isAdminSession } from "@/lib/admin-auth";
 const links = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/deployment", label: "Deployment" },
+  { href: "/admin/discord", label: "Discord" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/pastes", label: "Pastes" },
+  { href: "/admin/announcements", label: "Announcements" },
   { href: "/support/manage", label: "Support" }
 ] as const;
 

@@ -54,38 +54,6 @@ import { pasteBodyDownloadFilename, safeDownloadBasename } from "@/lib/paste-dow
 import type { PasteFileDraft, PublicPasteRecord } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
 
-function triggerDownloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.rel = "noopener";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-function downloadPasteFile(file: PasteFileDraft) {
-  const name = safeDownloadBasename(file.filename, "attachment");
-  if (file.mediaKind === "image" || file.mediaKind === "video") {
-    const mime = file.mimeType?.trim() || "application/octet-stream";
-    const compact = file.content.replace(/\s/g, "");
-    try {
-      const binary = atob(compact);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i += 1) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-      triggerDownloadBlob(new Blob([bytes], { type: mime }), name);
-    } catch {
-      return;
-    }
-    return;
-  }
-  triggerDownloadBlob(new Blob([file.content], { type: "text/plain;charset=utf-8" }), name);
-}
-
 type CommentRecord = {
   id: number;
   content: string;
@@ -482,14 +450,6 @@ export function PublicPasteShell({
     await navigator.clipboard.writeText(href);
   }
 
-  function downloadMainPaste() {
-    if (locked) {
-      return;
-    }
-    const filename = pasteBodyDownloadFilename(paste);
-    triggerDownloadBlob(new Blob([paste.content], { type: "text/plain;charset=utf-8" }), filename);
-  }
-
   function handlePrintPaste() {
     if (typeof window === "undefined") {
       return;
@@ -504,6 +464,14 @@ export function PublicPasteShell({
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const shareUrl = getPasteShareUrl(origin, paste.slug, paste.secretMode);
   const rawUrl = `${origin}/raw/${paste.slug}`;
+  const rawDownloadPath = `/raw/${paste.slug}?download=1`;
+  const downloadCheckHref = `/download-check?to=${encodeURIComponent(rawDownloadPath)}&label=${encodeURIComponent(
+    pasteBodyDownloadFilename(paste)
+  )}`;
+  const attachmentDownloadHref = (index: number, file: PasteFileDraft) =>
+    `/download-check?to=${encodeURIComponent(`/file/${paste.slug}/${index}?download=1`)}&label=${encodeURIComponent(
+      safeDownloadBasename(file.filename, "attachment")
+    )}`;
 
   return (
     <main className="wox-public-paste-print-root mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:py-8 md:px-6 md:py-10">
@@ -599,10 +567,19 @@ export function PublicPasteShell({
                 <ImageIcon className="h-4 w-4" />
                 Code image
               </Button>
-              <Button className="w-full sm:w-auto" disabled={locked} onClick={downloadMainPaste} type="button" variant="outline">
-                <Download className="h-4 w-4" />
-                Download
-              </Button>
+              {locked ? (
+                <Button className="w-full sm:w-auto" disabled type="button" variant="outline">
+                  <Download className="h-4 w-4" />
+                  Download
+                </Button>
+              ) : (
+                <Button asChild className="w-full sm:w-auto" type="button" variant="outline">
+                  <Link href={downloadCheckHref} prefetch={false}>
+                    <Download className="h-4 w-4" />
+                    Download
+                  </Link>
+                </Button>
+              )}
               {locked ? (
                 <Button className="w-full sm:w-auto" disabled type="button" variant="outline">
                   <FileDown className="h-4 w-4" />
@@ -610,7 +587,7 @@ export function PublicPasteShell({
                 </Button>
               ) : (
                 <Button asChild className="w-full sm:w-auto" type="button" variant="outline">
-                  <Link href={`/raw/${paste.slug}?download=1`} prefetch={false}>
+                  <Link href={downloadCheckHref} prefetch={false}>
                     <FileDown className="h-4 w-4" />
                     Download raw
                   </Link>
@@ -823,7 +800,7 @@ export function PublicPasteShell({
                       Multi-file pastes stay grouped together so shared snippets keep their context.
                     </p>
                   </div>
-                  {paste.files.map((file) => {
+                  {paste.files.map((file, index) => {
                     const isMedia = isPasteFileMedia(file);
                     const mediaSrc = isMedia ? dataUrlFromPasteFile(file) : null;
                     return (
@@ -842,15 +819,11 @@ export function PublicPasteShell({
                               ) : null}
                             </p>
                           </div>
-                          <Button
-                            className="w-full sm:w-auto"
-                            onClick={() => downloadPasteFile(file)}
-                            size="sm"
-                            type="button"
-                            variant="outline"
-                          >
-                            <Download className="h-4 w-4" />
-                            Download
+                          <Button asChild className="w-full sm:w-auto" size="sm" type="button" variant="outline">
+                            <Link href={attachmentDownloadHref(index, file)} prefetch={false}>
+                              <Download className="h-4 w-4" />
+                              Download
+                            </Link>
                           </Button>
                         </div>
                         {isMedia && mediaSrc ? (

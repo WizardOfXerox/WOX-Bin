@@ -127,6 +127,7 @@ import { readTurnstileToken, resetTurnstileFields, TurnstileField } from "@/comp
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { PwaInstallButton } from "@/components/ui/pwa-install-button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   ContextMenu,
@@ -193,6 +194,7 @@ import {
   parseDataUrl
 } from "@/lib/paste-file-media";
 import { enrichPasteLineageForLocal } from "@/lib/paste-lineage";
+import { WORKSPACE_UI_COPY } from "@/lib/workspace-ui-copy";
 import {
   isWorkspaceExportJson,
   languageFromFilename,
@@ -990,7 +992,8 @@ function usageWidth(used: number, limit: number) {
 export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRequested = false }: Props) {
   const pathname = usePathname();
   const router = useRouter();
-  const { t } = useUiLanguage();
+  const { language, t } = useUiLanguage();
+  const workspaceCopy = WORKSPACE_UI_COPY[language];
   const [mode, setMode] = useState<WorkspaceMode>(sessionUser ? "account" : "local");
   const [snapshot, setSnapshot] = useState<WorkspaceSnapshot>({
     folders: DEFAULT_FOLDERS,
@@ -3694,15 +3697,15 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
           }
         }}
         overlayClassName="rounded-xl"
-        overlayMessage="Drop to import JSON backup or text/code file"
+        overlayMessage={`Drop to import ${workspaceCopy.importJsonLabel} or text/code file`}
       >
         <Card className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl" data-tutorial="library-sidebar">
         <CardContent className="flex min-h-0 flex-1 flex-col p-0">
           <div className="border-b border-border px-3 py-2 sm:px-5 sm:py-4">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Library</p>
-                <h2 className="mt-0.5 text-base font-semibold leading-tight tracking-tight sm:text-lg">Pastes</h2>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{workspaceCopy.libraryEyebrow}</p>
+                <h2 className="mt-0.5 text-base font-semibold leading-tight tracking-tight sm:text-lg">{workspaceCopy.pastesTitle}</h2>
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 <Button
@@ -3717,7 +3720,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 </Button>
                 <Button className="h-8 gap-1.5 px-2.5 text-xs sm:text-sm" onClick={handleNewPaste} size="sm" type="button">
                   <FilePlus2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  New
+                  {workspaceCopy.newPaste}
                 </Button>
               </div>
             </div>
@@ -3726,12 +3729,12 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               <Input
                 className="h-9 pl-9 text-sm"
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search title, content, or tags"
+                placeholder={workspaceCopy.searchPlaceholder}
                 ref={searchInputRef}
                 value={search}
               />
             </div>
-            <p className="mt-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Folders</p>
+            <p className="mt-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{workspaceCopy.folders}</p>
             <ContextMenu>
               <ContextMenuTrigger asChild>
                 <div
@@ -3748,19 +3751,19 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                       type="button"
                       variant={sidebarFolder === "all" ? "default" : "outline"}
                     >
-                      All
+                      {workspaceCopy.all}
                     </Button>
                   </ContextMenuTrigger>
                   <ContextMenuContent className="w-52">
-                    <ContextMenuLabel>All pastes</ContextMenuLabel>
+                    <ContextMenuLabel>{workspaceCopy.allPastes}</ContextMenuLabel>
                     <ContextMenuItem onSelect={() => setSidebarFolder("all")}>
                       <FolderInput className="mr-2 h-4 w-4" />
-                      Show all pastes
+                      {workspaceCopy.showAllPastes}
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem onSelect={openNewFolderModal}>
                       <FolderPlus className="mr-2 h-4 w-4" />
-                      New folder…
+                      {workspaceCopy.newFolder}
                     </ContextMenuItem>
                   </ContextMenuContent>
                 </ContextMenu>
@@ -3787,7 +3790,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 type="button"
                 variant={sidebarFolder === PUBLIC_FEED_FOLDER ? "default" : "outline"}
               >
-                Public feed
+                {workspaceCopy.publicFeed}
               </Button>
               {snapshot.folders.map((folder) => (
                 <div className="flex shrink-0 items-center gap-1" key={folder}>
@@ -3855,21 +3858,21 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 </div>
               </ContextMenuTrigger>
               <ContextMenuContent className="w-52">
-                <ContextMenuLabel>Library folders</ContextMenuLabel>
+                <ContextMenuLabel>{workspaceCopy.libraryFolders}</ContextMenuLabel>
                 <ContextMenuItem onSelect={openNewFolderModal}>
                   <FolderPlus className="mr-2 h-4 w-4" />
-                  New folder…
+                  {workspaceCopy.newFolder}
                 </ContextMenuItem>
                 <ContextMenuSeparator />
                 <ContextMenuItem onSelect={() => setSidebarFolder("all")}>
                   <FolderInput className="mr-2 h-4 w-4" />
-                  Show all pastes
+                  {workspaceCopy.showAllPastes}
                 </ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>
             {!sidebarShowsPublicFeed && batchSelected.size > 0 ? (
               <div className="mt-3 flex flex-col gap-2 rounded-lg border border-primary/30 bg-primary/5 p-2.5">
-                <p className="text-xs font-medium text-foreground">{batchSelected.size} selected</p>
+                <p className="text-xs font-medium text-foreground">{workspaceCopy.selected(batchSelected.size)}</p>
                 <div className="flex flex-wrap gap-1.5">
                   <Button
                     className="h-8 text-xs"
@@ -3879,7 +3882,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                     type="button"
                     variant="outline"
                   >
-                    Move…
+                    {workspaceCopy.move}
                   </Button>
                   <Button
                     className="h-8 text-xs"
@@ -3889,10 +3892,10 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                     type="button"
                     variant="destructive"
                   >
-                    Delete
+                    {workspaceCopy.delete}
                   </Button>
                   <Button className="h-8 text-xs" onClick={clearBatchSelection} size="sm" type="button" variant="ghost">
-                    Clear
+                    {workspaceCopy.clear}
                   </Button>
                 </div>
               </div>
@@ -3901,7 +3904,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
             {!sidebarShowsPublicFeed ? (
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Button className="h-8 text-xs" onClick={selectAllVisibleBatch} size="sm" type="button" variant="outline">
-                  Select visible
+                  {workspaceCopy.selectVisible}
                 </Button>
                 <Button
                   className="h-8 px-2 text-xs text-muted-foreground"
@@ -3911,7 +3914,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   type="button"
                   variant="ghost"
                 >
-                  Clear selection
+                  {workspaceCopy.clearSelection}
                 </Button>
               </div>
             ) : null}
@@ -3920,7 +3923,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               <div className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                   <ListOrdered className="h-3 w-3" />
-                  Sort & filter
+                  {workspaceCopy.sortAndFilter}
                 </span>
                 <Button
                   className="h-7 px-2 text-[11px]"
@@ -3929,7 +3932,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   type="button"
                   variant={pinnedOnly ? "default" : "outline"}
                 >
-                  Pinned only
+                  {workspaceCopy.pinnedOnly}
                 </Button>
               </div>
               <select
@@ -3939,11 +3942,11 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 title="Sort order"
                 value={sortOrder}
               >
-                <option value="pinned_updated">Pinned first, by last update</option>
-                <option value="updated">By last update</option>
-                <option value="newest">Newest created</option>
-                <option value="oldest">Oldest created</option>
-                <option value="title">Title A–Z</option>
+                <option value="pinned_updated">{workspaceCopy.sortPinnedUpdated}</option>
+                <option value="updated">{workspaceCopy.sortUpdated}</option>
+                <option value="newest">{workspaceCopy.sortNewest}</option>
+                <option value="oldest">{workspaceCopy.sortOldest}</option>
+                <option value="title">{workspaceCopy.sortTitle}</option>
               </select>
               <div className="flex flex-wrap gap-1.5">
                 <Button
@@ -3953,7 +3956,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   type="button"
                   variant={listQuickFilter === "all" ? "default" : "outline"}
                 >
-                  Everything
+                  {workspaceCopy.everything}
                 </Button>
                 <Button
                   className="h-8 text-xs"
@@ -3962,7 +3965,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   type="button"
                   variant={listQuickFilter === "favorites" ? "default" : "outline"}
                 >
-                  Favorites
+                  {workspaceCopy.favorites}
                 </Button>
                 <Button
                   className="h-8 text-xs"
@@ -3971,7 +3974,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   type="button"
                   variant={listQuickFilter === "recent" ? "default" : "outline"}
                 >
-                  Recent
+                  {workspaceCopy.recent}
                 </Button>
                 <Button
                   className="h-8 text-xs"
@@ -3980,7 +3983,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   type="button"
                   variant={listQuickFilter === "archived" ? "default" : "outline"}
                 >
-                  Archived
+                  {workspaceCopy.archived}
                 </Button>
               </div>
             </div>
@@ -3988,16 +3991,16 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
 
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 pb-4 workspace-scrollbar-hide" ref={libraryScrollRef}>
             {loading ? (
-              <div className="px-3 py-4 text-sm text-muted-foreground">Loading workspace...</div>
+              <div className="px-3 py-4 text-sm text-muted-foreground">{workspaceCopy.loadingWorkspace}</div>
             ) : sidebarFolder === PUBLIC_FEED_FOLDER && publicFeedLoading ? (
-              <div className="px-3 py-4 text-sm text-muted-foreground">Loading public feed…</div>
+              <div className="px-3 py-4 text-sm text-muted-foreground">{workspaceCopy.loadingPublicFeed}</div>
             ) : sidebarFolder === PUBLIC_FEED_FOLDER && publicFeedError ? (
               <div className="px-3 py-4 text-sm text-destructive">{publicFeedError}</div>
             ) : listAfterFilter.length === 0 ? (
               <div className="px-3 py-4 text-sm text-muted-foreground">
                 {sidebarFolder === PUBLIC_FEED_FOLDER
-                  ? "No public pastes to show yet."
-                  : "No pastes match the current search. Start with a new draft or import a text file / workspace JSON export."}
+                  ? workspaceCopy.noPublicPastes
+                  : workspaceCopy.noPastesMatch}
               </div>
             ) : (
               listAfterFilter.map((paste) => (
@@ -4205,11 +4208,11 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
             <div className="flex flex-wrap gap-3">
               <Button onClick={() => fileInputRef.current?.click()} size="sm" type="button" variant="outline">
                 <Upload className="h-4 w-4" />
-                Import file
+                {workspaceCopy.importFile}
               </Button>
               <Button onClick={() => void handleExportWorkspace()} size="sm" type="button" variant="outline">
                 <Download className="h-4 w-4" />
-                Export
+                {workspaceCopy.export}
               </Button>
             </div>
             <input
@@ -4221,13 +4224,13 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               type="file"
             />
             <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-              <span className="font-medium text-foreground/80">JSON backup</span> restores the local library.{" "}
-              <span className="font-medium text-foreground/80">.txt, .md, code</span> and similar files create one new paste
+              <span className="font-medium text-foreground/80">{workspaceCopy.importJsonLabel}</span> restores the local library.{" "}
+              <span className="font-medium text-foreground/80">{workspaceCopy.importTextLabel}</span> and similar files create one new paste
               (syntax from the file extension). Use “All files” in the picker if an extension is not listed.
               {!sidebarShowsPublicFeed ? (
                 <>
                   {" "}
-                  <span className="font-medium text-foreground/80">Drag &amp; drop</span> anywhere on this library panel to import.
+                  <span className="font-medium text-foreground/80">{workspaceCopy.importDragDropLabel}</span> anywhere on this library panel to import.
                 </>
               ) : null}
             </p>
@@ -5258,13 +5261,13 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
             <>
               <PrismThemeLink theme={syntaxTheme} />
             <div className="flex min-h-[55vh] flex-col items-center justify-center gap-4 text-center print:hidden">
-              <p className="text-2xl font-semibold">Nothing selected yet</p>
+              <p className="text-2xl font-semibold">{workspaceCopy.emptyTitle}</p>
               <p className="max-w-md text-sm leading-7 text-muted-foreground">
-                Start a new paste, import your existing archive, or sign in to sync everything to the hosted workspace.
+                {workspaceCopy.emptyBody}
               </p>
               <Button onClick={handleNewPaste} type="button">
                 <FilePlus2 className="h-4 w-4" />
-                Create a paste
+                {workspaceCopy.createPaste}
               </Button>
             </div>
             </>
@@ -6608,6 +6611,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               workspaceTone={workspaceTone}
             />
             <LanguageSwitcher className="py-1.5" compact />
+            <PwaInstallButton compact />
           </div>
 
           <div className="flex flex-wrap items-center gap-2 sm:ml-auto sm:justify-end">
@@ -6822,7 +6826,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 variant="outline"
               >
                 <PanelLeft className="h-4 w-4" />
-                Library
+                {workspaceCopy.libraryButton}
               </Button>
               <Button
                 className="h-9 px-3 text-xs"
@@ -6834,7 +6838,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 variant="outline"
               >
                 <PanelRight className="h-4 w-4" />
-                Details
+                {workspaceCopy.detailsButton}
               </Button>
             </div>
             <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -6926,16 +6930,16 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
           <div className="glass-panel z-10 flex shrink-0 items-center justify-between gap-2 border-t border-border px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] print:hidden md:hidden">
             <Button className="h-9 min-h-9 flex-1 gap-1.5 px-2.5 text-[11px]" data-tutorial="library-button" onClick={() => setMobileLibraryOpen(true)} size="sm" type="button" variant="outline">
               <PanelLeft className="h-4 w-4" />
-              Library
+              {workspaceCopy.libraryButton}
             </Button>
             <Button className="h-9 min-h-9 flex-1 gap-1.5 px-2.5 text-[11px]" onClick={() => void handleSavePaste()} size="sm" type="button">
               <Save className="h-4 w-4" />
               Save
             </Button>
-            <Button className="h-9 min-h-9 flex-1 gap-1.5 px-2.5 text-[11px]" onClick={handleNewPaste} size="sm" type="button" variant="outline">
-              <FilePlus2 className="h-4 w-4" />
-              New
-            </Button>
+              <Button className="h-9 min-h-9 flex-1 gap-1.5 px-2.5 text-[11px]" onClick={handleNewPaste} size="sm" type="button" variant="outline">
+                <FilePlus2 className="h-4 w-4" />
+                {workspaceCopy.newPaste}
+              </Button>
             <Button
               className="h-9 min-h-9 flex-1 gap-1.5 px-2.5 text-[11px]"
               data-tutorial="details-button"
@@ -6946,7 +6950,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               variant="outline"
             >
               <PanelRight className="h-4 w-4" />
-              Details
+              {workspaceCopy.detailsButton}
             </Button>
           </div>
         ) : (
@@ -6988,8 +6992,8 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
       <Dialog onOpenChange={setMobileLibraryOpen} open={phoneViewport && mobileLibraryOpen}>
         <DialogContent className="flex h-[min(92dvh,56rem)] w-[calc(100vw-1rem)] max-w-none flex-col overflow-hidden rounded-[1.25rem] p-0 sm:max-w-xl">
           <DialogHeader className="sr-only">
-            <DialogTitle>Workspace library</DialogTitle>
-            <DialogDescription>Browse, filter, import, and open pastes from your workspace library.</DialogDescription>
+            <DialogTitle>{workspaceCopy.workspaceLibraryTitle}</DialogTitle>
+            <DialogDescription>{workspaceCopy.workspaceLibraryDescription}</DialogDescription>
           </DialogHeader>
           {renderSidebar()}
         </DialogContent>
@@ -6998,8 +7002,8 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
       <Dialog onOpenChange={setMobileDetailsOpen} open={phoneViewport && mobileDetailsOpen}>
         <DialogContent className="flex h-[min(92dvh,56rem)] w-[calc(100vw-1rem)] max-w-none flex-col overflow-hidden rounded-[1.25rem] p-4 sm:max-w-xl">
           <DialogHeader className="sr-only">
-            <DialogTitle>Paste details</DialogTitle>
-            <DialogDescription>Manage language, folder, sharing, versions, and advanced settings for the current paste.</DialogDescription>
+            <DialogTitle>{workspaceCopy.pasteDetailsTitle}</DialogTitle>
+            <DialogDescription>{workspaceCopy.pasteDetailsDescription}</DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-hidden">{renderDetails()}</div>
         </DialogContent>
@@ -7018,14 +7022,14 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
             <DialogTitle>
               {mobileFolderActions.open
                 ? mobileFolderActions.kind === "all"
-                  ? "All pastes"
+                  ? workspaceCopy.folderActionsAllTitle
                   : mobileFolderActions.folderName
-                : "Folder actions"}
+                : workspaceCopy.folderActionsTitle}
             </DialogTitle>
             <DialogDescription>
               {mobileFolderActions.open && mobileFolderActions.kind === "all"
-                ? "Quick actions for your full workspace library."
-                : "Manage this folder without needing desktop right-click."}
+                ? workspaceCopy.folderActionsAllDescription
+                : workspaceCopy.folderActionsFolderDescription}
             </DialogDescription>
           </DialogHeader>
           <div className="mt-2 flex flex-col gap-2">
@@ -7042,7 +7046,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               variant="outline"
             >
               <FolderInput className="h-4 w-4" />
-              Show all pastes
+              {workspaceCopy.showAllPastes}
             </Button>
             {mobileFolderActions.open && mobileFolderActions.kind === "folder" ? (
               <Button
@@ -7056,7 +7060,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 variant="outline"
               >
                 <Copy className="h-4 w-4" />
-                Copy folder name
+                {workspaceCopy.copyFolderName}
               </Button>
             ) : null}
             {mobileFolderActions.open && mobileFolderActions.kind === "folder" ? (
@@ -7071,7 +7075,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 variant="outline"
               >
                 <Search className="h-4 w-4" />
-                Filter to this folder
+                {workspaceCopy.filterToThisFolder}
               </Button>
             ) : null}
             <Button
@@ -7084,7 +7088,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               variant="outline"
             >
               <FolderPlus className="h-4 w-4" />
-              New folder…
+              {workspaceCopy.newFolder}
             </Button>
             {mobileFolderActions.open && mobileFolderActions.kind === "folder" ? (
               <Button

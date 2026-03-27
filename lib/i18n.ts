@@ -16,6 +16,8 @@ const messages = {
   en: {
     "common.loading": "Loading…",
     "common.language": "Language",
+    "common.terms": "Terms of Service",
+    "common.privacy": "Privacy Policy",
     "nav.home": "Home",
     "nav.workspace": "Workspace",
     "nav.privacy": "Privacy",
@@ -118,11 +120,14 @@ const messages = {
     "settings.account.totpDownloadRecovery": "Download recovery codes",
     "settings.account.languageHeading": "Language",
     "settings.account.languageDescription": "Choose the UI language used on supported pages and shared controls.",
+    "settings.account.viewPublicProfile": "View public profile",
     "workspace.tutorial": "Tutorial"
   },
   fil: {
     "common.loading": "Naglo-load…",
     "common.language": "Wika",
+    "common.terms": "Mga Tuntunin ng Serbisyo",
+    "common.privacy": "Patakaran sa Privacy",
     "nav.home": "Home",
     "nav.workspace": "Workspace",
     "nav.privacy": "Privacy",
@@ -225,11 +230,14 @@ const messages = {
     "settings.account.totpDownloadRecovery": "I-download ang recovery codes",
     "settings.account.languageHeading": "Wika",
     "settings.account.languageDescription": "Piliin ang wikang gagamitin ng UI sa mga suportadong pahina at controls.",
+    "settings.account.viewPublicProfile": "Tingnan ang public profile",
     "workspace.tutorial": "Tutorial"
   },
   ja: {
     "common.loading": "読み込み中…",
     "common.language": "言語",
+    "common.terms": "利用規約",
+    "common.privacy": "プライバシーポリシー",
     "nav.home": "ホーム",
     "nav.workspace": "ワークスペース",
     "nav.privacy": "プライバシー",
@@ -332,11 +340,14 @@ const messages = {
     "settings.account.totpDownloadRecovery": "リカバリーコードをダウンロード",
     "settings.account.languageHeading": "言語",
     "settings.account.languageDescription": "対応ページと共有コントロールで使用する UI 言語を選択します。",
+    "settings.account.viewPublicProfile": "公開プロフィールを見る",
     "workspace.tutorial": "チュートリアル"
   },
   es: {
     "common.loading": "Cargando…",
     "common.language": "Idioma",
+    "common.terms": "Términos del servicio",
+    "common.privacy": "Política de privacidad",
     "nav.home": "Inicio",
     "nav.workspace": "Workspace",
     "nav.privacy": "Privacidad",
@@ -439,6 +450,7 @@ const messages = {
     "settings.account.totpDownloadRecovery": "Descargar códigos de recuperación",
     "settings.account.languageHeading": "Idioma",
     "settings.account.languageDescription": "Elige el idioma de la interfaz usado en páginas y controles compatibles.",
+    "settings.account.viewPublicProfile": "Ver perfil público",
     "workspace.tutorial": "Tutorial"
   }
 } satisfies Record<UiLanguage, TranslationValue>;

@@ -1065,18 +1065,27 @@ export async function mountAfterdarkSurface(rootEl) {
                 <div class="afterdark-item__copy">
                   <strong>${escapeHtml(entry.displayName || entry.name || entry.fullName || "Vault file")}</strong>
                   <p>${escapeHtml(entry.dir || "vault root")}</p>
-                  <span>${escapeHtml(entry.typeLabel || entry.mimeType || "file")} · ${escapeHtml(formatDate(entry.updatedAt || entry.createdAt))}</span>
+                  <div class="afterdark-item__meta-row">
+                    <span class="afterdark-item__type">${escapeHtml(entry.typeLabel || entry.mimeType || "file")}</span>
+                    <span>${escapeHtml(formatDate(entry.updatedAt || entry.createdAt))}</span>
+                  </div>
                 </div>
-                <div class="afterdark-item__actions">
+                <div class="afterdark-item__actions afterdark-item__actions--vault">
                   <button type="button" class="afterdark-btn afterdark-btn--secondary afterdark-btn--tiny" data-preview-vault="${escapeHtml(
                     entry.fullName || entry.name || ""
                   )}">Preview</button>
-                  <button type="button" class="afterdark-btn afterdark-btn--ghost afterdark-btn--tiny" data-queue-vault="${escapeHtml(
+                  <button type="button" class="afterdark-btn afterdark-btn--primary afterdark-btn--tiny" data-queue-vault="${escapeHtml(
                     entry.fullName || entry.name || ""
                   )}">Queue</button>
-                  <button type="button" class="afterdark-btn afterdark-btn--ghost afterdark-btn--tiny" data-attach-vault="${escapeHtml(
+                  <button type="button" class="afterdark-btn afterdark-btn--ghost afterdark-btn--tiny" data-download-vault="${escapeHtml(
                     entry.fullName || entry.name || ""
-                  )}">Attach</button>
+                  )}">Download</button>
+                  <button type="button" class="afterdark-btn afterdark-btn--ghost afterdark-btn--tiny" data-sync-vault="${escapeHtml(
+                    entry.fullName || entry.name || ""
+                  )}">Sync</button>
+                  <button type="button" class="afterdark-btn afterdark-btn--ghost afterdark-btn--tiny afterdark-btn--wide" data-attach-vault="${escapeHtml(
+                    entry.fullName || entry.name || ""
+                  )}">Attach reference</button>
                 </div>
               </article>
             `
@@ -1110,6 +1119,30 @@ export async function mountAfterdarkSurface(rootEl) {
                   file.displayName || "vault-file"
                 )}">Download file</a></div>`
           );
+        } catch (error) {
+          setStatus(error instanceof Error ? error.message : String(error), "err");
+        }
+      });
+    });
+
+    vaultListEl.querySelectorAll("[data-download-vault]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const fullName = button.getAttribute("data-download-vault");
+        if (!fullName) {
+          return;
+        }
+        try {
+          const file = await vaultRpc("vault.read", { fullName });
+          const blob = dataBase64ToBlob(file.dataBase64, file.mimeType);
+          const objectUrl = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = objectUrl;
+          link.download = file.displayName || fullName.split("/").pop() || "vault-file";
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+          setStatus(`Downloaded ${file.displayName || fullName}.`, "ok");
         } catch (error) {
           setStatus(error instanceof Error ? error.message : String(error), "err");
         }
@@ -1158,6 +1191,22 @@ export async function mountAfterdarkSurface(rootEl) {
         } catch (error) {
           setStatus(error instanceof Error ? error.message : String(error), "err");
         }
+      });
+    });
+
+    vaultListEl.querySelectorAll("[data-sync-vault]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const fullName = button.getAttribute("data-sync-vault");
+        if (!fullName) {
+          return;
+        }
+        await attachEvidence({
+          kind: "vault",
+          label: fullName.split("/").pop() || fullName,
+          ref: fullName,
+          excerpt: "Open the hosted sync page to browse, edit, rename, or push this vault item."
+        });
+        openRoute("/bookmarkfs/sync");
       });
     });
 

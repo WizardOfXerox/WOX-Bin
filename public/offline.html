@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1220" />
+    <title>WOX-Bin Offline</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #09111f;
+        --bg-2: #111a2e;
+        --card: rgba(20, 29, 51, 0.94);
+        --border: rgba(110, 132, 180, 0.28);
+        --text: #ecf3ff;
+        --muted: #a9b8d6;
+        --primary: #2ea8ff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Space Grotesk", system-ui, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(46, 168, 255, 0.2), transparent 30%),
+          radial-gradient(circle at top right, rgba(45, 212, 191, 0.12), transparent 28%),
+          linear-gradient(180deg, var(--bg), var(--bg-2));
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+
+      .shell {
+        width: min(760px, 100%);
+        border: 1px solid var(--border);
+        border-radius: 28px;
+        background: var(--card);
+        box-shadow: 0 30px 70px rgba(0, 0, 0, 0.35);
+        padding: 28px;
+      }
+
+      .eyebrow {
+        margin: 0 0 14px;
+        font-size: 12px;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: clamp(2rem, 5vw, 3.4rem);
+        line-height: 0.95;
+      }
+
+      p {
+        margin: 0 0 14px;
+        color: var(--muted);
+        font-size: 1.05rem;
+        line-height: 1.65;
+      }
+
+      .panel {
+        margin-top: 22px;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        background: rgba(8, 13, 24, 0.72);
+        padding: 18px 18px 16px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .button {
+        appearance: none;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 12px 18px;
+        font: inherit;
+        font-weight: 600;
+        text-decoration: none;
+        color: var(--text);
+        background: transparent;
+        cursor: pointer;
+      }
+
+      .button.primary {
+        background: var(--primary);
+        border-color: transparent;
+        color: #06111f;
+      }
+
+      .list {
+        margin: 10px 0 0;
+        padding-left: 18px;
+        color: var(--muted);
+      }
+
+      .status {
+        margin-top: 14px;
+        font-size: 0.95rem;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <p class="eyebrow">WOX-Bin offline mode</p>
+      <h1>You’re offline.</h1>
+      <p>
+        WOX-Bin can still bring back pages you already visited, but this request needed the network and it was not
+        available. Once the connection returns, we can retry immediately.
+      </p>
+
+      <section class="panel">
+        <p>
+          If you already opened the workspace on this device, local drafts and cached UI may still be available once the
+          network comes back. Hosted account data, public feed updates, and new downloads still require a live
+          connection.
+        </p>
+        <ul class="list">
+          <li>Retry this page once you reconnect.</li>
+          <li>Go back to Home or Workspace if you want to try a route that may already be cached.</li>
+          <li>Installed app mode works best after you’ve visited the route at least once while online.</li>
+        </ul>
+      </section>
+
+      <div class="actions">
+        <button class="button primary" type="button" onclick="window.location.reload()">Try again</button>
+        <a class="button" href="/">Home</a>
+        <a class="button" href="/app">Workspace</a>
+      </div>
+
+      <div class="status" id="status">Waiting for connection…</div>
+    </main>
+    <script>
+      const status = document.getElementById("status");
+      function updateStatus() {
+        if (!status) return;
+        status.textContent = navigator.onLine
+          ? "Connection restored. You can retry now."
+          : "Waiting for connection…";
+      }
+      window.addEventListener("online", updateStatus);
+      window.addEventListener("offline", updateStatus);
+      updateStatus();
+    </script>
+  </body>
+</html>

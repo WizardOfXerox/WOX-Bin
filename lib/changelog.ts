@@ -8,6 +8,55 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    slug: "2026-03-27-discord-landing-and-control-dashboard",
+    date: "2026-03-27",
+    title: "Discord bot landing page and Vercel control dashboard",
+    summary:
+      "WOX-Bin now includes a public Discord bot landing page, an admin-side Discord control dashboard, and a site-owned bot quickpaste credential that is no longer tied to any user account API keys.",
+    bullets: [
+      "Added `/discord` as a public landing page with install CTA, command overview, bootstrap layout, and live linkage counts.",
+      "Added `/admin/discord` so staff can audit invite readiness, operator coverage, webhook linkage, and linked guild setup state without leaving the Vercel app.",
+      "Added shared Discord control helpers and regression tests so the public landing page and admin dashboard stay in sync.",
+      "Moved Discord bot quickpaste onto a dedicated site-owned `DISCORD_BOT_SITE_API_KEY` route instead of reusing user account API keys."
+    ]
+  },
+  {
+    slug: "2026-03-27-discord-bot-foundation",
+    date: "2026-03-27",
+    title: "Discord bot foundation, server bootstrap, and announcement mirroring",
+    summary:
+      "WOX-Bin now has a first-party Discord bot foundation with slash commands, automatic guild setup, site-status and feed lookups, operator-only quick pastes, and Discord webhook delivery for live site announcements.",
+    bullets: [
+      "Added a Discord bot runtime with `/wox` slash commands for help, links, feed, status, setup, site-ops toggles, announcements, and quick paste creation.",
+      "Added automatic guild bootstrap so the bot can create the WOX-Bin category, start-here channel, announcements channel, support channel, bot channel, and matching helper roles when it joins a server.",
+      "Added a guild integration table plus stored Discord webhooks so published site announcements can mirror directly into configured Discord ops servers."
+    ]
+  },
+  {
+    slug: "2026-03-27-installable-pwa-and-offline-shell",
+    date: "2026-03-27",
+    title: "Installable PWA with offline shell support",
+    summary:
+      "WOX-Bin can now be installed like an app, register a service worker on secure or localhost origins, and show a branded offline fallback instead of the browser’s default error page.",
+    bullets: [
+      "Added a real web app manifest with install icons, app shortcuts, and standalone display metadata for Workspace, Quick paste, and Privacy tools.",
+      "Added a service worker that caches the app shell, key static assets, and a branded offline fallback page for navigation requests.",
+      "Added install buttons in the shared site header and workspace so supported browsers can prompt for app installation directly from the UI."
+    ]
+  },
+  {
+    slug: "2026-03-27-admin-announcements-and-afterdark-vault-polish",
+    date: "2026-03-27",
+    title: "Admin announcements and cleaner Afterdark vault actions",
+    summary:
+      "WOX-Bin now has an admin-managed live announcement banner for the shared site shell, and Afterdark’s local vault cards are easier to scan and use on narrow extension widths.",
+    bullets: [
+      "Added a real announcements table, public active-announcement endpoint, and admin CRUD flow so staff can publish a single live banner without editing code.",
+      "Added the shared announcement banner to the public site shell and landing page, including optional CTA links and per-browser dismiss behavior.",
+      "Rebuilt the Afterdark vault item cards so file metadata and actions use a stable grid instead of a cramped button pile."
+    ]
+  },
+  {
     slug: "2026-03-25-darkbin-shortener-and-workspace-shortcuts",
     date: "2026-03-25",
     title: "Afterdark casefiles, privacy short links, and workspace shortcut polish",

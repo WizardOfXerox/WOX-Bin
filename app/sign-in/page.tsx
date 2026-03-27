@@ -17,6 +17,7 @@ import {
   getAuthNoticeRedirectUrl,
   normalizePostSignInRedirectUrl
 } from "@/lib/auth-client-redirect";
+import { AUTH_PAGE_COPY } from "@/lib/auth-page-copy";
 import {
   clearRememberedAccountQueue,
   forgetRememberedAccount,
@@ -27,29 +28,10 @@ import {
   writeRememberAccountPreference
 } from "@/lib/remembered-accounts";
 
-const SESSION_ERROR_MESSAGES: Record<string, string> = {
-  SessionRevoked: "This session was signed out or revoked elsewhere. Sign in again.",
-  SessionIdleTimeout: "You were signed out after a period of inactivity. Sign in again.",
-  AccountSuspended: "Your account is currently suspended. If you believe this is incorrect, contact the site operator.",
-  AccountBanned: "Your account has been banned. If you believe this is incorrect, contact the site operator."
-};
-
-const EMAIL_VERIFY_MESSAGES: Record<string, { tone: "ok" | "warn"; text: string }> = {
-  pending: { tone: "ok", text: "Account created. Check your email to verify your address before signing in." },
-  ok: { tone: "ok", text: "Email verified. You can sign in below." },
-  invalid: { tone: "warn", text: "That verification link is invalid or expired. Request a new one from account settings after signing in." },
-  missing: { tone: "warn", text: "Verification link was missing a token." }
-};
-
-const AUTH_ERROR_MESSAGES: Record<string, string> = {
-  emailNotVerified: "Your email is not verified yet. Check your inbox for the verification link, or use verification help below.",
-  accountSuspended: "Your account is currently suspended. Check your email for details or contact the site operator.",
-  accountBanned: "Your account has been banned. Contact the site operator if you need clarification."
-};
-
 function SignInPageContent() {
   const searchParams = useSearchParams();
-  const { t } = useUiLanguage();
+  const { language, t } = useUiLanguage();
+  const authCopy = AUTH_PAGE_COPY[language];
   const sessionError = searchParams.get("sessionError");
   const emailVerify = searchParams.get("emailVerify");
   const authError = searchParams.get("authError");
@@ -57,22 +39,22 @@ function SignInPageContent() {
     if (!sessionError) {
       return null;
     }
-    return SESSION_ERROR_MESSAGES[sessionError] ?? "Your session is no longer valid. Sign in again.";
-  }, [sessionError]);
+    return authCopy.sessionErrors[sessionError] ?? authCopy.sessionErrorFallback;
+  }, [authCopy.sessionErrorFallback, authCopy.sessionErrors, sessionError]);
 
   const emailVerifyNotice = useMemo(() => {
     if (!emailVerify) {
       return null;
     }
-    return EMAIL_VERIFY_MESSAGES[emailVerify] ?? null;
-  }, [emailVerify]);
+    return authCopy.emailVerify[emailVerify] ?? null;
+  }, [authCopy.emailVerify, emailVerify]);
 
   const authErrorNotice = useMemo(() => {
     if (!authError) {
       return null;
     }
-    return AUTH_ERROR_MESSAGES[authError] ?? "Sign in failed.";
-  }, [authError]);
+    return authCopy.authErrors[authError] ?? authCopy.authErrorFallback;
+  }, [authCopy.authErrorFallback, authCopy.authErrors, authError]);
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -193,10 +175,10 @@ function SignInPageContent() {
     setMagicLoading(false);
     if (result?.error) {
       clearRememberedAccountQueue();
-      setMagicStatus("Could not send sign-in email. Check the address and try again.");
+      setMagicStatus(authCopy.magicLinkFailed);
       return;
     }
-    setMagicStatus("Check your inbox for a sign-in link.");
+    setMagicStatus(authCopy.magicLinkSent);
   }
 
   async function handleVerificationRecovery(event: FormEvent<HTMLFormElement>) {
@@ -219,14 +201,14 @@ function SignInPageContent() {
     setRecoverLoading(false);
 
     if (!response.ok) {
-      setRecoverError(body?.error ?? "Could not recover verification email.");
+      setRecoverError(body?.error ?? authCopy.recoverFailed);
       return;
     }
 
     setRecoverMessage(
       body?.email
-        ? `Verification email sent to ${body.email}.`
-        : "Verification email sent. Check your inbox."
+        ? authCopy.recoverSentWithEmail.replace("{email}", body.email)
+        : authCopy.recoverSentGeneric
     );
     setRecoverPassword("");
   }
@@ -425,13 +407,13 @@ function SignInPageContent() {
               </form>
             ) : null}
             <p className="text-center text-xs text-muted-foreground">
-              Use of WOX-Bin is subject to our{" "}
+              {authCopy.legalPrefix}{" "}
               <Link className="text-primary underline-offset-4 hover:underline" href="/terms">
-                Terms of Service
+                {t("common.terms")}
               </Link>{" "}
-              and{" "}
+              {authCopy.legalConnector}{" "}
               <Link className="text-primary underline-offset-4 hover:underline" href="/privacy">
-                Privacy Policy
+                {t("common.privacy")}
               </Link>
               .
             </p>

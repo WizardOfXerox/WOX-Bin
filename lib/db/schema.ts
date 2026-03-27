@@ -38,6 +38,7 @@ export const supportTicketCategoryEnum = pgEnum("support_ticket_category", [
   "other"
 ]);
 export const publicDropKindEnum = pgEnum("public_drop_kind", ["text", "file"]);
+export const announcementToneEnum = pgEnum("announcement_tone", ["info", "success", "warning", "critical"]);
 
 /** Server-side conversion jobs (hybrid converter / worker queue). @see docs/CONVERSION-PLATFORM.md */
 export const conversionJobStatusEnum = pgEnum("conversion_job_status", [
@@ -589,6 +590,55 @@ export const privacyShortLinks = pgTable(
   (table) => ({
     slugUnique: uniqueIndex("privacy_short_links_slug_unique").on(table.slug),
     activeExpiresIdx: index("privacy_short_links_active_expires_idx").on(table.expiresAt, table.updatedAt)
+  })
+);
+
+export const announcements = pgTable(
+  "announcements",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    ctaLabel: text("cta_label"),
+    ctaHref: text("cta_href"),
+    tone: announcementToneEnum("tone").notNull().default("info"),
+    published: boolean("published").notNull().default(false),
+    startsAt: timestamp("starts_at", { mode: "date" }),
+    endsAt: timestamp("ends_at", { mode: "date" }),
+    createdByUserId: text("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow()
+  },
+  (table) => ({
+    publishedIdx: index("announcements_published_idx").on(table.published, table.updatedAt),
+    windowIdx: index("announcements_window_idx").on(table.startsAt, table.endsAt)
+  })
+);
+
+export const discordGuildIntegrations = pgTable(
+  "discord_guild_integrations",
+  {
+    guildId: text("guild_id").primaryKey(),
+    guildName: text("guild_name").notNull(),
+    ownerDiscordUserId: text("owner_discord_user_id"),
+    welcomeChannelId: text("welcome_channel_id"),
+    announcementsChannelId: text("announcements_channel_id"),
+    supportChannelId: text("support_channel_id"),
+    botChannelId: text("bot_channel_id"),
+    announcementWebhookUrl: text("announcement_webhook_url"),
+    siteOpsEnabled: boolean("site_ops_enabled").notNull().default(false),
+    setupVersion: integer("setup_version").notNull().default(1),
+    installedAt: timestamp("installed_at", { mode: "date" }).notNull().defaultNow(),
+    lastSetupAt: timestamp("last_setup_at", { mode: "date" }).notNull().defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { mode: "date" }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow()
+  },
+  (table) => ({
+    siteOpsIdx: index("discord_guild_integrations_site_ops_idx").on(table.siteOpsEnabled, table.updatedAt),
+    webhookIdx: index("discord_guild_integrations_webhook_idx").on(table.announcementWebhookUrl)
   })
 );
 

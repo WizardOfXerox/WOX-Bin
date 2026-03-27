@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { listFeedPastes } from "@/lib/paste-service";
+import { RECENT_PUBLIC_PASTES_LIMIT } from "@/lib/public-feed-view";
 import { getAppOrigin } from "@/lib/request";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ function escapeXml(value: string) {
 }
 
 export async function GET(request: Request) {
-  const pastes = await listFeedPastes(50);
+  const pastes = await listFeedPastes(RECENT_PUBLIC_PASTES_LIMIT);
   /** Prefer `NEXT_PUBLIC_APP_URL` when set; else current request origin (LAN IP, preview URL, etc.). */
   const origin = getAppOrigin(request);
 

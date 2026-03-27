@@ -10,9 +10,11 @@ import { db } from "@/lib/db";
 import { accounts, users } from "@/lib/db/schema";
 import { env } from "@/lib/env";
 import { isSmtpConfigured } from "@/lib/mail";
+import { getServerTranslator } from "@/lib/server-i18n";
 import { getTotpStatus } from "@/lib/totp-mfa";
 
 export default async function AccountSettingsPage() {
+  const { t } = await getServerTranslator();
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/sign-in");
@@ -68,7 +70,7 @@ export default async function AccountSettingsPage() {
       {row.username ? (
         <div className="flex justify-end">
           <Button asChild variant="outline">
-            <Link href={`/u/${encodeURIComponent(row.username)}`}>View public profile</Link>
+            <Link href={`/u/${encodeURIComponent(row.username)}`}>{t("settings.account.viewPublicProfile")}</Link>
           </Button>
         </div>
       ) : null}
