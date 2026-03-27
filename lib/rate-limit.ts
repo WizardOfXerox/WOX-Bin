@@ -19,6 +19,12 @@ type RateLimitResult = {
   reset: number;
 };
 
+export type RateLimitHealthStatus = {
+  configured: boolean;
+  degraded: boolean;
+  activeMode: "redis" | "memory-fallback";
+};
+
 const redis =
   env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN
     ? new Redis({
@@ -42,6 +48,14 @@ const limiterFactory = () =>
 
 const limiters = redis ? limiterFactory() : null;
 let redisWarningShown = false;
+
+export function getRateLimitHealthStatus(): RateLimitHealthStatus {
+  return {
+    configured: Boolean(redis),
+    degraded: Boolean(redis && redisWarningShown),
+    activeMode: redis && !redisWarningShown ? "redis" : "memory-fallback"
+  };
+}
 
 /**
  * Shared bucket for `GET /api/public/feed` and `GET /raw/*` (plan-tiered when using a valid API key).

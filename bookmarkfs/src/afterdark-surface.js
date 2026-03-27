@@ -1061,7 +1061,7 @@ export async function mountAfterdarkSurface(rootEl) {
           .slice(0, 8)
           .map(
             (entry) => `
-              <article class="afterdark-item">
+              <article class="afterdark-item afterdark-item--vault">
                 <div class="afterdark-item__copy">
                   <strong>${escapeHtml(entry.displayName || entry.name || entry.fullName || "Vault file")}</strong>
                   <p>${escapeHtml(entry.dir || "vault root")}</p>

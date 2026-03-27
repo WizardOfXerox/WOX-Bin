@@ -22,6 +22,7 @@ import { logAudit } from "@/lib/audit";
 import { buildMagicLinkEmail } from "@/lib/email-templates";
 import { rateLimit } from "@/lib/rate-limit";
 import { getAppOriginFromHeaderRecord, getRequestIpFromHeaderRecord } from "@/lib/request";
+import { resolveSessionIdleMinutes } from "@/lib/session-config";
 import { credentialsIdentifierSchema } from "@/lib/validators";
 import { getSmtpTransportOptions, isSmtpConfigured, sendMail, smtpFromAddress } from "@/lib/mail";
 import { sendSignupVerificationEmail } from "@/lib/email-verification";
@@ -222,7 +223,7 @@ export const authOptions: NextAuthOptions = {
         suspendedUntil: true
       } as const;
 
-      const idleMinutes = env.SESSION_IDLE_MINUTES ?? 30;
+      const idleMinutes = resolveSessionIdleMinutes(env.SESSION_IDLE_MINUTES);
       const idleMs = Math.max(1, idleMinutes) * 60 * 1000;
 
       async function refreshUserIntoToken(userId: string) {

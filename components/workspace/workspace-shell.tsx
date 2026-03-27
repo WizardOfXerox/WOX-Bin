@@ -219,6 +219,7 @@ const MOBILE_DEFAULT_WORKSPACE_ZOOM = 70;
 const API_KEY_TOKEN_STORAGE_PREFIX = "woxbin_api_key_tokens";
 
 type ListQuickFilter = "all" | "favorites" | "recent" | "archived";
+type LibraryViewMode = "cards" | "archive";
 
 function isShortcutConsumingTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) {
@@ -248,6 +249,17 @@ function workspaceMobileNavClass(active: boolean) {
     "block w-full min-h-11 rounded-lg px-3 py-3 text-left text-base font-medium leading-snug transition-colors",
     active ? "bg-muted/90 text-foreground" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
   );
+}
+
+function formatLibrarySidebarDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric"
+  }).format(date);
 }
 
 function defaultWorkspaceZoom(isPhoneViewport: boolean) {
@@ -1015,6 +1027,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   const [publishUrl, setPublishUrl] = useState<string | null>(null);
   const [sidebarFolder, setSidebarFolder] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<SortOrder>("pinned_updated");
+  const [libraryViewMode, setLibraryViewMode] = useState<LibraryViewMode>("cards");
   const [pinnedOnly, setPinnedOnly] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
   const [findQuery, setFindQuery] = useState("");
@@ -1922,6 +1935,25 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
       /* ignore */
     }
   }, [sortOrder]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("woxbin_library_view") as LibraryViewMode | null;
+      if (stored === "cards" || stored === "archive") {
+        setLibraryViewMode(stored);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("woxbin_library_view", libraryViewMode);
+    } catch {
+      /* ignore */
+    }
+  }, [libraryViewMode]);
 
   useEffect(() => {
     setFindMatchIndex(0);
@@ -3708,6 +3740,30 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 <h2 className="mt-0.5 text-base font-semibold leading-tight tracking-tight sm:text-lg">{workspaceCopy.pastesTitle}</h2>
               </div>
               <div className="flex shrink-0 items-center gap-1">
+                <div className="flex items-center rounded-lg border border-border/70 bg-card/70 p-0.5">
+                  <Button
+                    aria-label={workspaceCopy.cardsView}
+                    className="h-7 w-7 rounded-md p-0"
+                    onClick={() => setLibraryViewMode("cards")}
+                    size="icon"
+                    title={workspaceCopy.cardsView}
+                    type="button"
+                    variant={libraryViewMode === "cards" ? "default" : "ghost"}
+                  >
+                    <LayoutTemplate className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    aria-label={workspaceCopy.archiveView}
+                    className="h-7 w-7 rounded-md p-0"
+                    onClick={() => setLibraryViewMode("archive")}
+                    size="icon"
+                    title={workspaceCopy.archiveView}
+                    type="button"
+                    variant={libraryViewMode === "archive" ? "default" : "ghost"}
+                  >
+                    <ListOrdered className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
                 <Button
                   aria-label="Hide library sidebar"
                   className={cn("h-8 w-8 shrink-0", phoneViewport && "hidden")}
@@ -3989,7 +4045,13 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 pb-4 workspace-scrollbar-hide" ref={libraryScrollRef}>
+          <div
+            className={cn(
+              "min-h-0 flex-1 overflow-y-auto px-3 pb-4 workspace-scrollbar-hide",
+              libraryViewMode === "archive" ? "space-y-1.5" : "space-y-3"
+            )}
+            ref={libraryScrollRef}
+          >
             {loading ? (
               <div className="px-3 py-4 text-sm text-muted-foreground">{workspaceCopy.loadingWorkspace}</div>
             ) : sidebarFolder === PUBLIC_FEED_FOLDER && publicFeedLoading ? (
@@ -4003,28 +4065,37 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   : workspaceCopy.noPastesMatch}
               </div>
             ) : (
-              listAfterFilter.map((paste) => (
+              <>
+                {listAfterFilter.map((paste) => (
                 <ContextMenu key={paste.id}>
                   <ContextMenuTrigger asChild>
                     <div
-                      className={`flex gap-2 rounded-[1.2rem] border p-3 transition ${
-                        selectedPaste?.id === paste.id
-                          ? "border-primary/50 bg-primary/10"
-                          : "border-border bg-muted/40 hover:bg-muted/60"
-                      }`}
+                      className={cn(
+                        "transition",
+                        libraryViewMode === "archive"
+                          ? selectedPaste?.id === paste.id
+                            ? "flex items-stretch gap-0 rounded-lg border border-primary/50 bg-primary/10"
+                            : "flex items-stretch gap-0 rounded-lg border border-border/70 bg-card/45 hover:bg-muted/45"
+                          : selectedPaste?.id === paste.id
+                            ? "flex gap-2 rounded-[1.2rem] border border-primary/50 bg-primary/10 p-3"
+                            : "flex gap-2 rounded-[1.2rem] border border-border bg-muted/40 p-3 hover:bg-muted/60"
+                      )}
                     >
                       {!sidebarShowsPublicFeed ? (
                         <input
                           aria-label={`Select ${paste.title}`}
                           checked={batchSelected.has(paste.id)}
-                          className="mt-1.5 h-4 w-4 shrink-0 rounded border-border"
+                          className={cn(
+                            "h-4 w-4 shrink-0 rounded border-border",
+                            libraryViewMode === "archive" ? "mx-3 my-3 mt-4" : "mt-1.5"
+                          )}
                           onChange={() => toggleBatchId(paste.id)}
                           onClick={(e) => e.stopPropagation()}
                           type="checkbox"
                         />
                       ) : null}
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-start gap-2">
+                        <div className={cn("flex items-start gap-2", libraryViewMode === "archive" && "w-full p-3 pl-0")}>
                           <button
                             className="min-w-0 flex-1 text-left"
                             onClick={() => {
@@ -4035,28 +4106,62 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                             }}
                             type="button"
                           >
-                            <div className="flex items-center justify-between gap-3">
-                              <p className="truncate font-medium text-foreground">{paste.title}</p>
-                              <div className="flex shrink-0 flex-wrap items-center gap-1">
-                                {paste.favorite ? (
-                                  <Badge className="gap-0.5 border-amber-500/35 bg-amber-500/15 px-1.5 text-amber-950 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
-                                    <Star className="h-3 w-3" />
-                                  </Badge>
-                                ) : null}
-                                {paste.archived ? (
-                                  <Badge className="border-border bg-transparent">Archived</Badge>
-                                ) : null}
-                                {paste.pinned ? <Badge>Pinned</Badge> : null}
+                            {libraryViewMode === "archive" ? (
+                              <div className="space-y-1.5">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <p className="truncate font-medium text-foreground">{paste.title}</p>
+                                      {paste.favorite ? (
+                                        <Badge className="h-5 gap-0.5 border-amber-500/35 bg-amber-500/15 px-1.5 text-[10px] text-amber-950 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+                                          <Star className="h-3 w-3" />
+                                        </Badge>
+                                      ) : null}
+                                      {paste.archived ? (
+                                        <Badge className="h-5 border-border bg-transparent px-1.5 text-[10px]">Archived</Badge>
+                                      ) : null}
+                                      {paste.pinned ? <Badge className="h-5 px-1.5 text-[10px]">Pinned</Badge> : null}
+                                    </div>
+                                    <div className="mt-1 text-[11px] text-muted-foreground">
+                                      {paste.folder || "No folder"}
+                                    </div>
+                                  </div>
+                                  <span className="shrink-0 text-[11px] text-muted-foreground">
+                                    {formatLibrarySidebarDate(paste.updatedAt)}
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                                  <span>{paste.language}</span>
+                                  <span>&bull;</span>
+                                  <span>{paste.visibility}</span>
+                                </div>
                               </div>
-                            </div>
-                            <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm text-muted-foreground">
-                              {paste.content || "Empty paste"}
-                            </p>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              <Badge>{paste.language}</Badge>
-                              {paste.folder ? <Badge>{paste.folder}</Badge> : null}
-                              <Badge>{paste.visibility}</Badge>
-                            </div>
+                            ) : (
+                              <>
+                                <div className="flex items-center justify-between gap-3">
+                                  <p className="truncate font-medium text-foreground">{paste.title}</p>
+                                  <div className="flex shrink-0 flex-wrap items-center gap-1">
+                                    {paste.favorite ? (
+                                      <Badge className="gap-0.5 border-amber-500/35 bg-amber-500/15 px-1.5 text-amber-950 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+                                        <Star className="h-3 w-3" />
+                                      </Badge>
+                                    ) : null}
+                                    {paste.archived ? (
+                                      <Badge className="border-border bg-transparent">Archived</Badge>
+                                    ) : null}
+                                    {paste.pinned ? <Badge>Pinned</Badge> : null}
+                                  </div>
+                                </div>
+                                <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm text-muted-foreground">
+                                  {paste.content || "Empty paste"}
+                                </p>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  <Badge>{paste.language}</Badge>
+                                  {paste.folder ? <Badge>{paste.folder}</Badge> : null}
+                                  <Badge>{paste.visibility}</Badge>
+                                </div>
+                              </>
+                            )}
                           </button>
                           {phoneViewport ? (
                             <Button
@@ -4200,7 +4305,8 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                     ) : null}
                   </ContextMenuContent>
                 </ContextMenu>
-              ))
+                ))}
+              </>
             )}
           </div>
 

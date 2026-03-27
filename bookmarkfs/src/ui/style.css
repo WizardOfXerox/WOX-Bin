@@ -2006,6 +2006,8 @@ body.ext-afterdark-view {
   display: block;
   font-size: 14px;
   line-height: 1.3;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .afterdark-item__copy p {
@@ -2013,6 +2015,7 @@ body.ext-afterdark-view {
   font-size: 12px;
   line-height: 1.5;
   color: hsl(var(--x-muted));
+  overflow-wrap: anywhere;
 }
 
 .afterdark-item__copy span {
@@ -2056,6 +2059,23 @@ body.ext-afterdark-view {
 
 .afterdark-item__actions--vault .afterdark-btn {
   width: 100%;
+  min-width: 0;
+}
+
+.afterdark-item--vault {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.afterdark-item--vault .afterdark-item__copy {
+  flex: none;
+  width: 100%;
+}
+
+.afterdark-item--vault .afterdark-item__actions--vault {
+  width: 100%;
+  flex: none;
 }
 
 .afterdark-modal {

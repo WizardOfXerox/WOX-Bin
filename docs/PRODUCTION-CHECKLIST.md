@@ -29,6 +29,7 @@ Use this before pointing a real domain at WOX-Bin.
 
 - [ ] **Backups** — [RUNBOOK-BACKUPS.md](./RUNBOOK-BACKUPS.md).
 - [ ] **Restore drill** — restore a recent backup into a staging clone before calling backups “done”.
+- [ ] **Rollback plan** — keep [RUNBOOK-ROLLBACK.md](./RUNBOOK-ROLLBACK.md) handy before major releases or env changes.
 - [ ] **Uptime** — monitor **`GET /api/health`** — [MONITORING.md](./MONITORING.md).
 - [ ] **Conversion worker** — if using FFmpeg pipeline — [RUNBOOK-WORKER.md](./RUNBOOK-WORKER.md).
 

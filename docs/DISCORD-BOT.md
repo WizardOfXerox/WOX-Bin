@@ -46,6 +46,17 @@ Site process:
 - `DATABASE_URL`
   Needed by both the site and the bot because the bot stores guild setup state in the same Postgres database.
 
+## Recommended portal setup order
+
+Use this order when bringing the Discord app online:
+
+1. fill in Terms, Privacy, Linked Roles Verification, Interactions Endpoint, and Webhooks Endpoint URLs
+2. enable `Guild Install`
+3. keep `User Install` off unless you explicitly build user-scoped flows later
+4. use either Discord’s native install link or the branded landing page at `/discord`
+5. install the bot in one dev guild first and run `/wox setup`
+6. confirm `/wox help`, `/wox feed`, and `/wox status` before installing broadly
+
 Recommended split:
 
 - Vercel app:
@@ -134,6 +145,19 @@ Recommended install settings:
 - create a bot-owned quickpaste using the site-owned `DISCORD_BOT_SITE_API_KEY`
 - publish a live site announcement that mirrors into every site-ops guild with a stored webhook
 - copy the live Discord portal URLs directly from the dashboard
+
+## Recovery checklist
+
+If Discord stops responding after a deploy or env change:
+
+1. confirm `DISCORD_PUBLIC_KEY`, `DISCORD_APPLICATION_ID`, and `DISCORD_BOT_TOKEN` are still present in the correct environment
+2. verify the Discord Developer Portal still points to:
+   - `https://wox-bin.vercel.app/api/discord/interactions`
+   - `https://wox-bin.vercel.app/api/discord/events`
+3. run the site health and deployment verification scripts first
+4. test `/wox help` in the dev guild before changing production guild setup
+5. if the interactions endpoint is healthy but presence/bootstrap is broken, restart only the gateway companion worker
+6. use `/admin/discord` to confirm guild linkage, webhook state, and site-ops flags before re-running setup
 
 ## Bot quickpaste credential model
 

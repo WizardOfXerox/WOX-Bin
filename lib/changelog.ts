@@ -8,6 +8,66 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    slug: "2026-03-27-v1-1-browser-coverage-and-runbooks-complete",
+    date: "2026-03-27",
+    title: "v1.1 stability finishes with browser smoke coverage, runtime recovery UI, and runbook depth",
+    summary:
+      "The remaining v1.1 roadmap work is now in the repo: real browser smoke tests cover auth, workspace, public surfaces, and Discord operator access; the app has graceful runtime error recovery screens; and the missing rollback and recovery runbooks are documented.",
+    bullets: [
+      "Added Playwright browser smoke coverage for sign-up, sign-in, forgot/reset password, MFA, anonymous workspace publish, feed/archive, public paste views, and the Discord operator console access path.",
+      "Added route and global runtime error screens so unexpected App Router failures now surface a digest and recovery actions instead of falling straight through to a generic crash.",
+      "Added an explicit rollback runbook, strengthened backup validation cadence guidance, and expanded the Discord recovery checklist so the final v1.1 ops gaps are documented."
+    ]
+  },
+  {
+    slug: "2026-03-27-public-handoff-route-coverage",
+    date: "2026-03-27",
+    title: "Public short-link and safety-handoff route coverage",
+    summary:
+      "The roadmap’s public-surface hardening now covers the actual short-link and handoff routes, not just their helper utilities, so redirect and download safety behavior is enforced at the route level.",
+    bullets: [
+      "Added route tests for `/go/[slug]` so missing short links fall back to the privacy hub and valid ones preserve the no-store and no-referrer redirect headers.",
+      "Added route tests for `/out` so outbound privacy redirects keep their safety handoff HTML, VirusTotal preflight link, and same-origin back-link behavior.",
+      "Added route tests for `/download-check` so only approved same-origin download paths render the handoff page while disallowed paths fall back safely."
+    ]
+  },
+  {
+    slug: "2026-03-27-deployment-operator-summary-and-tests",
+    date: "2026-03-27",
+    title: "Deployment operator summary, prioritized next actions, and admin route coverage",
+    summary:
+      "The v1.1 stability roadmap now extends the deployment readiness surface with an overall operator summary, prioritized follow-up actions, and direct regression coverage for the admin deployment API and readiness summarization logic.",
+    bullets: [
+      "Added deployment readiness summarization so the admin deployment view can show an overall status and the highest-priority fail or warn actions instead of only raw counts.",
+      "Upgraded `/admin/deployment` to surface an operator summary and a short next-actions list that points directly at the most urgent docs-backed follow-ups.",
+      "Added regression tests for deployment readiness summarization and the admin deployment API route so deployment-ops visibility is covered in the stability phase."
+    ]
+  },
+  {
+    slug: "2026-03-27-session-timeout-and-auth-hardening",
+    date: "2026-03-27",
+    title: "Five-hour idle session default and stronger auth-session coverage",
+    summary:
+      "WOX-Bin now defaults browser-session idle sign-out to five hours instead of thirty minutes, and the roadmap stability pass adds direct regression coverage for session timeout config and the session-touch endpoint.",
+    bullets: [
+      "Raised the default `SESSION_IDLE_MINUTES` fallback from 30 minutes to 300 minutes so normal use is less likely to trigger surprise idle sign-outs.",
+      "Added a shared session-timeout config helper so the idle default is explicit, reusable, and easy to test.",
+      "Added auth-session regression coverage for the session-touch route and timeout config as part of the v1.1 stability roadmap."
+    ]
+  },
+  {
+    slug: "2026-03-27-v1-1-stability-and-ops-start",
+    date: "2026-03-27",
+    title: "v1.1 stability work: richer health checks, deployment verification, and recovery coverage",
+    summary:
+      "WOX-Bin’s first roadmap phase now has real code behind it: the health endpoint exposes rate-limit/deployment state, the missing ops helper scripts are in the repo, and recovery/health paths have stronger regression coverage.",
+    bullets: [
+      "Expanded `/api/health` so it still reports database status but now also shows whether rate limiting is using Redis or memory fallback, plus deployment metadata like environment and commit.",
+      "Added `scripts/check-health.ps1` and `scripts/verify-deployment.ps1` so operators can run a fast production health probe and a post-deploy smoke test from PowerShell.",
+      "Added regression coverage for the health route, forgot-password route, and rate-limit health reporting so the first stability phase is enforced in tests as well as docs."
+    ]
+  },
+  {
     slug: "2026-03-27-discord-operator-console-actions",
     date: "2026-03-27",
     title: "Discord operator console with live guild actions",

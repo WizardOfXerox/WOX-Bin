@@ -4,6 +4,7 @@ import type {
   DeploymentCheck,
   DeploymentCheckGroup,
   DeploymentCheckLevel,
+  DeploymentNextAction,
   DeploymentReadinessSnapshot
 } from "@/lib/deployment-readiness";
 import { cn, formatDate } from "@/lib/utils";
@@ -43,6 +44,21 @@ const LEVEL_CLASSNAMES: Record<DeploymentCheckLevel, string> = {
   info: "border-sky-400/30 bg-sky-400/10 text-sky-100"
 };
 
+const OVERALL_COPY: Record<DeploymentReadinessSnapshot["overallLevel"], { title: string; description: string }> = {
+  pass: {
+    title: "Ready to ship",
+    description: "No blocking or warning-grade deployment issues are currently detected in this runtime snapshot."
+  },
+  warn: {
+    title: "Usable, but not fully hardened",
+    description: "The app can run, but there are warning-grade gaps worth closing before traffic or operators depend on the current setup."
+  },
+  fail: {
+    title: "Blocking deployment issues detected",
+    description: "At least one critical deployment requirement is failing in the current runtime snapshot."
+  }
+};
+
 function CheckStatusBadge({ level }: { level: DeploymentCheckLevel }) {
   return <Badge className={cn("uppercase tracking-wide", LEVEL_CLASSNAMES[level])}>{LEVEL_LABELS[level]}</Badge>;
 }
@@ -55,8 +71,33 @@ function groupChecks(checks: DeploymentCheck[]) {
   })).filter((group) => group.items.length > 0);
 }
 
+function NextActionCard({ action }: { action: DeploymentNextAction }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-black/10 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="font-medium">{action.label}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{action.summary}</p>
+        </div>
+        <CheckStatusBadge level={action.level} />
+      </div>
+      {action.docs.length ? (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Docs: {action.docs.map((doc, index) => (
+            <span key={doc}>
+              <code>{doc}</code>
+              {index < action.docs.length - 1 ? ", " : ""}
+            </span>
+          ))}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function AdminDeploymentPanel({ snapshot }: { snapshot: DeploymentReadinessSnapshot }) {
   const grouped = groupChecks(snapshot.checks);
+  const overall = OVERALL_COPY[snapshot.overallLevel];
 
   return (
     <div className="space-y-6">
@@ -66,6 +107,33 @@ export function AdminDeploymentPanel({ snapshot }: { snapshot: DeploymentReadine
           Audit snapshot for the current runtime and environment. Last evaluated {formatDate(snapshot.generatedAt)}.
         </p>
       </div>
+
+      <Card className="border-white/10 bg-white/[0.03]">
+        <CardContent className="space-y-4 pt-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium">Operator summary</p>
+              <p className="mt-1 text-sm text-muted-foreground">{overall.description}</p>
+            </div>
+            <CheckStatusBadge level={snapshot.overallLevel} />
+          </div>
+          <div className="rounded-xl border border-white/10 bg-black/10 p-4">
+            <p className="text-base font-semibold">{overall.title}</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {snapshot.nextActions.length
+                ? "These are the most urgent issues or warnings to close next."
+                : "No follow-up actions are surfaced from the current snapshot."}
+            </p>
+          </div>
+          {snapshot.nextActions.length ? (
+            <div className="grid gap-3 xl:grid-cols-2">
+              {snapshot.nextActions.map((action) => (
+                <NextActionCard action={action} key={action.checkId} />
+              ))}
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {(

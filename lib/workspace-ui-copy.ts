@@ -19,12 +19,18 @@ type WorkspaceUiCopy = {
   selectVisible: string;
   clearSelection: string;
   sortAndFilter: string;
+  viewMode: string;
+  cardsView: string;
+  archiveView: string;
   pinnedOnly: string;
   sortPinnedUpdated: string;
   sortUpdated: string;
   sortNewest: string;
   sortOldest: string;
   sortTitle: string;
+  archiveColumnTitle: string;
+  archiveColumnUpdated: string;
+  archiveColumnMeta: string;
   everything: string;
   favorites: string;
   recent: string;
@@ -75,12 +81,18 @@ export const WORKSPACE_UI_COPY: Record<UiLanguage, WorkspaceUiCopy> = {
     selectVisible: "Select visible",
     clearSelection: "Clear selection",
     sortAndFilter: "Sort & filter",
+    viewMode: "View",
+    cardsView: "Cards",
+    archiveView: "Archive",
     pinnedOnly: "Pinned only",
     sortPinnedUpdated: "Pinned first, by last update",
     sortUpdated: "By last update",
     sortNewest: "Newest created",
     sortOldest: "Oldest created",
     sortTitle: "Title A–Z",
+    archiveColumnTitle: "Name / title",
+    archiveColumnUpdated: "Updated",
+    archiveColumnMeta: "Meta",
     everything: "Everything",
     favorites: "Favorites",
     recent: "Recent",
@@ -129,12 +141,18 @@ export const WORKSPACE_UI_COPY: Record<UiLanguage, WorkspaceUiCopy> = {
     selectVisible: "Piliin ang nakikita",
     clearSelection: "I-clear ang selection",
     sortAndFilter: "Sort at filter",
+    viewMode: "View",
+    cardsView: "Cards",
+    archiveView: "Archive",
     pinnedOnly: "Pinned lang",
     sortPinnedUpdated: "Pinned muna, ayon sa huling update",
     sortUpdated: "Ayon sa huling update",
     sortNewest: "Pinakabagong gawa",
     sortOldest: "Pinakalumang gawa",
     sortTitle: "Pamagat A–Z",
+    archiveColumnTitle: "Pangalan / pamagat",
+    archiveColumnUpdated: "Na-update",
+    archiveColumnMeta: "Meta",
     everything: "Lahat",
     favorites: "Paborito",
     recent: "Kamakailan",
@@ -183,12 +201,18 @@ export const WORKSPACE_UI_COPY: Record<UiLanguage, WorkspaceUiCopy> = {
     selectVisible: "表示中を選択",
     clearSelection: "選択を解除",
     sortAndFilter: "並び替えとフィルター",
+    viewMode: "表示",
+    cardsView: "カード",
+    archiveView: "アーカイブ",
     pinnedOnly: "ピン留めのみ",
     sortPinnedUpdated: "ピン留め優先、更新順",
     sortUpdated: "更新順",
     sortNewest: "新しい作成順",
     sortOldest: "古い作成順",
     sortTitle: "タイトル A–Z",
+    archiveColumnTitle: "名前 / タイトル",
+    archiveColumnUpdated: "更新",
+    archiveColumnMeta: "情報",
     everything: "すべて",
     favorites: "お気に入り",
     recent: "最近",
@@ -237,12 +261,18 @@ export const WORKSPACE_UI_COPY: Record<UiLanguage, WorkspaceUiCopy> = {
     selectVisible: "Seleccionar visibles",
     clearSelection: "Limpiar selección",
     sortAndFilter: "Ordenar y filtrar",
+    viewMode: "Vista",
+    cardsView: "Tarjetas",
+    archiveView: "Archivo",
     pinnedOnly: "Solo fijados",
     sortPinnedUpdated: "Fijados primero, por última actualización",
     sortUpdated: "Por última actualización",
     sortNewest: "Más nuevos",
     sortOldest: "Más antiguos",
     sortTitle: "Título A–Z",
+    archiveColumnTitle: "Nombre / título",
+    archiveColumnUpdated: "Actualizado",
+    archiveColumnMeta: "Meta",
     everything: "Todo",
     favorites: "Favoritos",
     recent: "Recientes",

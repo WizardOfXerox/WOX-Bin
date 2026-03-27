@@ -31,7 +31,7 @@ The **legacy** stack (`legacy/index.html`, `legacy/js/*.js`, `legacy/server/serv
 | **Pinned-only filter** | Sidebar **Pinned only**. |
 | **Drop text file on editor** | `enableFileDrop` on `PrismOverlayEditor`. |
 | **Raw paste URL** | `GET /raw/[slug]` — default **plain text**; optional **`?format=html`** highlighted HTML document (`lib/prism-html-string.ts`, `app/raw/[slug]/route.ts`). |
-| **Browser sessions (revoke / idle)** | Table `browser_sessions`, JWT `browserSessionId`, optional **`SESSION_IDLE_MINUTES`** (`auth.ts`). **Settings → Sessions** (`/settings/sessions`), touch API, sign-out revoke. Client: `SessionErrorHandler` + `SessionTouch` in `components/providers/session-provider.tsx`. |
+| **Browser sessions (revoke / idle)** | Table `browser_sessions`, JWT `browserSessionId`, optional **`SESSION_IDLE_MINUTES`** (`auth.ts`, default **5 hours**). **Settings → Sessions** (`/settings/sessions`), touch API, sign-out revoke. Client: `SessionErrorHandler` + `SessionTouch` in `components/providers/session-provider.tsx`. |
 | **Admin audit export** | `GET /api/admin/audit?format=json|csv` + links on `/admin` (`docs/ADMIN.md`). |
 
 ## Still missing vs legacy (or different by design)

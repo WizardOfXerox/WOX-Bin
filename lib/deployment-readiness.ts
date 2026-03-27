@@ -18,6 +18,14 @@ export type DeploymentCheck = {
   docs?: string[];
 };
 
+export type DeploymentNextAction = {
+  checkId: string;
+  label: string;
+  level: Extract<DeploymentCheckLevel, "fail" | "warn">;
+  summary: string;
+  docs: string[];
+};
+
 export type DeploymentReadinessSnapshot = {
   generatedAt: string;
   environment: {
@@ -31,6 +39,8 @@ export type DeploymentReadinessSnapshot = {
   };
   checks: DeploymentCheck[];
   counts: Record<DeploymentCheckLevel, number>;
+  overallLevel: "pass" | "warn" | "fail";
+  nextActions: DeploymentNextAction[];
 };
 
 function isHttpsUrl(value: string | null) {
@@ -115,6 +125,39 @@ function buildConversionConfigStatus() {
     any: requiredCount > 0 || Boolean(region) || Boolean(endpoint),
     coreComplete: requiredCount === 3
   };
+}
+
+export function summarizeDeploymentChecks(checks: DeploymentCheck[]) {
+  const counts = checks.reduce<Record<DeploymentCheckLevel, number>>(
+    (acc, check) => {
+      acc[check.level] += 1;
+      return acc;
+    },
+    { pass: 0, warn: 0, fail: 0, info: 0 }
+  );
+
+  const overallLevel: "pass" | "warn" | "fail" =
+    counts.fail > 0 ? "fail" : counts.warn > 0 ? "warn" : "pass";
+
+  const nextActions: DeploymentNextAction[] = checks
+    .filter((check): check is DeploymentCheck & { level: "fail" | "warn" } => check.level === "fail" || check.level === "warn")
+    .sort((left, right) => {
+      if (left.level !== right.level) {
+        return left.level === "fail" ? -1 : 1;
+      }
+
+      return left.label.localeCompare(right.label);
+    })
+    .slice(0, 4)
+    .map((check) => ({
+      checkId: check.id,
+      label: check.label,
+      level: check.level,
+      summary: check.summary,
+      docs: check.docs ?? []
+    }));
+
+  return { counts, overallLevel, nextActions };
 }
 
 export async function getDeploymentReadinessSnapshot(): Promise<DeploymentReadinessSnapshot> {
@@ -415,13 +458,7 @@ export async function getDeploymentReadinessSnapshot(): Promise<DeploymentReadin
     docs: ["docs/VERCEL-CONVERSIONS.md", "docs/CONVERSION-WORKER.md", "docs/RUNBOOK-WORKER.md"]
   });
 
-  const counts = checks.reduce<Record<DeploymentCheckLevel, number>>(
-    (acc, check) => {
-      acc[check.level] += 1;
-      return acc;
-    },
-    { pass: 0, warn: 0, fail: 0, info: 0 }
-  );
+  const { counts, overallLevel, nextActions } = summarizeDeploymentChecks(checks);
 
   return {
     generatedAt: new Date().toISOString(),
@@ -435,6 +472,8 @@ export async function getDeploymentReadinessSnapshot(): Promise<DeploymentReadin
       codeImagePlaywrightExport
     },
     checks,
-    counts
+    counts,
+    overallLevel,
+    nextActions
   };
 }

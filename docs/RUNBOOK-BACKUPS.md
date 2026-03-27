@@ -4,6 +4,15 @@
 
 WOX-Bin stores application data in **Postgres** (`DATABASE_URL`). Backups are **your responsibility** on self-hosted or managed providers.
 
+## Validation cadence
+
+Use this as the minimum operator cadence:
+
+- take automated backups continuously according to your provider retention policy
+- run a staged restore drill at least once per quarter
+- run an extra restore validation before any large schema or billing/auth migration
+- record the date of the last successful restore drill outside the repo
+
 ## Managed Postgres (Neon, Supabase, RDS, etc.)
 
 1. Enable **automated backups** in the provider console (retention per your compliance needs).
@@ -42,6 +51,16 @@ Adjust flags to match your dump format (`--format=custom` vs plain SQL).
 2. Run **`npm run db:push`** or migrations against a **clone** first when possible.
 3. Keep **`drizzle/`** SQL migrations in version control.
 4. Restore the new backup into a non-production database at least once before considering the runbook validated.
+
+## Restore validation checklist
+
+After every restore drill, confirm:
+
+1. `npm run build` still passes against the restored database.
+2. `powershell -File scripts/check-health.ps1 -BaseUrl ...` reports the database as up.
+3. a real sign-in works.
+4. `/feed` and one public paste still render normally.
+5. `/admin/deployment` still reports the expected environment state.
 
 ## Related
 

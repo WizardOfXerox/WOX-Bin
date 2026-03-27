@@ -118,7 +118,7 @@ If you use **PayMongo**, you can skip this section and use manual plan updates f
 
 | Variable | Type | Description |
 |----------|------|-------------|
-| **`SESSION_IDLE_MINUTES`** | Plain | Idle minutes before browser session is revoked (default **30**). |
+| **`SESSION_IDLE_MINUTES`** | Plain | Idle minutes before browser session is revoked (default **300** / **5 hours**). |
 | **`ADMIN_QUOTA_PLAN`** | Plain | `free` / `pro` / `team` / `admin` — caps **staff** API scrape tier when not using full admin limits. See **[ADMIN.md](./ADMIN.md)**. |
 
 ### 3.7 Optional — Pastebin migration (server only)

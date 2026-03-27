@@ -74,4 +74,41 @@ describe("public feed view helpers", () => {
       })
     ).toBe(false);
   });
+
+  it("reflects password and visibility transitions immediately", () => {
+    const baseline = {
+      visibility: "public",
+      secretMode: false,
+      status: "active",
+      deletedAt: null,
+      passwordHash: null
+    } as const;
+
+    expect(isPublicFeedEligible(baseline)).toBe(true);
+    expect(
+      isPublicFeedEligible({
+        ...baseline,
+        passwordHash: "hashed-password"
+      })
+    ).toBe(false);
+    expect(
+      isPublicFeedEligible({
+        ...baseline,
+        visibility: "unlisted"
+      })
+    ).toBe(false);
+    expect(
+      isPublicFeedEligible({
+        ...baseline,
+        visibility: "private"
+      })
+    ).toBe(false);
+    expect(
+      isPublicFeedEligible({
+        ...baseline,
+        status: "hidden"
+      })
+    ).toBe(false);
+    expect(isPublicFeedEligible(baseline)).toBe(true);
+  });
 });

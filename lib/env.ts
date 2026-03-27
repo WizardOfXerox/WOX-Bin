@@ -20,7 +20,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
   UPSTASH_REDIS_REST_URL: z.string().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
-  /** Minutes without a server refresh before JWT browser session is revoked (rolling). Default 30. */
+  /** Minutes without a server refresh before JWT browser session is revoked (rolling). Default 300 (5 hours). */
   SESSION_IDLE_MINUTES: z.coerce.number().min(1).max(24 * 60).optional()
 });
 

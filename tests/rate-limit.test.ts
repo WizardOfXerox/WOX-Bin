@@ -70,4 +70,57 @@ describe("rate limiting hardening", () => {
 
     warnSpy.mockRestore();
   });
+
+  it("reports whether rate limiting is using Redis or fallback mode", async () => {
+    vi.doMock("@/lib/env", () => ({
+      env: {
+        UPSTASH_REDIS_REST_URL: undefined,
+        UPSTASH_REDIS_REST_TOKEN: undefined
+      }
+    }));
+
+    let mod = await import("@/lib/rate-limit");
+    expect(mod.getRateLimitHealthStatus()).toEqual({
+      configured: false,
+      degraded: false,
+      activeMode: "memory-fallback"
+    });
+
+    vi.resetModules();
+
+    vi.doMock("@/lib/env", () => ({
+      env: {
+        UPSTASH_REDIS_REST_URL: "https://redis.example.com",
+        UPSTASH_REDIS_REST_TOKEN: "token"
+      }
+    }));
+
+    vi.doMock("@upstash/redis", () => ({
+      Redis: class MockRedis {}
+    }));
+
+    vi.doMock("@upstash/ratelimit", () => ({
+      Ratelimit: class MockRateLimit {
+        static slidingWindow() {
+          return {};
+        }
+
+        async limit() {
+          return {
+            success: true,
+            limit: RATE_LIMIT_CONFIG.register.max,
+            remaining: RATE_LIMIT_CONFIG.register.max - 1,
+            reset: Date.now() + 1000
+          };
+        }
+      }
+    }));
+
+    mod = await import("@/lib/rate-limit");
+    expect(mod.getRateLimitHealthStatus()).toEqual({
+      configured: true,
+      degraded: false,
+      activeMode: "redis"
+    });
+  });
 });

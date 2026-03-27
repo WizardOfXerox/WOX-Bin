@@ -8,6 +8,7 @@ These Markdown files live **in the repository**. They are **not** automatically 
 |-----|---------|
 | **[NPM-SCRIPTS.md](./NPM-SCRIPTS.md)** | **All `npm run` commands** — dev/build, `db:*`, codegen (`gen:*`, `fetch:*`), tests, worker, admin |
 | **[PRODUCT-SURFACES.md](./PRODUCT-SURFACES.md)** | Bounded map of the paste product vs the tools platform |
+| **[ROADMAP.md](./ROADMAP.md)** | Current staged roadmap for stability, Discord ops, product polish, and scale hardening |
 | **[VERCEL-CONVERSIONS.md](./VERCEL-CONVERSIONS.md)** | FFmpeg jobs + S3 on Vercel: env vars, presigned uploads, worker off-platform, CORS |
 | **[VERCEL-READINESS-AUDIT.md](./VERCEL-READINESS-AUDIT.md)** | Current code-level deployment audit for Vercel |
 | **[CONVERSION-WORKER.md](./CONVERSION-WORKER.md)** | Local/worker: MinIO, Docker, `npm run worker:convert` |
@@ -33,6 +34,7 @@ These Markdown files live **in the repository**. They are **not** automatically 
 | **[SECURITY.md](./SECURITY.md)** | HTTP headers, rate limits, auth hardening, production checklist |
 | **[MONITORING.md](./MONITORING.md)** | Health checks, logging, alert targets, and production response checklist |
 | **[RUNBOOK-BACKUPS.md](./RUNBOOK-BACKUPS.md)** | Database backup and restore runbook, including the PowerShell helpers in `scripts/` |
+| **[RUNBOOK-ROLLBACK.md](./RUNBOOK-ROLLBACK.md)** | Deployment rollback decision tree and post-rollback verification flow |
 | **[VERCEL-SETUP.md](./VERCEL-SETUP.md)** | **Full Vercel deploy checklist** — env vars, DB, Redis, Turnstile, SMTP, OAuth, post-deploy |
 | **[LEGAL.md](./LEGAL.md)** | Terms of Service (live at `/terms`) — operator checklist |
 
