@@ -1,7 +1,12 @@
 import { listDiscordGuildIntegrations, type DiscordGuildIntegrationRecord } from "@/lib/discord/guilds";
 import {
   buildDiscordInteractionEndpointUrl,
+  buildDiscordLandingUrl,
   buildDiscordBotInviteUrl,
+  buildDiscordLinkedRolesVerificationUrl,
+  buildDiscordPrivacyUrl,
+  buildDiscordTermsUrl,
+  buildDiscordWebhookEventsUrl,
   summarizeDiscordGuildIntegrations,
   type DiscordGuildSummary
 } from "@/lib/discord/control-center-shared";
@@ -12,6 +17,11 @@ export type DiscordControlSnapshot = {
   inviteUrl: string | null;
   siteBaseUrl: string;
   interactionEndpointUrl: string | null;
+  webhookEventsUrl: string | null;
+  linkedRolesVerificationUrl: string | null;
+  termsUrl: string | null;
+  privacyUrl: string | null;
+  landingUrl: string | null;
   config: {
     hasApplicationId: boolean;
     hasToken: boolean;
@@ -37,6 +47,11 @@ export async function getDiscordControlSnapshot(): Promise<DiscordControlSnapsho
     inviteUrl: buildDiscordBotInviteUrl(applicationId),
     siteBaseUrl,
     interactionEndpointUrl: buildDiscordInteractionEndpointUrl(siteBaseUrl),
+    webhookEventsUrl: buildDiscordWebhookEventsUrl(siteBaseUrl),
+    linkedRolesVerificationUrl: buildDiscordLinkedRolesVerificationUrl(siteBaseUrl),
+    termsUrl: buildDiscordTermsUrl(siteBaseUrl),
+    privacyUrl: buildDiscordPrivacyUrl(siteBaseUrl),
+    landingUrl: buildDiscordLandingUrl(siteBaseUrl),
     config: {
       hasApplicationId: Boolean(applicationId),
       hasToken: Boolean(String(process.env.DISCORD_BOT_TOKEN ?? "").trim()),

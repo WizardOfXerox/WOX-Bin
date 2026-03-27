@@ -16,6 +16,51 @@ export function buildDiscordInteractionEndpointUrl(baseUrl: string) {
   return `${trimmed}/api/discord/interactions`;
 }
 
+export function buildDiscordWebhookEventsUrl(baseUrl: string) {
+  const trimmed = baseUrl.trim().replace(/\/+$/, "");
+  if (!trimmed) {
+    return null;
+  }
+
+  return `${trimmed}/api/discord/events`;
+}
+
+export function buildDiscordLinkedRolesVerificationUrl(baseUrl: string) {
+  const trimmed = baseUrl.trim().replace(/\/+$/, "");
+  if (!trimmed) {
+    return null;
+  }
+
+  return `${trimmed}/discord/linked-roles`;
+}
+
+export function buildDiscordTermsUrl(baseUrl: string) {
+  const trimmed = baseUrl.trim().replace(/\/+$/, "");
+  if (!trimmed) {
+    return null;
+  }
+
+  return `${trimmed}/terms`;
+}
+
+export function buildDiscordPrivacyUrl(baseUrl: string) {
+  const trimmed = baseUrl.trim().replace(/\/+$/, "");
+  if (!trimmed) {
+    return null;
+  }
+
+  return `${trimmed}/privacy`;
+}
+
+export function buildDiscordLandingUrl(baseUrl: string) {
+  const trimmed = baseUrl.trim().replace(/\/+$/, "");
+  if (!trimmed) {
+    return null;
+  }
+
+  return `${trimmed}/discord`;
+}
+
 export type DiscordGuildSummaryInput = {
   announcementWebhookUrl: string | null;
   announcementsChannelId: string | null;

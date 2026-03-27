@@ -17,6 +17,7 @@ function buildWoxCommand() {
     .setDescription("WOX-Bin server tools and site controls.")
     .addSubcommand((subcommand) => subcommand.setName("help").setDescription("Show the main WOX-Bin bot features."))
     .addSubcommand((subcommand) => subcommand.setName("links").setDescription("Show the main WOX-Bin links for this server."))
+    .addSubcommand((subcommand) => subcommand.setName("tools").setDescription("Open the main WOX-Bin tools and privacy surfaces."))
     .addSubcommand((subcommand) =>
       subcommand
         .setName("feed")
@@ -26,6 +27,77 @@ function buildWoxCommand() {
         )
     )
     .addSubcommand((subcommand) => subcommand.setName("status").setDescription("Check site and database health."))
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("roll")
+        .setDescription("Roll one or more dice.")
+        .addIntegerOption((option) =>
+          option.setName("sides").setDescription("Sides per die.").setRequired(false).setMinValue(2).setMaxValue(1000)
+        )
+        .addIntegerOption((option) =>
+          option.setName("count").setDescription("How many dice to roll.").setRequired(false).setMinValue(1).setMaxValue(10)
+        )
+    )
+    .addSubcommand((subcommand) => subcommand.setName("coinflip").setDescription("Flip a coin."))
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("choose")
+        .setDescription("Pick one option from a list.")
+        .addStringOption((option) =>
+          option
+            .setName("options")
+            .setDescription("Separate choices with commas, pipes, or new lines.")
+            .setRequired(true)
+            .setMaxLength(1000)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("magic8")
+        .setDescription("Ask the magic 8-ball a yes-or-no question.")
+        .addStringOption((option) =>
+          option.setName("question").setDescription("Your yes-or-no question.").setRequired(true).setMaxLength(300)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("rps")
+        .setDescription("Play rock, paper, scissors against the bot.")
+        .addStringOption((option) =>
+          option
+            .setName("pick")
+            .setDescription("Your pick.")
+            .setRequired(true)
+            .addChoices(
+              { name: "Rock", value: "rock" },
+              { name: "Paper", value: "paper" },
+              { name: "Scissors", value: "scissors" }
+            )
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("music")
+        .setDescription("Open quick music search links for a mood or custom search.")
+        .addStringOption((option) =>
+          option
+            .setName("mood")
+            .setDescription("Pick a vibe.")
+            .setRequired(false)
+            .addChoices(
+              { name: "Focus", value: "focus" },
+              { name: "Lo-fi", value: "lofi" },
+              { name: "Synthwave", value: "synthwave" },
+              { name: "Ambient", value: "ambient" },
+              { name: "Phonk", value: "phonk" },
+              { name: "Metal", value: "metal" },
+              { name: "Custom", value: "custom" }
+            )
+        )
+        .addStringOption((option) =>
+          option.setName("query").setDescription("Optional custom search text or artist/song prompt.").setRequired(false).setMaxLength(200)
+        )
+    )
     .addSubcommand((subcommand) => subcommand.setName("setup").setDescription("Create or refresh the WOX-Bin channels, roles, and webhook."))
     .addSubcommand((subcommand) =>
       subcommand
@@ -133,6 +205,7 @@ export async function handleDiscordCommand(
       guild: interaction.guild ?? null,
       options: {
         count: interaction.options.getInteger("count") ?? undefined,
+        sides: interaction.options.getInteger("sides") ?? undefined,
         enabled: interaction.options.getBoolean("enabled") ?? undefined,
         title: interaction.options.getString("title") ?? undefined,
         body: interaction.options.getString("body") ?? undefined,
@@ -141,7 +214,21 @@ export async function handleDiscordCommand(
         ctaHref: interaction.options.getString("cta_href"),
         content: interaction.options.getString("content") ?? undefined,
         visibility:
-          (interaction.options.getString("visibility") as "private" | "unlisted" | "public" | null) ?? undefined
+          (interaction.options.getString("visibility") as "private" | "unlisted" | "public" | null) ?? undefined,
+        optionsText: interaction.options.getString("options") ?? undefined,
+        question: interaction.options.getString("question") ?? undefined,
+        pick: (interaction.options.getString("pick") as "rock" | "paper" | "scissors" | null) ?? undefined,
+        mood:
+          (interaction.options.getString("mood") as
+            | "focus"
+            | "lofi"
+            | "synthwave"
+            | "ambient"
+            | "phonk"
+            | "metal"
+            | "custom"
+            | null) ?? undefined,
+        query: interaction.options.getString("query") ?? undefined
       }
     },
     config,

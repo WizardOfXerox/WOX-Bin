@@ -96,6 +96,7 @@ function flattenDiscordCommandOptions(options: DiscordInteractionOption[] | unde
     subcommand: subcommand?.name ?? "",
     options: {
       count: typeof getValue<number>("count") === "number" ? Number(getValue<number>("count")) : undefined,
+      sides: typeof getValue<number>("sides") === "number" ? Number(getValue<number>("sides")) : undefined,
       enabled: typeof getValue<boolean>("enabled") === "boolean" ? Boolean(getValue<boolean>("enabled")) : undefined,
       title: typeof getValue<string>("title") === "string" ? String(getValue<string>("title")) : undefined,
       body: typeof getValue<string>("body") === "string" ? String(getValue<string>("body")) : undefined,
@@ -106,7 +107,18 @@ function flattenDiscordCommandOptions(options: DiscordInteractionOption[] | unde
       visibility:
         typeof getValue<string>("visibility") === "string"
           ? (String(getValue<string>("visibility")) as DiscordCommandInput["options"]["visibility"])
-          : undefined
+          : undefined,
+      optionsText: typeof getValue<string>("options") === "string" ? String(getValue<string>("options")) : undefined,
+      question: typeof getValue<string>("question") === "string" ? String(getValue<string>("question")) : undefined,
+      pick:
+        typeof getValue<string>("pick") === "string"
+          ? (String(getValue<string>("pick")) as DiscordCommandInput["options"]["pick"])
+          : undefined,
+      mood:
+        typeof getValue<string>("mood") === "string"
+          ? (String(getValue<string>("mood")) as DiscordCommandInput["options"]["mood"])
+          : undefined,
+      query: typeof getValue<string>("query") === "string" ? String(getValue<string>("query")) : undefined
     }
   };
 }

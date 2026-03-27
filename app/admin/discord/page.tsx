@@ -181,6 +181,36 @@ export default async function AdminDiscordPage() {
                   Interactions endpoint:{" "}
                   <span className="font-mono text-foreground">{snapshot.interactionEndpointUrl ?? "Unavailable"}</span>
                 </p>
+                <p>
+                  Webhook events endpoint:{" "}
+                  <span className="font-mono text-foreground">{snapshot.webhookEventsUrl ?? "Unavailable"}</span>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-white/10 bg-white/[0.03]">
+            <CardContent className="space-y-4 pt-6">
+              <p className="text-sm font-medium">Discord portal values</p>
+              <div className="space-y-3 text-xs text-muted-foreground">
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                  <p className="uppercase tracking-[0.22em] text-muted-foreground">Linked Roles Verification URL</p>
+                  <p className="mt-2 break-all font-mono text-foreground">
+                    {snapshot.linkedRolesVerificationUrl ?? "Unavailable"}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                  <p className="uppercase tracking-[0.22em] text-muted-foreground">Terms of Service URL</p>
+                  <p className="mt-2 break-all font-mono text-foreground">{snapshot.termsUrl ?? "Unavailable"}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                  <p className="uppercase tracking-[0.22em] text-muted-foreground">Privacy Policy URL</p>
+                  <p className="mt-2 break-all font-mono text-foreground">{snapshot.privacyUrl ?? "Unavailable"}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                  <p className="uppercase tracking-[0.22em] text-muted-foreground">Optional custom install landing</p>
+                  <p className="mt-2 break-all font-mono text-foreground">{snapshot.landingUrl ?? "Unavailable"}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -197,7 +227,11 @@ export default async function AdminDiscordPage() {
                   so slash commands run from the Vercel app without your PC.
                 </li>
                 <li>
-                  5. Keep a dedicated <code>DISCORD_BOT_SITE_API_KEY</code> as a site-owned secret in env, not as a normal
+                  5. Set the Webhooks Endpoint URL to <code>{snapshot.webhookEventsUrl ?? "/api/discord/events"}</code> and
+                  the Linked Roles Verification URL to <code>{snapshot.linkedRolesVerificationUrl ?? "/discord/linked-roles"}</code>.
+                </li>
+                <li>
+                  6. Keep a dedicated <code>DISCORD_BOT_SITE_API_KEY</code> as a site-owned secret in env, not as a normal
                   user account API key, so bot quickpaste access is easy to rotate.
                 </li>
               </ol>

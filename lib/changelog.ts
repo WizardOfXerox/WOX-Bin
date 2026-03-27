@@ -8,6 +8,30 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    slug: "2026-03-27-discord-portal-and-linked-roles-urls",
+    date: "2026-03-27",
+    title: "Discord portal helper URLs, linked-roles verification page, and webhook events endpoint",
+    summary:
+      "WOX-Bin now exposes a real Linked Roles verification landing page, a dedicated Discord webhook-events endpoint, and copy-ready portal URLs through the public and admin Discord surfaces.",
+    bullets: [
+      "Added `/discord/linked-roles` so the Discord Developer Portal can use a real WOX-Bin verification page instead of a placeholder URL.",
+      "Added `/api/discord/events` as a signed Discord webhook-events endpoint that is separate from the slash-command interactions route.",
+      "Extended the Discord control center so the landing page and admin dashboard show the Linked Roles Verification URL, Terms URL, Privacy URL, optional custom install landing, and webhook-events endpoint."
+    ]
+  },
+  {
+    slug: "2026-03-27-discord-command-pack-expansion",
+    date: "2026-03-27",
+    title: "Expanded Discord bot commands for tools, fun, games, and music helpers",
+    summary:
+      "The `/wox` command bundle now goes beyond setup and ops with quick access to WOX-Bin tools, lightweight randomizer/game commands, and music discovery helpers that work without a voice backend.",
+    bullets: [
+      "Added `/wox tools` for one-click links into the privacy suite, shortener, snapshots, proofs, polls, chat, docs, BookmarkFS, and workspace surfaces.",
+      "Added `/wox roll`, `/wox coinflip`, `/wox choose`, `/wox magic8`, and `/wox rps` for quick fun and lightweight game interactions inside Discord.",
+      "Added `/wox music` so users can jump to YouTube, Spotify, Apple Music, and SoundCloud searches from a mood preset or custom query."
+    ]
+  },
+  {
     slug: "2026-03-27-discord-hybrid-interactions-and-gateway",
     date: "2026-03-27",
     title: "Discord hybrid bot mode with hosted interactions and a live gateway companion",

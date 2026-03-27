@@ -4,6 +4,11 @@ import {
   DISCORD_BOT_REQUIRED_PERMISSIONS,
   buildDiscordInteractionEndpointUrl,
   buildDiscordBotInviteUrl,
+  buildDiscordLandingUrl,
+  buildDiscordLinkedRolesVerificationUrl,
+  buildDiscordPrivacyUrl,
+  buildDiscordTermsUrl,
+  buildDiscordWebhookEventsUrl,
   summarizeDiscordGuildIntegrations
 } from "@/lib/discord/control-center-shared";
 
@@ -24,6 +29,18 @@ describe("discord control center", () => {
     expect(buildDiscordInteractionEndpointUrl("https://wox-bin.vercel.app/")).toBe(
       "https://wox-bin.vercel.app/api/discord/interactions"
     );
+  });
+
+  it("builds the other Discord portal URLs from the site base url", () => {
+    expect(buildDiscordWebhookEventsUrl("https://wox-bin.vercel.app/")).toBe(
+      "https://wox-bin.vercel.app/api/discord/events"
+    );
+    expect(buildDiscordLinkedRolesVerificationUrl("https://wox-bin.vercel.app/")).toBe(
+      "https://wox-bin.vercel.app/discord/linked-roles"
+    );
+    expect(buildDiscordTermsUrl("https://wox-bin.vercel.app/")).toBe("https://wox-bin.vercel.app/terms");
+    expect(buildDiscordPrivacyUrl("https://wox-bin.vercel.app/")).toBe("https://wox-bin.vercel.app/privacy");
+    expect(buildDiscordLandingUrl("https://wox-bin.vercel.app/")).toBe("https://wox-bin.vercel.app/discord");
   });
 
   it("summarizes linked guild coverage for the dashboard", () => {

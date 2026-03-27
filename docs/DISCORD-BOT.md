@@ -16,6 +16,7 @@ WOX-Bin now includes a first-party Discord bot foundation that runs in hybrid mo
 - can answer slash commands through `/api/discord/interactions` without keeping your PC online
 - can keep a live bot presence online when the gateway companion is running on a worker/VPS
 - now has a public landing page at `/discord`
+- now has a Linked Roles verification landing page at `/discord/linked-roles`
 - now has an admin control dashboard at `/admin/discord`
 
 ## Required env
@@ -59,8 +60,15 @@ Recommended split:
 
 - `/wox help`
 - `/wox links`
+- `/wox tools`
 - `/wox feed [count]`
 - `/wox status`
+- `/wox roll [sides] [count]`
+- `/wox coinflip`
+- `/wox choose <options>`
+- `/wox magic8 <question>`
+- `/wox rps <pick>`
+- `/wox music [mood] [query]`
 - `/wox setup`
 - `/wox siteops enabled:true|false`
 - `/wox announce title body [tone] [cta_label] [cta_href]`
@@ -77,6 +85,27 @@ For WOX-Bin production this is:
 - `https://wox-bin.vercel.app/api/discord/interactions`
 
 Once that is set, slash commands no longer depend on your local PC staying online.
+
+## Discord portal URLs
+
+These are the values you can paste into the Discord Developer Portal:
+
+- Linked Roles Verification URL
+  - `https://wox-bin.vercel.app/discord/linked-roles`
+- Terms of Service URL
+  - `https://wox-bin.vercel.app/terms`
+- Privacy Policy URL
+  - `https://wox-bin.vercel.app/privacy`
+- Interactions Endpoint URL
+  - `https://wox-bin.vercel.app/api/discord/interactions`
+- Webhooks Endpoint URL
+  - `https://wox-bin.vercel.app/api/discord/events`
+
+Recommended install settings:
+
+- Keep `Guild Install` enabled
+- Leave `User Install` off unless you later build user-scoped Discord app flows
+- Use Discord’s provided install link for the main add-app flow, or point the optional custom install landing to `/discord`
 
 ## Scripts
 

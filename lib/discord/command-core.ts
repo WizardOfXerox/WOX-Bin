@@ -32,6 +32,11 @@ export type DiscordCommandMessage = {
   }>;
 };
 
+type DiscordLinkButton = {
+  label: string;
+  url: string;
+};
+
 export type DiscordCommandInput = {
   commandName: string;
   subcommand: string;
@@ -42,6 +47,7 @@ export type DiscordCommandInput = {
   guild: Guild | null;
   options: {
     count?: number;
+    sides?: number;
     enabled?: boolean;
     title?: string;
     body?: string;
@@ -50,6 +56,11 @@ export type DiscordCommandInput = {
     ctaHref?: string | null;
     content?: string;
     visibility?: "private" | "unlisted" | "public";
+    optionsText?: string;
+    question?: string;
+    pick?: "rock" | "paper" | "scissors";
+    mood?: "focus" | "lofi" | "synthwave" | "ambient" | "phonk" | "metal" | "custom";
+    query?: string;
   };
 };
 
@@ -70,18 +81,95 @@ export type DiscordCommandPlan = {
 
 function buildLinksComponents() {
   const links = getDiscordBotSiteLinks();
-  return [
-    {
-      type: 1 as const,
-      components: [
-        { type: 2 as const, style: 5 as const, label: "Workspace", url: links.workspace },
-        { type: 2 as const, style: 5 as const, label: "Quick paste", url: links.quick },
-        { type: 2 as const, style: 5 as const, label: "Feed", url: links.feed },
-        { type: 2 as const, style: 5 as const, label: "Privacy", url: links.privacy },
-        { type: 2 as const, style: 5 as const, label: "Support", url: links.support }
-      ]
-    }
-  ];
+  return buildUrlButtonRows([
+    { label: "Workspace", url: links.workspace },
+    { label: "Quick paste", url: links.quick },
+    { label: "Feed", url: links.feed },
+    { label: "Privacy", url: links.privacy },
+    { label: "Support", url: links.support }
+  ]);
+}
+
+function buildUrlButtonRows(buttons: DiscordLinkButton[]) {
+  const rows: DiscordCommandMessage["components"] = [];
+
+  for (let index = 0; index < buttons.length; index += 5) {
+    rows.push({
+      type: 1,
+      components: buttons.slice(index, index + 5).map((button) => ({
+        type: 2,
+        style: 5,
+        label: button.label,
+        url: button.url
+      }))
+    });
+  }
+
+  return rows;
+}
+
+function clampInteger(value: number | undefined, min: number, max: number, fallback: number) {
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+
+  return Math.max(min, Math.min(max, Math.trunc(value as number)));
+}
+
+function normalizeChoiceList(raw: string | undefined) {
+  return String(raw ?? "")
+    .split(/[\n,|]/)
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .slice(0, 25);
+}
+
+function pickRandom<T>(items: readonly T[]) {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function buildToolsComponents() {
+  const links = getDiscordBotSiteLinks();
+  return buildUrlButtonRows([
+    { label: "Privacy suite", url: links.privacy },
+    { label: "Shorten", url: `${links.home}shorten` },
+    { label: "Snapshot", url: `${links.home}snapshot` },
+    { label: "Proof", url: `${links.home}proof` },
+    { label: "Poll", url: `${links.home}poll` },
+    { label: "Chat", url: `${links.home}chat` },
+    { label: "Docs", url: `${links.home}doc` },
+    { label: "BookmarkFS", url: links.bookmarkfs },
+    { label: "Workspace", url: links.workspace },
+    { label: "Support", url: links.support }
+  ]);
+}
+
+function buildMusicSearchQuery(mood: NonNullable<DiscordCommandInput["options"]["mood"]>, query: string | undefined) {
+  const trimmed = String(query ?? "").trim();
+  if (mood === "custom") {
+    return trimmed;
+  }
+
+  const defaults: Record<Exclude<NonNullable<DiscordCommandInput["options"]["mood"]>, "custom">, string> = {
+    focus: "focus music coding mix",
+    lofi: "lofi beats study mix",
+    synthwave: "synthwave retrowave mix",
+    ambient: "ambient deep focus mix",
+    phonk: "drift phonk mix",
+    metal: "instrumental metal mix"
+  };
+
+  return trimmed || defaults[mood];
+}
+
+function buildMusicComponents(query: string) {
+  const encoded = encodeURIComponent(query);
+  return buildUrlButtonRows([
+    { label: "YouTube", url: `https://www.youtube.com/results?search_query=${encoded}` },
+    { label: "Spotify", url: `https://open.spotify.com/search/${encoded}` },
+    { label: "Apple Music", url: `https://music.apple.com/us/search?term=${encoded}` },
+    { label: "SoundCloud", url: `https://soundcloud.com/search?q=${encoded}` }
+  ]);
 }
 
 function summarizeGuildSetup(result: DiscordGuildSetupResult) {
@@ -144,7 +232,8 @@ export function createDiscordCommandPlan(
             fields: [
               {
                 name: "Public commands",
-                value: "`/wox links`, `/wox feed`, `/wox status`, `/wox help`"
+                value:
+                  "`/wox links`, `/wox tools`, `/wox feed`, `/wox status`, `/wox roll`, `/wox coinflip`, `/wox choose`, `/wox magic8`, `/wox rps`, `/wox music`, `/wox help`"
               },
               {
                 name: "Guild setup",
@@ -179,6 +268,37 @@ export function createDiscordCommandPlan(
             }
           ],
           components: buildLinksComponents()
+        };
+      }
+    };
+  }
+
+  if (input.subcommand === "tools") {
+    return {
+      deferred: false,
+      ephemeral: false,
+      execute: async () => {
+        const links = getDiscordBotSiteLinks();
+        return {
+          embeds: [
+            {
+              title: "WOX-Bin tools",
+              color: 0x38bdf8,
+              description:
+                "Fast links to the privacy suite, shortener, snapshots, proofs, polls, chat, docs, BookmarkFS, and core workspace surfaces.",
+              fields: [
+                {
+                  name: "Privacy tools",
+                  value: `${links.privacy}\n${links.home}shorten\n${links.home}snapshot\n${links.home}proof\n${links.home}poll\n${links.home}chat`
+                },
+                {
+                  name: "Core surfaces",
+                  value: `${links.workspace}\n${links.quick}\n${links.feed}\n${links.bookmarkfs}\n${links.support}`
+                }
+              ]
+            }
+          ],
+          components: buildToolsComponents()
         };
       }
     };
@@ -226,6 +346,187 @@ export function createDiscordCommandPlan(
               ]
             }
           ]
+        };
+      }
+    };
+  }
+
+  if (input.subcommand === "roll") {
+    return {
+      deferred: false,
+      ephemeral: false,
+      execute: async () => {
+        const sides = clampInteger(input.options.sides, 2, 1000, 6);
+        const rolls = clampInteger(input.options.count, 1, 10, 1);
+        const results = Array.from({ length: rolls }, () => Math.floor(Math.random() * sides) + 1);
+        const total = results.reduce((sum, value) => sum + value, 0);
+
+        return {
+          embeds: [
+            {
+              title: "Dice roll",
+              color: 0x38bdf8,
+              description: `Rolled **${rolls}d${sides}**`,
+              fields: [
+                { name: "Results", value: results.join(", "), inline: false },
+                { name: "Total", value: String(total), inline: true },
+                { name: "Highest", value: String(Math.max(...results)), inline: true }
+              ]
+            }
+          ]
+        };
+      }
+    };
+  }
+
+  if (input.subcommand === "coinflip") {
+    return {
+      deferred: false,
+      ephemeral: false,
+      execute: async () => {
+        const result = Math.random() < 0.5 ? "Heads" : "Tails";
+        return {
+          embeds: [
+            {
+              title: "Coin flip",
+              color: 0x38bdf8,
+              description: `The coin landed on **${result}**.`
+            }
+          ]
+        };
+      }
+    };
+  }
+
+  if (input.subcommand === "choose") {
+    return {
+      deferred: false,
+      ephemeral: false,
+      execute: async () => {
+        const choices = normalizeChoiceList(input.options.optionsText);
+        if (choices.length < 2) {
+          throw new Error("Give me at least two choices separated by commas, pipes, or new lines.");
+        }
+
+        const selected = pickRandom(choices);
+        return {
+          embeds: [
+            {
+              title: "Choice picker",
+              color: 0x38bdf8,
+              description: `I choose **${selected}**.`,
+              fields: [
+                {
+                  name: "Options",
+                  value: choices.map((choice, index) => `${index + 1}. ${choice}`).join("\n")
+                }
+              ]
+            }
+          ]
+        };
+      }
+    };
+  }
+
+  if (input.subcommand === "magic8") {
+    return {
+      deferred: false,
+      ephemeral: false,
+      execute: async () => {
+        const question = String(input.options.question ?? "").trim();
+        if (!question) {
+          throw new Error("Ask a yes-or-no question first.");
+        }
+
+        const answers = [
+          "Yes, definitely.",
+          "No chance.",
+          "Ask again later.",
+          "Signs point to yes.",
+          "Very doubtful.",
+          "Absolutely.",
+          "Focus and try again.",
+          "It would be wise to wait."
+        ] as const;
+
+        return {
+          embeds: [
+            {
+              title: "Magic 8-Ball",
+              color: 0x38bdf8,
+              fields: [
+                { name: "Question", value: question },
+                { name: "Answer", value: pickRandom(answers) }
+              ]
+            }
+          ]
+        };
+      }
+    };
+  }
+
+  if (input.subcommand === "rps") {
+    return {
+      deferred: false,
+      ephemeral: false,
+      execute: async () => {
+        const playerPick = input.options.pick;
+        if (!playerPick) {
+          throw new Error("Choose rock, paper, or scissors.");
+        }
+
+        const botPick = pickRandom(["rock", "paper", "scissors"] as const);
+        const winsAgainst: Record<"rock" | "paper" | "scissors", "rock" | "paper" | "scissors"> = {
+          rock: "scissors",
+          paper: "rock",
+          scissors: "paper"
+        };
+
+        const result =
+          playerPick === botPick ? "It's a tie." : winsAgainst[playerPick] === botPick ? "You win." : "I win.";
+
+        return {
+          embeds: [
+            {
+              title: "Rock, paper, scissors",
+              color: 0x38bdf8,
+              fields: [
+                { name: "You", value: playerPick, inline: true },
+                { name: "Bot", value: botPick, inline: true },
+                { name: "Result", value: result, inline: false }
+              ]
+            }
+          ]
+        };
+      }
+    };
+  }
+
+  if (input.subcommand === "music") {
+    return {
+      deferred: false,
+      ephemeral: false,
+      execute: async () => {
+        const mood = input.options.mood ?? "focus";
+        const query = buildMusicSearchQuery(mood, input.options.query);
+        if (!query) {
+          throw new Error("For custom music mode, add a search query too.");
+        }
+
+        return {
+          embeds: [
+            {
+              title: "Music helper",
+              color: 0x38bdf8,
+              description:
+                "WOX-Bin does not run a voice music player, but it can hand you fast search links for a mood or custom query.",
+              fields: [
+                { name: "Mode", value: mood, inline: true },
+                { name: "Search", value: query, inline: true }
+              ]
+            }
+          ],
+          components: buildMusicComponents(query)
         };
       }
     };

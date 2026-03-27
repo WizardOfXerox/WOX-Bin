@@ -85,8 +85,11 @@ They share auth, deployment, and parts of the UI system, but they should be trea
 - `/settings` → `/settings/account` (profile), plus `/settings/billing`, `/settings/usage`, `/settings/sessions`, `/settings/webhooks`, `/settings/team`, and `/settings/team/pastes` (teammates’ public/unlisted pastes)
 - `/admin` with overview, deployment readiness, user management, paste moderation, audit export, and SMTP test hooks
 - `/admin/discord` with Discord bot invite readiness, guild linkage, webhook coverage, and rollout health
+- `/discord/linked-roles` as a ready-made Linked Roles Verification URL for the Discord Developer Portal
 - `DISCORD_BOT_SITE_API_KEY` is now a site-owned bot secret for Discord quickpaste, not a user account API key
 - `DISCORD_PUBLIC_KEY` lets the hosted interactions endpoint verify Discord request signatures before running commands
+- `/api/discord/events` is available as a signed Discord webhook-events endpoint, separate from `/api/discord/interactions`
+- The Discord bot now includes extra `/wox` subcommands for tools, fun, light games, and music discovery helpers
 
 ## Stack
 
