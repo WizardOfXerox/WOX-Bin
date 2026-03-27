@@ -8,6 +8,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    slug: "2026-03-27-discord-operator-console-actions",
+    date: "2026-03-27",
+    title: "Discord operator console with live guild actions",
+    summary:
+      "The admin Discord dashboard is now a real operator console that can refresh server setup, toggle site-ops mirroring, test announcement webhooks, create bot-owned quickpastes, and publish live announcements without leaving WOX-Bin.",
+    bullets: [
+      "Added an admin-only Discord actions endpoint at `/api/admin/discord` so setup refresh, site-ops toggles, webhook tests, announcement publishing, and quickpaste creation all stay server-side.",
+      "Rebuilt `/admin/discord` into a client-backed operator console with per-guild action buttons, a bot quickpaste composer, an announcement composer, and copy-ready portal values.",
+      "Added shared Discord admin-console helpers plus regression coverage so the new operator actions are validated alongside the existing Discord control-center logic."
+    ]
+  },
+  {
     slug: "2026-03-27-discord-portal-and-linked-roles-urls",
     date: "2026-03-27",
     title: "Discord portal helper URLs, linked-roles verification page, and webhook events endpoint",

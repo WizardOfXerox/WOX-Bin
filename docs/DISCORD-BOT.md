@@ -18,6 +18,7 @@ WOX-Bin now includes a first-party Discord bot foundation that runs in hybrid mo
 - now has a public landing page at `/discord`
 - now has a Linked Roles verification landing page at `/discord/linked-roles`
 - now has an admin control dashboard at `/admin/discord`
+- now lets admins run bot/operator actions from `/admin/discord` without dropping into Discord first
 
 ## Required env
 
@@ -121,7 +122,18 @@ Recommended install settings:
 - `/discord`
   Public landing page for installation, command overview, bootstrap layout, and high-level bot status.
 - `/admin/discord`
-  Admin-only control dashboard that shows invite readiness, operator coverage, linked guilds, webhook linkage, and rollout health.
+  Admin-only control dashboard and operator console for install readiness, linked guild visibility, setup refresh, site-ops toggles, webhook tests, bot quickpastes, and announcement publishing.
+
+## Admin operator console
+
+`/admin/discord` now does more than show status:
+
+- refresh guild setup through Discord REST
+- enable or disable `site ops` on a linked guild
+- send a webhook test into the configured announcement channel
+- create a bot-owned quickpaste using the site-owned `DISCORD_BOT_SITE_API_KEY`
+- publish a live site announcement that mirrors into every site-ops guild with a stored webhook
+- copy the live Discord portal URLs directly from the dashboard
 
 ## Bot quickpaste credential model
 
