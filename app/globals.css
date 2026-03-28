@@ -173,6 +173,11 @@ html.theme-light .glass-panel {
   }
 }
 
+.defer-section {
+  content-visibility: auto;
+  contain-intrinsic-size: 720px;
+}
+
 .workspace-grid {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr) 360px;

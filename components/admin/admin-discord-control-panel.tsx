@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState, type CSSProperties } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,8 +47,7 @@ const QUICK_PASTE_PRESETS: QuickPastePreset[] = [
     description: "Short internal hand-off note for moderators or server operators.",
     draft: {
       title: "WOX-Bin ops hand-off",
-      content:
-        "Context:\n\nWhat changed:\n\nWho owns the next step:\n\nEscalation notes:\n\nUseful links:\n",
+      content: "Context:\n\nWhat changed:\n\nWho owns the next step:\n\nEscalation notes:\n\nUseful links:\n",
       visibility: "unlisted"
     }
   },
@@ -58,8 +57,7 @@ const QUICK_PASTE_PRESETS: QuickPastePreset[] = [
     description: "A clean reply block for support or onboarding help.",
     draft: {
       title: "WOX-Bin support follow-up",
-      content:
-        "Issue summary:\n\nSteps already taken:\n\nRecommended next action:\n\nEscalate if:\n",
+      content: "Issue summary:\n\nSteps already taken:\n\nRecommended next action:\n\nEscalate if:\n",
       visibility: "unlisted"
     }
   },
@@ -80,8 +78,7 @@ const QUICK_PASTE_PRESETS: QuickPastePreset[] = [
     description: "Short incident timeline or status stub for ops channels.",
     draft: {
       title: "WOX-Bin incident update",
-      content:
-        "Current status:\n\nImpact:\n\nMitigation in progress:\n\nNext update:\n",
+      content: "Current status:\n\nImpact:\n\nMitigation in progress:\n\nNext update:\n",
       visibility: "unlisted"
     }
   }
@@ -89,6 +86,11 @@ const QUICK_PASTE_PRESETS: QuickPastePreset[] = [
 
 const selectClass =
   "h-11 w-full rounded-2xl border border-border bg-card/80 px-4 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+const DEFER_SECTION_STYLE: CSSProperties = {
+  contentVisibility: "auto",
+  containIntrinsicSize: "720px"
+};
 
 function statusBadge(enabled: boolean, label: string) {
   return (
@@ -303,7 +305,7 @@ export function AdminDiscordControlPanel({ initialSnapshot }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="glass-panel space-y-5 px-6 py-6">
+      <div className="glass-panel space-y-5 px-6 py-6 sm:px-7 xl:px-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Discord</p>
@@ -330,7 +332,13 @@ export function AdminDiscordControlPanel({ initialSnapshot }: Props) {
                 View landing page
               </a>
             </Button>
-            <Button disabled={refreshing} onClick={() => void refreshSnapshot()} size="sm" type="button" variant="ghost">
+            <Button
+              disabled={refreshing}
+              onClick={() => void refreshSnapshot()}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
               {refreshing ? "Refreshing…" : "Refresh"}
             </Button>
           </div>
@@ -355,7 +363,7 @@ export function AdminDiscordControlPanel({ initialSnapshot }: Props) {
           </div>
         ) : null}
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
           {statCards.map((card) => (
             <Card className="border-white/10 bg-white/[0.03]" key={card.label}>
               <CardContent className="space-y-2 pt-6">
@@ -367,8 +375,8 @@ export function AdminDiscordControlPanel({ initialSnapshot }: Props) {
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1.1fr)_minmax(360px,0.9fr)]">
-        <Card className="border-white/10 bg-white/[0.03]">
+      <div className="grid gap-5 xl:grid-cols-[minmax(280px,320px)_minmax(0,1fr)] 2xl:grid-cols-[minmax(280px,320px)_minmax(0,1.08fr)_minmax(360px,420px)]">
+        <Card className="border-white/10 bg-white/[0.03] xl:self-start 2xl:sticky 2xl:top-6">
           <CardContent className="space-y-4 pt-6">
             <div className="space-y-1">
               <p className="text-sm font-medium">Guild picker</p>
@@ -402,8 +410,8 @@ export function AdminDiscordControlPanel({ initialSnapshot }: Props) {
                       type="button"
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-medium text-foreground">{guild.guildName}</p>
+                        <div className="min-w-0">
+                          <p className="break-words font-medium text-foreground">{guild.guildName}</p>
                           <p className="mt-1 text-xs text-muted-foreground">{guild.guildId}</p>
                         </div>
                         <div className="flex flex-col gap-2">
@@ -411,9 +419,14 @@ export function AdminDiscordControlPanel({ initialSnapshot }: Props) {
                         </div>
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        {statusBadge(guild.bootstrapReady, guild.bootstrapReady ? "Ready" : `${guild.bootstrapCoverage}/4 channels`)}
+                        {statusBadge(
+                          guild.bootstrapReady,
+                          guild.bootstrapReady ? "Ready" : `${guild.bootstrapCoverage}/4 channels`
+                        )}
                         {statusBadge(Boolean(guild.announcementWebhookUrl), "Webhook")}
-                        {guild.lastAnnouncementDelivery ? activityBadge(guild.lastAnnouncementDelivery.status) : statusBadge(false, "No delivery")}
+                        {guild.lastAnnouncementDelivery
+                          ? activityBadge(guild.lastAnnouncementDelivery.status)
+                          : statusBadge(false, "No delivery")}
                       </div>
                     </button>
                   );
@@ -423,46 +436,56 @@ export function AdminDiscordControlPanel({ initialSnapshot }: Props) {
           </CardContent>
         </Card>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           {selectedGuild ? (
             <Card className="border-white/10 bg-white/[0.03]">
               <CardContent className="space-y-5 pt-6">
                 <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Selected guild</p>
-                    <h2 className="mt-2 text-2xl font-semibold">{selectedGuild.guildName}</h2>
-                    <p className="mt-2 font-mono text-xs text-muted-foreground">{selectedGuild.guildId}</p>
+                    <h2 className="mt-2 break-words text-2xl font-semibold text-balance">{selectedGuild.guildName}</h2>
+                    <p className="mt-2 break-all font-mono text-xs text-muted-foreground">{selectedGuild.guildId}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {statusBadge(selectedGuild.siteOpsEnabled, selectedGuild.siteOpsEnabled ? "Site ops mirror on" : "Standard guild")}
-                    {statusBadge(selectedGuild.bootstrapReady, selectedGuild.bootstrapReady ? "Bootstrapped" : "Needs setup")}
+                    {statusBadge(
+                      selectedGuild.siteOpsEnabled,
+                      selectedGuild.siteOpsEnabled ? "Site ops mirror on" : "Standard guild"
+                    )}
+                    {statusBadge(
+                      selectedGuild.bootstrapReady,
+                      selectedGuild.bootstrapReady ? "Bootstrapped" : "Needs setup"
+                    )}
                     {statusBadge(Boolean(selectedGuild.announcementWebhookUrl), "Webhook linked")}
                   </div>
                 </div>
 
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
                   <div className="rounded-xl border border-white/10 bg-black/10 p-4">
                     <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Setup status</p>
-                    <p className="mt-2 text-lg font-semibold text-foreground">
+                    <p className="mt-2 break-words text-base font-semibold leading-tight text-foreground xl:text-lg">
                       {selectedGuild.bootstrapReady ? "Ready" : `${selectedGuild.bootstrapCoverage}/4`}
                     </p>
                     <p className="mt-2 text-xs text-muted-foreground">Version {selectedGuild.setupVersion}</p>
                   </div>
                   <div className="rounded-xl border border-white/10 bg-black/10 p-4">
                     <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Webhook check</p>
-                    <p className="mt-2 text-lg font-semibold text-foreground">
+                    <p className="mt-2 break-words text-base font-semibold leading-tight text-foreground xl:text-lg">
                       {selectedGuild.lastWebhookCheck ? selectedGuild.lastWebhookCheck.label : "Not tested yet"}
                     </p>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {selectedGuild.lastWebhookCheck ? formatDate(selectedGuild.lastWebhookCheck.createdAt) : "Run a webhook test to verify delivery."}
+                    <p className="mt-2 break-words text-xs leading-5 text-muted-foreground">
+                      {selectedGuild.lastWebhookCheck
+                        ? formatDate(selectedGuild.lastWebhookCheck.createdAt)
+                        : "Run a webhook test to verify delivery."}
                     </p>
                   </div>
                   <div className="rounded-xl border border-white/10 bg-black/10 p-4">
                     <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Mirror delivery</p>
-                    <p className="mt-2 text-lg font-semibold text-foreground">
-                      {selectedGuild.lastAnnouncementDelivery ? selectedGuild.lastAnnouncementDelivery.label : "No mirrored announcement yet"}
+                    <p className="mt-2 break-words text-base font-semibold leading-tight text-foreground xl:text-lg">
+                      {selectedGuild.lastAnnouncementDelivery
+                        ? selectedGuild.lastAnnouncementDelivery.label
+                        : "No mirrored announcement yet"}
                     </p>
-                    <p className="mt-2 text-xs text-muted-foreground">
+                    <p className="mt-2 break-words text-xs leading-5 text-muted-foreground">
                       {selectedGuild.lastAnnouncementDelivery
                         ? formatDate(selectedGuild.lastAnnouncementDelivery.createdAt)
                         : "Publish a site announcement to test live mirroring."}
@@ -470,15 +493,24 @@ export function AdminDiscordControlPanel({ initialSnapshot }: Props) {
                   </div>
                   <div className="rounded-xl border border-white/10 bg-black/10 p-4">
                     <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Last seen</p>
-                    <p className="mt-2 text-lg font-semibold text-foreground">{formatDate(selectedGuild.lastSeenAt)}</p>
-                    <p className="mt-2 text-xs text-muted-foreground">Installed {formatDate(selectedGuild.installedAt)}</p>
+                    <p className="mt-2 break-words text-base font-semibold leading-tight text-foreground xl:text-lg">
+                      {formatDate(selectedGuild.lastSeenAt)}
+                    </p>
+                    <p className="mt-2 break-words text-xs leading-5 text-muted-foreground">
+                      Installed {formatDate(selectedGuild.installedAt)}
+                    </p>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
                   <Button
                     disabled={actingKey === `setup:${selectedGuildActionPrefix}`}
-                    onClick={() => void runAction({ action: "setup", guildId: selectedGuild.guildId }, `setup:${selectedGuild.guildId}`)}
+                    onClick={() =>
+                      void runAction(
+                        { action: "setup", guildId: selectedGuild.guildId },
+                        `setup:${selectedGuild.guildId}`
+                      )
+                    }
                     size="sm"
                     type="button"
                   >
@@ -503,20 +535,32 @@ export function AdminDiscordControlPanel({ initialSnapshot }: Props) {
                         : "Enable site ops"}
                   </Button>
                   <Button
-                    disabled={actingKey === `webhook:${selectedGuildActionPrefix}` || !selectedGuild.announcementWebhookUrl}
-                    onClick={() => void runAction({ action: "webhook-test", guildId: selectedGuild.guildId }, `webhook:${selectedGuild.guildId}`)}
+                    disabled={
+                      actingKey === `webhook:${selectedGuildActionPrefix}` || !selectedGuild.announcementWebhookUrl
+                    }
+                    onClick={() =>
+                      void runAction(
+                        { action: "webhook-test", guildId: selectedGuild.guildId },
+                        `webhook:${selectedGuild.guildId}`
+                      )
+                    }
                     size="sm"
                     type="button"
                     variant="outline"
                   >
                     {actingKey === `webhook:${selectedGuildActionPrefix}` ? "Sending…" : "Test webhook"}
                   </Button>
-                  <Button onClick={() => void copyText(selectedGuild.guildId, "Guild ID")} size="sm" type="button" variant="ghost">
+                  <Button
+                    onClick={() => void copyText(selectedGuild.guildId, "Guild ID")}
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
                     Copy guild ID
                   </Button>
                 </div>
 
-                <div className="grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
+                <div className="grid gap-3 text-sm sm:grid-cols-2 2xl:grid-cols-4">
                   {[
                     { label: "Welcome", value: selectedGuild.welcomeChannelId },
                     { label: "Announcements", value: selectedGuild.announcementsChannelId },
@@ -530,7 +574,7 @@ export function AdminDiscordControlPanel({ initialSnapshot }: Props) {
                   ))}
                 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
+                <div className="defer-section rounded-2xl border border-white/10 bg-black/10 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-medium">Recent guild activity</p>
@@ -541,18 +585,25 @@ export function AdminDiscordControlPanel({ initialSnapshot }: Props) {
                   </div>
                   <div className="mt-4 space-y-3">
                     {selectedGuild.recentActivity.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No Discord activity is recorded for this guild yet.</p>
+                      <p className="text-sm text-muted-foreground">
+                        No Discord activity is recorded for this guild yet.
+                      </p>
                     ) : (
                       selectedGuild.recentActivity.map((entry) => (
-                        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3" key={`${entry.id}:${entry.action}`}>
+                        <div
+                          className="rounded-xl border border-white/10 bg-white/[0.03] p-3"
+                          key={`${entry.id}:${entry.action}`}
+                        >
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
                               <p className="font-medium text-foreground">{entry.label}</p>
-                              {entry.detail ? <p className="mt-1 text-sm text-muted-foreground">{entry.detail}</p> : null}
+                              {entry.detail ? (
+                                <p className="mt-1 text-sm text-muted-foreground">{entry.detail}</p>
+                              ) : null}
                             </div>
                             {activityBadge(entry.status)}
                           </div>
-                          <p className="mt-3 text-xs text-muted-foreground">
+                          <p className="mt-3 break-words text-xs text-muted-foreground">
                             {formatDate(entry.createdAt)} · {entry.actorLabel}
                           </p>
                         </div>
@@ -572,26 +623,29 @@ export function AdminDiscordControlPanel({ initialSnapshot }: Props) {
           )}
         </div>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4 xl:col-span-2 2xl:col-span-1">
           <Card className="border-white/10 bg-white/[0.03]">
             <CardContent className="space-y-4 pt-6">
               <p className="text-sm font-medium">Linked roles readiness</p>
               <div className="flex flex-wrap gap-2">
-                {statusBadge(snapshot.linkedRoles.oauthReady, snapshot.linkedRoles.oauthReady ? "Discord OAuth ready" : "Discord OAuth missing")}
+                {statusBadge(
+                  snapshot.linkedRoles.oauthReady,
+                  snapshot.linkedRoles.oauthReady ? "Discord OAuth ready" : "Discord OAuth missing"
+                )}
                 {statusBadge(
                   snapshot.linkedRoles.metadataSyncReady,
                   snapshot.linkedRoles.metadataSyncReady ? "Metadata sync ready" : "Bot token or app id missing"
                 )}
               </div>
               <p className="text-sm leading-7 text-muted-foreground">
-                Users can now connect Discord from account settings and synchronize their plan, staff level, verification
-                state, onboarding state, and account age to Discord linked roles.
+                Users can now connect Discord from account settings and synchronize their plan, staff level,
+                verification state, onboarding state, and account age to Discord linked roles.
               </p>
               <div className="space-y-2">
                 {snapshot.linkedRoles.metadataRecords.map((record) => (
                   <div className="rounded-xl border border-white/10 bg-black/10 p-3" key={record.key}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <div className="min-w-0">
                         <p className="font-medium text-foreground">{record.name}</p>
                         <p className="mt-1 text-xs text-muted-foreground">{record.description}</p>
                       </div>
@@ -610,7 +664,7 @@ export function AdminDiscordControlPanel({ initialSnapshot }: Props) {
             </CardContent>
           </Card>
 
-          <Card className="border-white/10 bg-white/[0.03]">
+          <Card className="defer-section border-white/10 bg-white/[0.03]" style={DEFER_SECTION_STYLE}>
             <CardContent className="space-y-4 pt-6">
               <div>
                 <p className="text-sm font-medium">Bot quickpaste</p>
@@ -662,7 +716,7 @@ export function AdminDiscordControlPanel({ initialSnapshot }: Props) {
             </CardContent>
           </Card>
 
-          <Card className="border-white/10 bg-white/[0.03]">
+          <Card className="defer-section border-white/10 bg-white/[0.03]" style={DEFER_SECTION_STYLE}>
             <CardContent className="space-y-4 pt-6">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -741,14 +795,14 @@ export function AdminDiscordControlPanel({ initialSnapshot }: Props) {
             </CardContent>
           </Card>
 
-          <Card className="border-white/10 bg-white/[0.03]">
+          <Card className="defer-section border-white/10 bg-white/[0.03]" style={DEFER_SECTION_STYLE}>
             <CardContent className="space-y-4 pt-6">
               <p className="text-sm font-medium">Runtime and portal values</p>
               <div className="rounded-xl border border-white/10 bg-black/10 p-3 text-sm text-muted-foreground">
                 Commands are served through the hosted interactions endpoint. A gateway companion remains optional for
                 presence or lifecycle-only features.
               </div>
-              <div className="space-y-3 text-xs text-muted-foreground">
+              <div className="min-w-0 space-y-3 text-xs text-muted-foreground">
                 {[
                   { label: "Custom install link", value: snapshot.landingUrl },
                   { label: "Interactions Endpoint URL", value: snapshot.interactionEndpointUrl },
@@ -767,7 +821,12 @@ export function AdminDiscordControlPanel({ initialSnapshot }: Props) {
                           <p className="mt-2 break-all font-mono text-foreground">{value ?? "Unavailable"}</p>
                         </div>
                         {value ? (
-                          <Button onClick={() => void copyText(value, item.label)} size="sm" type="button" variant="ghost">
+                          <Button
+                            onClick={() => void copyText(value, item.label)}
+                            size="sm"
+                            type="button"
+                            variant="ghost"
+                          >
                             Copy
                           </Button>
                         ) : null}
@@ -781,7 +840,7 @@ export function AdminDiscordControlPanel({ initialSnapshot }: Props) {
         </div>
       </div>
 
-      <Card className="border-white/10 bg-white/[0.03]">
+      <Card className="defer-section border-white/10 bg-white/[0.03]" style={DEFER_SECTION_STYLE}>
         <CardContent className="space-y-4 pt-6">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -804,14 +863,14 @@ export function AdminDiscordControlPanel({ initialSnapshot }: Props) {
               snapshot.recentActivity.map((entry) => (
                 <div className="rounded-xl border border-white/10 bg-black/10 p-4" key={`${entry.id}:${entry.action}`}>
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-medium text-foreground">{entry.label}</p>
                       {entry.guildName ? <p className="mt-1 text-xs text-muted-foreground">{entry.guildName}</p> : null}
                       {entry.detail ? <p className="mt-2 text-sm text-muted-foreground">{entry.detail}</p> : null}
                     </div>
                     {activityBadge(entry.status)}
                   </div>
-                  <p className="mt-3 text-xs text-muted-foreground">
+                  <p className="mt-3 break-words text-xs text-muted-foreground">
                     {formatDate(entry.createdAt)} · {entry.actorLabel}
                   </p>
                 </div>

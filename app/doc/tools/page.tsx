@@ -12,17 +12,13 @@ export const metadata: Metadata = {
 export default function DocToolsPage() {
   if (!TOOLS_ENABLED) {
     return (
-      <DocShell
-        subtitle="Status and planned routes for the tools surface."
-        title="Tools"
-      >
+      <DocShell subtitle="Status and planned routes for the tools surface." title="Tools">
         <p>{TOOLS_DISABLED_COPY.docsDescription}</p>
 
         <h2>Status</h2>
         <p>
-          Public <code>/tools</code> pages and <code>/api/convert/*</code> endpoints currently return disabled responses on
-          this deployment. The unfinished tools code remains in the repo and can be re-enabled later with the environment
-          flag.
+          Public <code>/tools</code> pages and <code>/api/convert/*</code> endpoints currently return disabled responses
+          on this deployment. The tools code remains in the repo and can be re-enabled again with the environment flag.
         </p>
 
         <h2>Planned routes</h2>
@@ -45,17 +41,14 @@ export default function DocToolsPage() {
         </ul>
 
         <p className="text-xs">
-          Re-enable the surface with <code>WOX_ENABLE_TOOLS=1</code> after the product is ready.
+          Re-enable the surface with <code>WOX_ENABLE_TOOLS=1</code> if this deployment was intentionally switched off.
         </p>
       </DocShell>
     );
   }
 
   return (
-    <DocShell
-      subtitle="Client-side and hybrid conversion utilities shipped with WOX-Bin."
-      title="Tools"
-    >
+    <DocShell subtitle="Client-side and hybrid conversion utilities shipped with WOX-Bin." title="Tools">
       <p>
         The <Link href="/tools">/tools</Link> hub lists format converters, PDF helpers, data/zip labs, and links to the
         conversion registry.
@@ -71,8 +64,7 @@ export default function DocToolsPage() {
         </li>
         <li>
           <Link href="/tools/pdf-extract">/tools/pdf-extract</Link>,{" "}
-          <Link href="/tools/pdf-split">/tools/pdf-split</Link>,{" "}
-          <Link href="/tools/pdf-merge">/tools/pdf-merge</Link>
+          <Link href="/tools/pdf-split">/tools/pdf-split</Link>, <Link href="/tools/pdf-merge">/tools/pdf-merge</Link>
         </li>
         <li>
           <code>GET /api/convert/capabilities</code> — machine-readable capability snapshot for integrators

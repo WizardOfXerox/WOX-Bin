@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -14,7 +15,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type ChangeEvent,
+  type ChangeEvent
 } from "react";
 import { flushSync } from "react-dom";
 
@@ -67,7 +68,6 @@ import {
 
 import { PasteLineageBanner } from "@/components/paste-lineage-banner";
 import { ShareAnywherePanel } from "@/components/share/share-anywhere";
-import { CodeImageDialog } from "@/components/workspace/code-image-dialog";
 import { PrismThemeLink } from "@/components/workspace/prism-theme-link";
 import {
   PrismOverlayEditor,
@@ -120,7 +120,6 @@ import {
   wrapSelection,
   type RangeEdit
 } from "@/lib/ribbon-text-ops";
-import { WorkspacePasteComments } from "@/components/workspace/workspace-paste-comments";
 import { readTurnstileToken, resetTurnstileFields, TurnstileField } from "@/components/turnstile-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -152,13 +151,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { BUILTIN_TEMPLATES } from "@/lib/builtin-templates";
-import {
-  BURN_VIEW_OPTIONS,
-  CATEGORIES,
-  DEFAULT_FOLDERS,
-  LANGUAGES,
-  VISIBILITY_OPTIONS
-} from "@/lib/constants";
+import { BURN_VIEW_OPTIONS, CATEGORIES, DEFAULT_FOLDERS, LANGUAGES, VISIBILITY_OPTIONS } from "@/lib/constants";
 import {
   addLocalFolder,
   clearAnonymousClaims,
@@ -203,6 +196,23 @@ import type { AccountPlanSummary, PlanId, PlanStatus } from "@/lib/plans";
 import type { LocalWorkspaceSnapshot, PasteDraft, PasteVersionDraft, PublicPasteRecord } from "@/lib/types";
 import { cn, formatDate, normalizeOptionalSlug, normalizeTagList, slugify } from "@/lib/utils";
 import { useUiLanguage } from "@/components/providers/ui-language-provider";
+
+const CodeImageDialog = dynamic(
+  () => import("@/components/workspace/code-image-dialog").then((mod) => mod.CodeImageDialog),
+  { ssr: false, loading: () => null }
+);
+
+const WorkspacePasteComments = dynamic(
+  () => import("@/components/workspace/workspace-paste-comments").then((mod) => mod.WorkspacePasteComments),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="rounded-[1.25rem] border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+        Loading comments…
+      </div>
+    )
+  }
+);
 
 /** Sidebar folder sentinel: public feed (legacy “everyone’s public”). */
 const PUBLIC_FEED_FOLDER = "__wox_public_feed__";
@@ -308,19 +318,14 @@ function isAccountOnlyDraft(paste: WorkspacePaste, workspaceMode: WorkspaceMode)
   return workspaceMode === "account" && paste.serverPersisted === false;
 }
 
-type FolderModalState =
-  | { open: false }
-  | { open: true; mode: "new" }
-  | { open: true; mode: "rename"; from: string };
+type FolderModalState = { open: false } | { open: true; mode: "new" } | { open: true; mode: "rename"; from: string };
 
 type MobileFolderActionsState =
   | { open: false }
   | { open: true; kind: "all" }
   | { open: true; kind: "folder"; folderName: string };
 
-type MobilePasteActionsState =
-  | { open: false }
-  | { open: true; pasteId: string };
+type MobilePasteActionsState = { open: false } | { open: true; pasteId: string };
 
 type TutorialLayoutSnapshot = {
   leftSidebarCollapsed: boolean;
@@ -410,7 +415,8 @@ const DESKTOP_TUTORIAL_STEPS: WorkspaceTutorialStep[] = [
     id: "nav",
     targetId: "workspace-nav",
     title: "Workspace shell and site navigation",
-    description: "This header keeps the workspace connected to the rest of the product instead of trapping you inside one editor view.",
+    description:
+      "This header keeps the workspace connected to the rest of the product instead of trapping you inside one editor view.",
     bullets: [
       "Use Home, Feed, Archive, Help, Support, and Settings without losing your current place in the workspace.",
       "This is also the fastest way to jump between authoring, public browsing, and account/support surfaces.",
@@ -422,13 +428,15 @@ const DESKTOP_TUTORIAL_STEPS: WorkspaceTutorialStep[] = [
     id: "library",
     targetId: "library-sidebar",
     title: "Library, folders, and search",
-    description: "This sidebar is the control center for your workspace. It is where you search, filter, batch-manage, import, and open pastes.",
+    description:
+      "This sidebar is the control center for your workspace. It is where you search, filter, batch-manage, import, and open pastes.",
     bullets: [
       "Use search to scan titles, content, and tags across the current workspace.",
       "Folders, quick filters, and sort order shape what you are looking at before you edit anything.",
       "Import and export live at the bottom of the library so backups stay close to the source list."
     ],
-    emphasis: "The fastest way to move around WOX-Bin is: filter in the library, open the paste, then work in the editor."
+    emphasis:
+      "The fastest way to move around WOX-Bin is: filter in the library, open the paste, then work in the editor."
   },
   {
     id: "editor",
@@ -440,7 +448,8 @@ const DESKTOP_TUTORIAL_STEPS: WorkspaceTutorialStep[] = [
       "The ribbon above the editor exposes formatting, JSON tools, find/replace, printing, and code image export.",
       "Your selected paste stays loaded here while the side panels handle organization and metadata."
     ],
-    emphasis: "If you can see the editor, you are in the part of the app that matters most. Everything else exists to support this surface."
+    emphasis:
+      "If you can see the editor, you are in the part of the app that matters most. Everything else exists to support this surface."
   },
   {
     id: "templates",
@@ -458,7 +467,8 @@ const DESKTOP_TUTORIAL_STEPS: WorkspaceTutorialStep[] = [
     id: "files",
     targetId: "files-section",
     title: "Files, attachments, and media",
-    description: "A paste can be more than one body field. This section lets you attach extra files and media directly to the paste.",
+    description:
+      "A paste can be more than one body field. This section lets you attach extra files and media directly to the paste.",
     bullets: [
       "Add extra text/code files for multi-file snippets or grouped references.",
       "Drag images or videos into the drop zone to attach visual context.",
@@ -470,19 +480,22 @@ const DESKTOP_TUTORIAL_STEPS: WorkspaceTutorialStep[] = [
     id: "details",
     targetId: "details-panel",
     title: "Sharing, privacy, and advanced settings",
-    description: "The details panel is where a draft becomes a managed share with URL, privacy, and lifecycle controls.",
+    description:
+      "The details panel is where a draft becomes a managed share with URL, privacy, and lifecycle controls.",
     bullets: [
       "Visibility, Pro or Team custom URLs, category, tags, password, burn rules, Turnstile-before-view, versioning, and template status all live here.",
       "This is also where you switch between normal sharing and secret-link behavior, then copy the resulting URL after save.",
       "Folder assignment and metadata stay separate from the editor so the writing surface stays clean."
     ],
-    emphasis: "If a paste needs to be private, public, secret, protected, pinned, or reusable, this panel is where you do it."
+    emphasis:
+      "If a paste needs to be private, public, secret, protected, pinned, or reusable, this panel is where you do it."
   },
   {
     id: "comments",
     targetId: "comments-section",
     title: "Comments, replies, and support flow",
-    description: "WOX-Bin supports threaded comment discussion on saved pastes, and support/help live in the same product surface rather than outside it.",
+    description:
+      "WOX-Bin supports threaded comment discussion on saved pastes, and support/help live in the same product surface rather than outside it.",
     bullets: [
       "Saved hosted pastes can receive comments and comment replies from signed-in users.",
       "Use Help for documented answers, Support for real tickets with screenshots, and the quick-share routes when the full workspace is unnecessary.",
@@ -492,7 +505,10 @@ const DESKTOP_TUTORIAL_STEPS: WorkspaceTutorialStep[] = [
   }
 ];
 
-function buildTutorialTours(steps: WorkspaceTutorialStep[], blueprints: TutorialTourBlueprint[]): WorkspaceTutorialTour[] {
+function buildTutorialTours(
+  steps: WorkspaceTutorialStep[],
+  blueprints: TutorialTourBlueprint[]
+): WorkspaceTutorialTour[] {
   const stepMap = new Map(steps.map((step) => [step.id, step] as const));
   return blueprints
     .map((tour) => ({
@@ -538,7 +554,8 @@ const MOBILE_TUTORIAL_STEPS: WorkspaceTutorialStep[] = [
     id: "library-mobile",
     targetId: "library-button",
     title: "Library access on mobile",
-    description: "On phones the editor stays primary, so the library moves behind this button instead of permanently taking screen space.",
+    description:
+      "On phones the editor stays primary, so the library moves behind this button instead of permanently taking screen space.",
     bullets: [
       "Tap Library to browse folders, search, import, export, and open other pastes.",
       "This keeps the editing surface visible instead of compressing the app into stacked panels.",
@@ -550,7 +567,8 @@ const MOBILE_TUTORIAL_STEPS: WorkspaceTutorialStep[] = [
     id: "editor-mobile",
     targetId: "editor-main",
     title: "Editor-first mobile workspace",
-    description: "The editor is the main screen on mobile. That is intentional: the most important action should remain visible and usable.",
+    description:
+      "The editor is the main screen on mobile. That is intentional: the most important action should remain visible and usable.",
     bullets: [
       "Write and edit directly here without sidebars fighting for vertical space.",
       "The ribbon still gives you formatting, JSON actions, templates, and code image export.",
@@ -574,7 +592,8 @@ const MOBILE_TUTORIAL_STEPS: WorkspaceTutorialStep[] = [
     id: "files-mobile",
     targetId: "files-section",
     title: "Attachments and media on mobile",
-    description: "Files and media are handled inline under the editor so you can keep the paste and its assets together.",
+    description:
+      "Files and media are handled inline under the editor so you can keep the paste and its assets together.",
     bullets: [
       "Attach additional files when a paste needs more than one document.",
       "Upload screenshots or media when support, documentation, or demos need visual proof.",
@@ -598,7 +617,8 @@ const MOBILE_TUTORIAL_STEPS: WorkspaceTutorialStep[] = [
     id: "comments-mobile",
     targetId: "comments-section",
     title: "Comments and help surfaces",
-    description: "Below the paste, WOX-Bin keeps discussion and support close to the content instead of sending users off-platform.",
+    description:
+      "Below the paste, WOX-Bin keeps discussion and support close to the content instead of sending users off-platform.",
     bullets: [
       "Saved hosted pastes can receive threaded comments and replies.",
       "Help documents known answers; Support opens an actual ticket when you need staff action.",
@@ -656,7 +676,10 @@ function readRememberedApiKeyTokens(userId: string | null | undefined): Record<s
 
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     return Object.fromEntries(
-      Object.entries(parsed).filter((entry): entry is [string, string] => typeof entry[0] === "string" && typeof entry[1] === "string" && entry[1].length > 0)
+      Object.entries(parsed).filter(
+        (entry): entry is [string, string] =>
+          typeof entry[0] === "string" && typeof entry[1] === "string" && entry[1].length > 0
+      )
     );
   } catch {
     return {};
@@ -747,9 +770,7 @@ function sanitizeSnapshot(snapshot: WorkspaceSnapshot): WorkspaceSnapshot {
       new Set([
         ...DEFAULT_FOLDERS,
         ...(snapshot.folders || []),
-        ...snapshot.pastes
-          .map((paste) => paste.folder)
-          .filter((value): value is string => Boolean(value))
+        ...snapshot.pastes.map((paste) => paste.folder).filter((value): value is string => Boolean(value))
       ])
     ),
     pastes: sortPastes(snapshot.pastes)
@@ -927,19 +948,14 @@ function ShareBuilderPanel({
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
-        Public pages use <code className="rounded bg-muted px-1">#line-N</code> anchors. A range scrolls to the first line in the
-        URL.
+        Public pages use <code className="rounded bg-muted px-1">#line-N</code> anchors. A range scrolls to the first
+        line in the URL.
       </p>
 
       <div className="space-y-2 rounded-xl border border-border bg-muted/40 p-3">
         <p className="text-xs font-medium text-muted-foreground">{secretMode ? "Secret link URL" : "Share URL"}</p>
         <p className="break-all font-mono text-xs text-foreground">{shareUrl}</p>
-        <Button
-          onClick={() => void navigator.clipboard.writeText(shareUrl)}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
+        <Button onClick={() => void navigator.clipboard.writeText(shareUrl)} size="sm" type="button" variant="outline">
           Copy
         </Button>
       </div>
@@ -966,7 +982,9 @@ function ShareBuilderPanel({
       <div className="space-y-2 rounded-xl border border-border bg-muted/40 p-3">
         <p className="text-xs font-medium text-muted-foreground">Read-only hint URL</p>
         <p className="break-all font-mono text-xs text-foreground">{roUrl}</p>
-        <p className="text-xs text-muted-foreground">Append for hosts that honor a read-only flag (parity with legacy links).</p>
+        <p className="text-xs text-muted-foreground">
+          Append for hosts that honor a read-only flag (parity with legacy links).
+        </p>
       </div>
 
       <div className="space-y-2 rounded-xl border border-border bg-muted/40 p-3">
@@ -984,7 +1002,13 @@ function ShareBuilderPanel({
         <p className="text-xs font-medium text-muted-foreground">QR (external)</p>
         {origin ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img alt="QR code for paste URL" className="rounded-lg border border-border bg-white p-2" height={140} src={qrSrc} width={140} />
+          <img
+            alt="QR code for paste URL"
+            className="rounded-lg border border-border bg-white p-2"
+            height={140}
+            src={qrSrc}
+            width={140}
+          />
         ) : null}
       </div>
     </div>
@@ -1108,7 +1132,8 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   const effectiveEditorFontPx = narrowEditorViewport ? Math.max(editorFontSize, 16) : editorFontSize;
   const workspaceZoomFactor = pageZoom / 100;
   const compactLibraryChrome = !phoneViewport && shortViewport;
-  const activeLibraryToolCount = (pinnedOnly ? 1 : 0) + (listQuickFilter !== "all" ? 1 : 0) + (sortOrder !== "pinned_updated" ? 1 : 0);
+  const activeLibraryToolCount =
+    (pinnedOnly ? 1 : 0) + (listQuickFilter !== "all" ? 1 : 0) + (sortOrder !== "pinned_updated" ? 1 : 0);
   const workspaceOuterVerticalPadding = phoneViewport ? "0.75rem" : shortViewport ? "1rem" : "1.5rem";
   const workspaceViewportStyle =
     pageZoom === DESKTOP_DEFAULT_WORKSPACE_ZOOM
@@ -1125,7 +1150,10 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   const lastForkImportKeyRef = useRef<string | null>(null);
   const forkImportInFlightRef = useRef<string | null>(null);
   const tutorialAutoOpenHandledRef = useRef(false);
-  const tutorialTours = useMemo(() => (phoneViewport ? MOBILE_TUTORIAL_TOURS : DESKTOP_TUTORIAL_TOURS), [phoneViewport]);
+  const tutorialTours = useMemo(
+    () => (phoneViewport ? MOBILE_TUTORIAL_TOURS : DESKTOP_TUTORIAL_TOURS),
+    [phoneViewport]
+  );
   const [tutorialTourId, setTutorialTourId] = useState<string>(tutorialTours[0]?.id ?? "basics");
   const activeTutorialTour = useMemo(
     () => tutorialTours.find((tour) => tour.id === tutorialTourId) ?? tutorialTours[0] ?? null,
@@ -1150,9 +1178,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
 
   const captureTutorialLayoutSnapshot = useCallback((): TutorialLayoutSnapshot => {
     const editorMetrics = mainEditorRef.current?.getScrollMetrics();
-    const editorMaxScroll = editorMetrics
-      ? Math.max(1, editorMetrics.scrollHeight - editorMetrics.clientHeight)
-      : 1;
+    const editorMaxScroll = editorMetrics ? Math.max(1, editorMetrics.scrollHeight - editorMetrics.clientHeight) : 1;
     return {
       leftSidebarCollapsed,
       rightSidebarCollapsed,
@@ -1167,14 +1193,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
       editorPaneScrollTop: editorPaneScrollRef.current?.scrollTop ?? 0,
       editorTextScrollRatio: editorMetrics ? editorMetrics.scrollTop / editorMaxScroll : 0
     };
-  }, [
-    leftSidebarCollapsed,
-    mobileDetailsOpen,
-    mobileLibraryOpen,
-    ribbonCollapsed,
-    ribbonTab,
-    rightSidebarCollapsed
-  ]);
+  }, [leftSidebarCollapsed, mobileDetailsOpen, mobileLibraryOpen, ribbonCollapsed, ribbonTab, rightSidebarCollapsed]);
 
   const restoreTutorialLayoutSnapshot = useCallback((snapshot: TutorialLayoutSnapshot) => {
     setLeftSidebarCollapsed(snapshot.leftSidebarCollapsed);
@@ -1212,19 +1231,22 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
     });
   }, []);
 
-  const openTutorial = useCallback((tourOrStep: string | number = tutorialTours[0]?.id ?? "basics", maybeStep = 0) => {
-    const nextTourId = typeof tourOrStep === "string" ? tourOrStep : tutorialTours[0]?.id ?? "basics";
-    const nextStep = typeof tourOrStep === "number" ? tourOrStep : maybeStep;
-    if (!tutorialOpen && typeof window !== "undefined") {
-      tutorialLayoutSnapshotRef.current = captureTutorialLayoutSnapshot();
-    }
-    setWorkspaceMobileMenuOpen(false);
-    setTutorialTourId(nextTourId);
-    const targetTour = tutorialTours.find((tour) => tour.id === nextTourId) ?? tutorialTours[0] ?? null;
-    const maxIndex = Math.max((targetTour?.steps.length ?? 1) - 1, 0);
-    setTutorialStepIndex(Math.max(0, Math.min(nextStep, maxIndex)));
-    setTutorialOpen(true);
-  }, [captureTutorialLayoutSnapshot, tutorialOpen, tutorialTours]);
+  const openTutorial = useCallback(
+    (tourOrStep: string | number = tutorialTours[0]?.id ?? "basics", maybeStep = 0) => {
+      const nextTourId = typeof tourOrStep === "string" ? tourOrStep : (tutorialTours[0]?.id ?? "basics");
+      const nextStep = typeof tourOrStep === "number" ? tourOrStep : maybeStep;
+      if (!tutorialOpen && typeof window !== "undefined") {
+        tutorialLayoutSnapshotRef.current = captureTutorialLayoutSnapshot();
+      }
+      setWorkspaceMobileMenuOpen(false);
+      setTutorialTourId(nextTourId);
+      const targetTour = tutorialTours.find((tour) => tour.id === nextTourId) ?? tutorialTours[0] ?? null;
+      const maxIndex = Math.max((targetTour?.steps.length ?? 1) - 1, 0);
+      setTutorialStepIndex(Math.max(0, Math.min(nextStep, maxIndex)));
+      setTutorialOpen(true);
+    },
+    [captureTutorialLayoutSnapshot, tutorialOpen, tutorialTours]
+  );
 
   const markTutorialSeen = useCallback(() => {
     if (typeof window === "undefined" || !sessionUserId) {
@@ -1255,7 +1277,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
       loadLocalWorkspace().catch(() => null)
     ]);
 
-    const workspaceRaw = await workspaceResponse.json().catch(() => null) as
+    const workspaceRaw = (await workspaceResponse.json().catch(() => null)) as
       | AccountWorkspaceResponse
       | { error?: string }
       | null;
@@ -1270,9 +1292,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
 
     const workspaceData = workspaceRaw as AccountWorkspaceResponse;
 
-    const keysData = keysResponse.ok
-      ? ((await keysResponse.json()) as { keys: ApiKeyRecord[] })
-      : { keys: [] };
+    const keysData = keysResponse.ok ? ((await keysResponse.json()) as { keys: ApiKeyRecord[] }) : { keys: [] };
     const rememberedApiKeyTokens = readRememberedApiKeyTokens(sessionUserId);
 
     if (localResult) {
@@ -1343,7 +1363,9 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
     }
 
     await clearAnonymousClaims(claims.map((claim) => claim.slug));
-    setStatus(`Claimed ${claims.length} anonymously published paste${claims.length === 1 ? "" : "s"} into your account.`);
+    setStatus(
+      `Claimed ${claims.length} anonymously published paste${claims.length === 1 ? "" : "s"} into your account.`
+    );
   }
 
   async function refreshWorkspace(nextMode: WorkspaceMode, preserveSelection = true) {
@@ -1468,7 +1490,9 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
 
   useLayoutEffect(() => {
     try {
-      setUiTheme(parseUiThemeMode(localStorage.getItem(UI_THEME_STORAGE_KEY), localStorage.getItem(LEGACY_APP_SHELL_LIGHT_KEY)));
+      setUiTheme(
+        parseUiThemeMode(localStorage.getItem(UI_THEME_STORAGE_KEY), localStorage.getItem(LEGACY_APP_SHELL_LIGHT_KEY))
+      );
       setAppHighContrast(localStorage.getItem(HIGH_CONTRAST_STORAGE_KEY) === "1");
 
       const isMobileLayout = window.matchMedia("(max-width: 1023px)").matches;
@@ -1553,8 +1577,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
 
   useEffect(() => {
     try {
-      const isMobileLayout =
-        typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches;
+      const isMobileLayout = typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches;
       const st = localStorage.getItem("woxbin_syntax_theme");
       if (st) {
         setSyntaxTheme(normalizeSyntaxTheme(st));
@@ -1779,7 +1802,8 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       const inFindInput = event.target === findInputRef.current;
-      const inReplaceInput = event.target === replaceFindInputRef.current || event.target === replaceWithInputRef.current;
+      const inReplaceInput =
+        event.target === replaceFindInputRef.current || event.target === replaceWithInputRef.current;
 
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
@@ -2029,9 +2053,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
           const tags = Array.isArray(paste.tags) ? paste.tags : [];
           const files = Array.isArray(paste.files) ? paste.files : [];
           const fileHaystack = files
-            .map((f) =>
-              isPasteFileMedia(f) ? f.filename : `${f.filename}\n${f.content}`
-            )
+            .map((f) => (isPasteFileMedia(f) ? f.filename : `${f.filename}\n${f.content}`))
             .join("\n");
           const haystack = [
             paste.title ?? "",
@@ -2047,11 +2069,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
         })();
 
       const matchesFolder =
-        sidebarFolder === PUBLIC_FEED_FOLDER
-          ? true
-          : sidebarFolder === "all"
-            ? true
-            : paste.folder === sidebarFolder;
+        sidebarFolder === PUBLIC_FEED_FOLDER ? true : sidebarFolder === "all" ? true : paste.folder === sidebarFolder;
 
       if (!matchesSearch || !matchesFolder) {
         return false;
@@ -2445,7 +2463,11 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
       try {
         const parsed = new URL(fetchUrl);
         derivedTitle =
-          parsed.pathname.split("/").filter(Boolean).pop()?.replace(/\.txt$/i, "") ||
+          parsed.pathname
+            .split("/")
+            .filter(Boolean)
+            .pop()
+            ?.replace(/\.txt$/i, "") ||
           parsed.hostname ||
           derivedTitle;
       } catch {
@@ -3036,9 +3058,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
     setSaving(true);
     try {
       if (mode === "account") {
-        const discardIds = new Set(
-          selectedPastes.filter((p) => isAccountOnlyDraft(p, mode)).map((p) => p.id)
-        );
+        const discardIds = new Set(selectedPastes.filter((p) => isAccountOnlyDraft(p, mode)).map((p) => p.id));
         flushSync(() => {
           setSnapshot((current) =>
             sanitizeSnapshot({
@@ -3785,682 +3805,754 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
       >
         <Card className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl" data-tutorial="library-sidebar">
           <CardContent className="flex min-h-0 flex-1 flex-col p-0">
-          <div
-            className={cn(
-              "border-b border-border px-3 sm:px-5",
-              compactLibraryChrome ? "py-2.5 sm:px-4 sm:py-3" : "py-2 sm:py-4"
-            )}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{workspaceCopy.libraryEyebrow}</p>
-                <h2 className="mt-0.5 text-base font-semibold leading-tight tracking-tight sm:text-lg">{workspaceCopy.pastesTitle}</h2>
-              </div>
-              <div className="flex shrink-0 items-center gap-1">
-                <div className="flex items-center rounded-lg border border-border/70 bg-card/70 p-0.5">
-                  <Button
-                    aria-label={workspaceCopy.cardsView}
-                    className="h-7 w-7 rounded-md p-0"
-                    onClick={() => setLibraryViewMode("cards")}
-                    size="icon"
-                    title={workspaceCopy.cardsView}
-                    type="button"
-                    variant={libraryViewMode === "cards" ? "default" : "ghost"}
-                  >
-                    <LayoutTemplate className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    aria-label={workspaceCopy.archiveView}
-                    className="h-7 w-7 rounded-md p-0"
-                    onClick={() => setLibraryViewMode("archive")}
-                    size="icon"
-                    title={workspaceCopy.archiveView}
-                    type="button"
-                    variant={libraryViewMode === "archive" ? "default" : "ghost"}
-                  >
-                    <ListOrdered className="h-3.5 w-3.5" />
-                  </Button>
+            <div
+              className={cn(
+                "border-b border-border px-3 sm:px-5",
+                compactLibraryChrome ? "py-2.5 sm:px-4 sm:py-3" : "py-2 sm:py-4"
+              )}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    {workspaceCopy.libraryEyebrow}
+                  </p>
+                  <h2 className="mt-0.5 text-base font-semibold leading-tight tracking-tight sm:text-lg">
+                    {workspaceCopy.pastesTitle}
+                  </h2>
                 </div>
-                <Button
-                  aria-label="Hide library sidebar"
-                  className={cn("h-8 w-8 shrink-0", phoneViewport && "hidden")}
-                  onClick={() => setLeftSidebarCollapsed(true)}
-                  size="icon"
-                  type="button"
-                  variant="ghost"
-                >
-                  <PanelLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  className={cn(
-                    "gap-1.5 px-2.5 text-xs sm:text-sm",
-                    compactLibraryChrome ? "h-7 px-2 text-[11px] sm:h-8 sm:text-xs" : "h-8"
-                  )}
-                  onClick={handleNewPaste}
-                  size="sm"
-                  type="button"
-                >
-                  <FilePlus2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  {workspaceCopy.newPaste}
-                </Button>
-              </div>
-            </div>
-            <div className="relative mt-3">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                className={cn("pl-9", compactLibraryChrome ? "h-8 text-[13px]" : "h-9 text-sm")}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={workspaceCopy.searchPlaceholder}
-                ref={searchInputRef}
-                value={search}
-              />
-            </div>
-            <p className={cn("text-[10px] font-semibold uppercase tracking-widest text-muted-foreground", compactLibraryChrome ? "mt-2" : "mt-3")}>
-              {workspaceCopy.folders}
-            </p>
-            <ContextMenu>
-              <ContextMenuTrigger asChild>
-                <div
-                  aria-label="Folders — right-click empty area for new folder"
-                  className={cn(
-                    "mt-1.5 flex flex-nowrap overflow-x-auto overflow-y-visible rounded-xl border border-transparent p-1.5 -m-1.5 transition-colors [-webkit-overflow-scrolling:touch] hover:border-border/35 data-[state=open]:border-border/50 data-[state=open]:bg-muted/25 sm:flex-wrap sm:overflow-x-visible",
-                    compactLibraryChrome ? "min-h-[2.5rem] gap-1.5 pb-1.5" : "min-h-[2.75rem] gap-2 pb-2 sm:pb-1.5"
-                  )}
-                >
-              <div className="flex shrink-0 items-center gap-1">
-                <ContextMenu>
-                  <ContextMenuTrigger asChild>
+                <div className="flex shrink-0 items-center gap-1">
+                  <div className="flex items-center rounded-lg border border-border/70 bg-card/70 p-0.5">
                     <Button
-                      className={cn("shrink-0 touch-manipulation text-xs", compactLibraryChrome ? "h-8 px-2.5 text-[11px]" : "h-9 sm:h-8")}
-                      onClick={() => setSidebarFolder("all")}
-                      size="sm"
+                      aria-label={workspaceCopy.cardsView}
+                      className="h-7 w-7 rounded-md p-0"
+                      onClick={() => setLibraryViewMode("cards")}
+                      size="icon"
+                      title={workspaceCopy.cardsView}
                       type="button"
-                      variant={sidebarFolder === "all" ? "default" : "outline"}
+                      variant={libraryViewMode === "cards" ? "default" : "ghost"}
                     >
-                      {workspaceCopy.all}
+                      <LayoutTemplate className="h-3.5 w-3.5" />
                     </Button>
-                  </ContextMenuTrigger>
-                  <ContextMenuContent className="w-52">
-                    <ContextMenuLabel>{workspaceCopy.allPastes}</ContextMenuLabel>
-                    <ContextMenuItem onSelect={() => setSidebarFolder("all")}>
-                      <FolderInput className="mr-2 h-4 w-4" />
-                      {workspaceCopy.showAllPastes}
-                    </ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem onSelect={openNewFolderModal}>
-                      <FolderPlus className="mr-2 h-4 w-4" />
-                      {workspaceCopy.newFolder}
-                    </ContextMenuItem>
-                  </ContextMenuContent>
-                </ContextMenu>
-                {phoneViewport ? (
+                    <Button
+                      aria-label={workspaceCopy.archiveView}
+                      className="h-7 w-7 rounded-md p-0"
+                      onClick={() => setLibraryViewMode("archive")}
+                      size="icon"
+                      title={workspaceCopy.archiveView}
+                      type="button"
+                      variant={libraryViewMode === "archive" ? "default" : "ghost"}
+                    >
+                      <ListOrdered className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                   <Button
-                    aria-label="All paste actions"
-                    className="h-9 w-9 shrink-0 touch-manipulation rounded-full p-0"
-                    onClick={() => setMobileFolderActions({ open: true, kind: "all" })}
+                    aria-label="Hide library sidebar"
+                    className={cn("h-8 w-8 shrink-0", phoneViewport && "hidden")}
+                    onClick={() => setLeftSidebarCollapsed(true)}
+                    size="icon"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <PanelLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    className={cn(
+                      "gap-1.5 px-2.5 text-xs sm:text-sm",
+                      compactLibraryChrome ? "h-7 px-2 text-[11px] sm:h-8 sm:text-xs" : "h-8"
+                    )}
+                    onClick={handleNewPaste}
                     size="sm"
                     type="button"
-                    variant="outline"
                   >
-                    <MoreHorizontal className="h-4 w-4" />
+                    <FilePlus2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    {workspaceCopy.newPaste}
                   </Button>
-                ) : null}
+                </div>
               </div>
-              <Button
-                className={cn("shrink-0 touch-manipulation text-xs", compactLibraryChrome ? "h-8 px-2.5 text-[11px]" : "h-9 sm:h-8")}
-                onClick={() => {
-                  setSidebarFolder(PUBLIC_FEED_FOLDER);
-                  setListQuickFilter("all");
-                }}
-                size="sm"
-                type="button"
-                variant={sidebarFolder === PUBLIC_FEED_FOLDER ? "default" : "outline"}
+              <div className="relative mt-3">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className={cn("pl-9", compactLibraryChrome ? "h-8 text-[13px]" : "h-9 text-sm")}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={workspaceCopy.searchPlaceholder}
+                  ref={searchInputRef}
+                  value={search}
+                />
+              </div>
+              <p
+                className={cn(
+                  "text-[10px] font-semibold uppercase tracking-widest text-muted-foreground",
+                  compactLibraryChrome ? "mt-2" : "mt-3"
+                )}
               >
-                {workspaceCopy.publicFeed}
-              </Button>
-              {snapshot.folders.map((folder) => (
-                <div className="flex shrink-0 items-center gap-1" key={folder}>
-                  <ContextMenu>
-                    <ContextMenuTrigger asChild>
-                      <Button
-                        className={cn(
-                          "max-w-[10rem] shrink-0 touch-manipulation truncate text-xs",
-                          compactLibraryChrome ? "h-8 text-[11px] sm:max-w-[9rem]" : "h-9 sm:h-8 sm:max-w-[9.5rem]"
-                        )}
-                        onClick={() => setSidebarFolder(folder)}
-                        size="sm"
-                        title={folder}
-                        type="button"
-                        variant={sidebarFolder === folder ? "default" : "outline"}
-                      >
-                        {folder}
-                      </Button>
-                    </ContextMenuTrigger>
-                    <ContextMenuContent className="w-56">
-                      <ContextMenuLabel className="max-w-[14rem] truncate">{folder}</ContextMenuLabel>
-                      <ContextMenuItem onSelect={() => setSidebarFolder(folder)}>
-                        <FolderInput className="mr-2 h-4 w-4" />
-                        Filter to this folder
-                      </ContextMenuItem>
-                      <ContextMenuItem
-                        onSelect={() => {
-                          void navigator.clipboard.writeText(folder);
-                          setStatus(`Copied folder name "${folder}".`);
-                        }}
-                      >
-                        <Copy className="mr-2 h-4 w-4" />
-                        Copy folder name
-                      </ContextMenuItem>
-                      <ContextMenuSeparator />
-                      <ContextMenuItem onSelect={() => openRenameFolderModal(folder)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Rename folder…
-                      </ContextMenuItem>
-                      <ContextMenuItem onSelect={openNewFolderModal}>
-                        <FolderPlus className="mr-2 h-4 w-4" />
-                        New folder…
-                      </ContextMenuItem>
-                      <ContextMenuSeparator />
-                      <ContextMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onSelect={() => void handleDeleteFolder(folder)}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete folder…
-                      </ContextMenuItem>
-                    </ContextMenuContent>
-                  </ContextMenu>
-                  {phoneViewport ? (
+                {workspaceCopy.folders}
+              </p>
+              <ContextMenu>
+                <ContextMenuTrigger asChild>
+                  <div
+                    aria-label="Folders — right-click empty area for new folder"
+                    className={cn(
+                      "mt-1.5 flex flex-nowrap overflow-x-auto overflow-y-visible rounded-xl border border-transparent p-1.5 -m-1.5 transition-colors [-webkit-overflow-scrolling:touch] hover:border-border/35 data-[state=open]:border-border/50 data-[state=open]:bg-muted/25 sm:flex-wrap sm:overflow-x-visible",
+                      compactLibraryChrome ? "min-h-[2.5rem] gap-1.5 pb-1.5" : "min-h-[2.75rem] gap-2 pb-2 sm:pb-1.5"
+                    )}
+                  >
+                    <div className="flex shrink-0 items-center gap-1">
+                      <ContextMenu>
+                        <ContextMenuTrigger asChild>
+                          <Button
+                            className={cn(
+                              "shrink-0 touch-manipulation text-xs",
+                              compactLibraryChrome ? "h-8 px-2.5 text-[11px]" : "h-9 sm:h-8"
+                            )}
+                            onClick={() => setSidebarFolder("all")}
+                            size="sm"
+                            type="button"
+                            variant={sidebarFolder === "all" ? "default" : "outline"}
+                          >
+                            {workspaceCopy.all}
+                          </Button>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent className="w-52">
+                          <ContextMenuLabel>{workspaceCopy.allPastes}</ContextMenuLabel>
+                          <ContextMenuItem onSelect={() => setSidebarFolder("all")}>
+                            <FolderInput className="mr-2 h-4 w-4" />
+                            {workspaceCopy.showAllPastes}
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem onSelect={openNewFolderModal}>
+                            <FolderPlus className="mr-2 h-4 w-4" />
+                            {workspaceCopy.newFolder}
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
+                      {phoneViewport ? (
+                        <Button
+                          aria-label="All paste actions"
+                          className="h-9 w-9 shrink-0 touch-manipulation rounded-full p-0"
+                          onClick={() => setMobileFolderActions({ open: true, kind: "all" })}
+                          size="sm"
+                          type="button"
+                          variant="outline"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      ) : null}
+                    </div>
                     <Button
-                      aria-label={`${folder} actions`}
-                      className="h-9 w-9 shrink-0 touch-manipulation rounded-full p-0"
-                      onClick={() => setMobileFolderActions({ open: true, kind: "folder", folderName: folder })}
+                      className={cn(
+                        "shrink-0 touch-manipulation text-xs",
+                        compactLibraryChrome ? "h-8 px-2.5 text-[11px]" : "h-9 sm:h-8"
+                      )}
+                      onClick={() => {
+                        setSidebarFolder(PUBLIC_FEED_FOLDER);
+                        setListQuickFilter("all");
+                      }}
+                      size="sm"
+                      type="button"
+                      variant={sidebarFolder === PUBLIC_FEED_FOLDER ? "default" : "outline"}
+                    >
+                      {workspaceCopy.publicFeed}
+                    </Button>
+                    {snapshot.folders.map((folder) => (
+                      <div className="flex shrink-0 items-center gap-1" key={folder}>
+                        <ContextMenu>
+                          <ContextMenuTrigger asChild>
+                            <Button
+                              className={cn(
+                                "max-w-[10rem] shrink-0 touch-manipulation truncate text-xs",
+                                compactLibraryChrome
+                                  ? "h-8 text-[11px] sm:max-w-[9rem]"
+                                  : "h-9 sm:h-8 sm:max-w-[9.5rem]"
+                              )}
+                              onClick={() => setSidebarFolder(folder)}
+                              size="sm"
+                              title={folder}
+                              type="button"
+                              variant={sidebarFolder === folder ? "default" : "outline"}
+                            >
+                              {folder}
+                            </Button>
+                          </ContextMenuTrigger>
+                          <ContextMenuContent className="w-56">
+                            <ContextMenuLabel className="max-w-[14rem] truncate">{folder}</ContextMenuLabel>
+                            <ContextMenuItem onSelect={() => setSidebarFolder(folder)}>
+                              <FolderInput className="mr-2 h-4 w-4" />
+                              Filter to this folder
+                            </ContextMenuItem>
+                            <ContextMenuItem
+                              onSelect={() => {
+                                void navigator.clipboard.writeText(folder);
+                                setStatus(`Copied folder name "${folder}".`);
+                              }}
+                            >
+                              <Copy className="mr-2 h-4 w-4" />
+                              Copy folder name
+                            </ContextMenuItem>
+                            <ContextMenuSeparator />
+                            <ContextMenuItem onSelect={() => openRenameFolderModal(folder)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Rename folder…
+                            </ContextMenuItem>
+                            <ContextMenuItem onSelect={openNewFolderModal}>
+                              <FolderPlus className="mr-2 h-4 w-4" />
+                              New folder…
+                            </ContextMenuItem>
+                            <ContextMenuSeparator />
+                            <ContextMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onSelect={() => void handleDeleteFolder(folder)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete folder…
+                            </ContextMenuItem>
+                          </ContextMenuContent>
+                        </ContextMenu>
+                        {phoneViewport ? (
+                          <Button
+                            aria-label={`${folder} actions`}
+                            className="h-9 w-9 shrink-0 touch-manipulation rounded-full p-0"
+                            onClick={() => setMobileFolderActions({ open: true, kind: "folder", folderName: folder })}
+                            size="sm"
+                            type="button"
+                            variant="outline"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </ContextMenuTrigger>
+                <ContextMenuContent className="w-52">
+                  <ContextMenuLabel>{workspaceCopy.libraryFolders}</ContextMenuLabel>
+                  <ContextMenuItem onSelect={openNewFolderModal}>
+                    <FolderPlus className="mr-2 h-4 w-4" />
+                    {workspaceCopy.newFolder}
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem onSelect={() => setSidebarFolder("all")}>
+                    <FolderInput className="mr-2 h-4 w-4" />
+                    {workspaceCopy.showAllPastes}
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
+              {!sidebarShowsPublicFeed && batchSelected.size > 0 ? (
+                <div
+                  className={cn(
+                    "flex flex-col gap-2 rounded-lg border border-primary/30 bg-primary/5",
+                    compactLibraryChrome ? "mt-2 p-2" : "mt-3 p-2.5"
+                  )}
+                >
+                  <p className="text-xs font-medium text-foreground">{workspaceCopy.selected(batchSelected.size)}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Button
+                      className="h-8 text-xs"
+                      disabled={saving}
+                      onClick={() => setBatchMoveOpen(true)}
                       size="sm"
                       type="button"
                       variant="outline"
                     >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  ) : null}
-                </div>
-              ))}
-                </div>
-              </ContextMenuTrigger>
-              <ContextMenuContent className="w-52">
-                <ContextMenuLabel>{workspaceCopy.libraryFolders}</ContextMenuLabel>
-                <ContextMenuItem onSelect={openNewFolderModal}>
-                  <FolderPlus className="mr-2 h-4 w-4" />
-                  {workspaceCopy.newFolder}
-                </ContextMenuItem>
-                <ContextMenuSeparator />
-                <ContextMenuItem onSelect={() => setSidebarFolder("all")}>
-                  <FolderInput className="mr-2 h-4 w-4" />
-                  {workspaceCopy.showAllPastes}
-                </ContextMenuItem>
-              </ContextMenuContent>
-            </ContextMenu>
-            {!sidebarShowsPublicFeed && batchSelected.size > 0 ? (
-              <div className={cn("flex flex-col gap-2 rounded-lg border border-primary/30 bg-primary/5", compactLibraryChrome ? "mt-2 p-2" : "mt-3 p-2.5")}>
-                <p className="text-xs font-medium text-foreground">{workspaceCopy.selected(batchSelected.size)}</p>
-                <div className="flex flex-wrap gap-1.5">
-                  <Button
-                    className="h-8 text-xs"
-                    disabled={saving}
-                    onClick={() => setBatchMoveOpen(true)}
-                    size="sm"
-                    type="button"
-                    variant="outline"
-                  >
-                    {workspaceCopy.move}
-                  </Button>
-                  <Button
-                    className="h-8 text-xs"
-                    disabled={saving}
-                    onClick={() => void handleBatchDelete()}
-                    size="sm"
-                    type="button"
-                    variant="destructive"
-                  >
-                    {workspaceCopy.delete}
-                  </Button>
-                  <Button className="h-8 text-xs" onClick={clearBatchSelection} size="sm" type="button" variant="ghost">
-                    {workspaceCopy.clear}
-                  </Button>
-                </div>
-              </div>
-            ) : null}
-
-            {!sidebarShowsPublicFeed && !compactLibraryChrome ? (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <Button className="h-8 text-xs" onClick={selectAllVisibleBatch} size="sm" type="button" variant="outline">
-                  {workspaceCopy.selectVisible}
-                </Button>
-                <Button
-                  className="h-8 px-2 text-xs text-muted-foreground"
-                  disabled={batchSelected.size === 0}
-                  onClick={clearBatchSelection}
-                  size="sm"
-                  type="button"
-                  variant="ghost"
-                >
-                  {workspaceCopy.clearSelection}
-                </Button>
-              </div>
-            ) : null}
-
-            {compactLibraryChrome ? (
-              <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                {!sidebarShowsPublicFeed ? (
-                  <>
-                    <Button className="h-7 px-2 text-[11px]" onClick={selectAllVisibleBatch} size="sm" type="button" variant="outline">
-                      {workspaceCopy.selectVisible}
+                      {workspaceCopy.move}
                     </Button>
                     <Button
-                      className="h-7 px-2 text-[11px] text-muted-foreground"
-                      disabled={batchSelected.size === 0}
+                      className="h-8 text-xs"
+                      disabled={saving}
+                      onClick={() => void handleBatchDelete()}
+                      size="sm"
+                      type="button"
+                      variant="destructive"
+                    >
+                      {workspaceCopy.delete}
+                    </Button>
+                    <Button
+                      className="h-8 text-xs"
                       onClick={clearBatchSelection}
                       size="sm"
                       type="button"
                       variant="ghost"
                     >
-                      {workspaceCopy.clearSelection}
+                      {workspaceCopy.clear}
                     </Button>
-                  </>
-                ) : null}
-                <Button
-                  className="h-7 gap-1.5 px-2 text-[11px]"
-                  onClick={() => setLibraryToolsExpanded((open) => !open)}
-                  size="sm"
-                  type="button"
-                  variant={libraryToolsExpanded ? "default" : "outline"}
-                >
-                  <ListOrdered className="h-3.5 w-3.5" />
-                  {activeLibraryToolCount > 0 ? `${workspaceCopy.sortAndFilter} (${activeLibraryToolCount})` : workspaceCopy.sortAndFilter}
-                </Button>
-                <Button className="h-7 gap-1.5 px-2 text-[11px]" onClick={() => fileInputRef.current?.click()} size="sm" type="button" variant="outline">
-                  <Upload className="h-3.5 w-3.5" />
-                  {workspaceCopy.importFile}
-                </Button>
-                <Button className="h-7 gap-1.5 px-2 text-[11px]" onClick={() => void handleExportWorkspace()} size="sm" type="button" variant="outline">
-                  <Download className="h-3.5 w-3.5" />
-                  {workspaceCopy.export}
-                </Button>
-              </div>
-            ) : null}
+                  </div>
+                </div>
+              ) : null}
 
-            {showExpandedLibraryTools ? (
-              <div className={cn("space-y-2 rounded-lg border border-border/60 bg-muted/20", compactLibraryChrome ? "mt-2 p-2" : "mt-3 p-2.5")}>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    <ListOrdered className="h-3 w-3" />
-                    {workspaceCopy.sortAndFilter}
-                  </span>
+              {!sidebarShowsPublicFeed && !compactLibraryChrome ? (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
                   <Button
-                    className="h-7 px-2 text-[11px]"
-                    onClick={() => setPinnedOnly((v) => !v)}
+                    className="h-8 text-xs"
+                    onClick={selectAllVisibleBatch}
                     size="sm"
                     type="button"
-                    variant={pinnedOnly ? "default" : "outline"}
+                    variant="outline"
                   >
-                    {workspaceCopy.pinnedOnly}
+                    {workspaceCopy.selectVisible}
+                  </Button>
+                  <Button
+                    className="h-8 px-2 text-xs text-muted-foreground"
+                    disabled={batchSelected.size === 0}
+                    onClick={clearBatchSelection}
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    {workspaceCopy.clearSelection}
                   </Button>
                 </div>
-                <select
-                  className="h-9 w-full min-w-0 rounded-lg border border-border bg-card/90 px-3 text-sm shadow-sm"
-                  id="wox-sort-order"
-                  onChange={(e) => setSortOrder(e.target.value as SortOrder)}
-                  title="Sort order"
-                  value={sortOrder}
-                >
-                  <option value="pinned_updated">{workspaceCopy.sortPinnedUpdated}</option>
-                  <option value="updated">{workspaceCopy.sortUpdated}</option>
-                  <option value="newest">{workspaceCopy.sortNewest}</option>
-                  <option value="oldest">{workspaceCopy.sortOldest}</option>
-                  <option value="title">{workspaceCopy.sortTitle}</option>
-                </select>
-                <div className="flex flex-wrap gap-1.5">
+              ) : null}
+
+              {compactLibraryChrome ? (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  {!sidebarShowsPublicFeed ? (
+                    <>
+                      <Button
+                        className="h-7 px-2 text-[11px]"
+                        onClick={selectAllVisibleBatch}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        {workspaceCopy.selectVisible}
+                      </Button>
+                      <Button
+                        className="h-7 px-2 text-[11px] text-muted-foreground"
+                        disabled={batchSelected.size === 0}
+                        onClick={clearBatchSelection}
+                        size="sm"
+                        type="button"
+                        variant="ghost"
+                      >
+                        {workspaceCopy.clearSelection}
+                      </Button>
+                    </>
+                  ) : null}
                   <Button
-                    className="h-8 text-xs"
-                    onClick={() => setListQuickFilter("all")}
+                    className="h-7 gap-1.5 px-2 text-[11px]"
+                    onClick={() => setLibraryToolsExpanded((open) => !open)}
                     size="sm"
                     type="button"
-                    variant={listQuickFilter === "all" ? "default" : "outline"}
+                    variant={libraryToolsExpanded ? "default" : "outline"}
                   >
-                    {workspaceCopy.everything}
+                    <ListOrdered className="h-3.5 w-3.5" />
+                    {activeLibraryToolCount > 0
+                      ? `${workspaceCopy.sortAndFilter} (${activeLibraryToolCount})`
+                      : workspaceCopy.sortAndFilter}
                   </Button>
                   <Button
-                    className="h-8 text-xs"
-                    onClick={() => setListQuickFilter("favorites")}
+                    className="h-7 gap-1.5 px-2 text-[11px]"
+                    onClick={() => fileInputRef.current?.click()}
                     size="sm"
                     type="button"
-                    variant={listQuickFilter === "favorites" ? "default" : "outline"}
+                    variant="outline"
                   >
-                    {workspaceCopy.favorites}
+                    <Upload className="h-3.5 w-3.5" />
+                    {workspaceCopy.importFile}
                   </Button>
                   <Button
-                    className="h-8 text-xs"
-                    onClick={() => setListQuickFilter("recent")}
+                    className="h-7 gap-1.5 px-2 text-[11px]"
+                    onClick={() => void handleExportWorkspace()}
                     size="sm"
                     type="button"
-                    variant={listQuickFilter === "recent" ? "default" : "outline"}
+                    variant="outline"
                   >
-                    {workspaceCopy.recent}
-                  </Button>
-                  <Button
-                    className="h-8 text-xs"
-                    onClick={() => setListQuickFilter("archived")}
-                    size="sm"
-                    type="button"
-                    variant={listQuickFilter === "archived" ? "default" : "outline"}
-                  >
-                    {workspaceCopy.archived}
+                    <Download className="h-3.5 w-3.5" />
+                    {workspaceCopy.export}
                   </Button>
                 </div>
-              </div>
-            ) : null}
-          </div>
+              ) : null}
 
-          <div
-            className={cn(
-              "min-h-0 flex-1 overflow-y-auto px-3 workspace-scrollbar-hide",
-              compactLibraryChrome ? "pb-3" : "pb-4",
-              libraryViewMode === "archive" ? "space-y-1.5" : "space-y-3"
-            )}
-            ref={libraryScrollRef}
-          >
-            {loading ? (
-              <div className="px-3 py-4 text-sm text-muted-foreground">{workspaceCopy.loadingWorkspace}</div>
-            ) : sidebarFolder === PUBLIC_FEED_FOLDER && publicFeedLoading ? (
-              <div className="px-3 py-4 text-sm text-muted-foreground">{workspaceCopy.loadingPublicFeed}</div>
-            ) : sidebarFolder === PUBLIC_FEED_FOLDER && publicFeedError ? (
-              <div className="px-3 py-4 text-sm text-destructive">{publicFeedError}</div>
-            ) : listAfterFilter.length === 0 ? (
-              <div className="px-3 py-4 text-sm text-muted-foreground">
-                {sidebarFolder === PUBLIC_FEED_FOLDER
-                  ? workspaceCopy.noPublicPastes
-                  : workspaceCopy.noPastesMatch}
-              </div>
-            ) : (
-              <>
-                {listAfterFilter.map((paste) => (
-                <ContextMenu key={paste.id}>
-                  <ContextMenuTrigger asChild>
-                    <div
-                      className={cn(
-                        "transition",
-                        libraryViewMode === "archive"
-                          ? selectedPaste?.id === paste.id
-                            ? "flex items-stretch gap-0 rounded-lg border border-primary/50 bg-primary/10"
-                            : "flex items-stretch gap-0 rounded-lg border border-border/70 bg-card/45 hover:bg-muted/45"
-                          : selectedPaste?.id === paste.id
-                            ? "flex gap-2 rounded-[1.2rem] border border-primary/50 bg-primary/10 p-3"
-                            : "flex gap-2 rounded-[1.2rem] border border-border bg-muted/40 p-3 hover:bg-muted/60"
-                      )}
+              {showExpandedLibraryTools ? (
+                <div
+                  className={cn(
+                    "space-y-2 rounded-lg border border-border/60 bg-muted/20",
+                    compactLibraryChrome ? "mt-2 p-2" : "mt-3 p-2.5"
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      <ListOrdered className="h-3 w-3" />
+                      {workspaceCopy.sortAndFilter}
+                    </span>
+                    <Button
+                      className="h-7 px-2 text-[11px]"
+                      onClick={() => setPinnedOnly((v) => !v)}
+                      size="sm"
+                      type="button"
+                      variant={pinnedOnly ? "default" : "outline"}
                     >
-                      {!sidebarShowsPublicFeed ? (
-                        <input
-                          aria-label={`Select ${paste.title}`}
-                          checked={batchSelected.has(paste.id)}
+                      {workspaceCopy.pinnedOnly}
+                    </Button>
+                  </div>
+                  <select
+                    className="h-9 w-full min-w-0 rounded-lg border border-border bg-card/90 px-3 text-sm shadow-sm"
+                    id="wox-sort-order"
+                    onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+                    title="Sort order"
+                    value={sortOrder}
+                  >
+                    <option value="pinned_updated">{workspaceCopy.sortPinnedUpdated}</option>
+                    <option value="updated">{workspaceCopy.sortUpdated}</option>
+                    <option value="newest">{workspaceCopy.sortNewest}</option>
+                    <option value="oldest">{workspaceCopy.sortOldest}</option>
+                    <option value="title">{workspaceCopy.sortTitle}</option>
+                  </select>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Button
+                      className="h-8 text-xs"
+                      onClick={() => setListQuickFilter("all")}
+                      size="sm"
+                      type="button"
+                      variant={listQuickFilter === "all" ? "default" : "outline"}
+                    >
+                      {workspaceCopy.everything}
+                    </Button>
+                    <Button
+                      className="h-8 text-xs"
+                      onClick={() => setListQuickFilter("favorites")}
+                      size="sm"
+                      type="button"
+                      variant={listQuickFilter === "favorites" ? "default" : "outline"}
+                    >
+                      {workspaceCopy.favorites}
+                    </Button>
+                    <Button
+                      className="h-8 text-xs"
+                      onClick={() => setListQuickFilter("recent")}
+                      size="sm"
+                      type="button"
+                      variant={listQuickFilter === "recent" ? "default" : "outline"}
+                    >
+                      {workspaceCopy.recent}
+                    </Button>
+                    <Button
+                      className="h-8 text-xs"
+                      onClick={() => setListQuickFilter("archived")}
+                      size="sm"
+                      type="button"
+                      variant={listQuickFilter === "archived" ? "default" : "outline"}
+                    >
+                      {workspaceCopy.archived}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div
+              className={cn(
+                "min-h-0 flex-1 overflow-y-auto px-3 workspace-scrollbar-hide",
+                compactLibraryChrome ? "pb-3" : "pb-4",
+                libraryViewMode === "archive" ? "space-y-1.5" : "space-y-3"
+              )}
+              ref={libraryScrollRef}
+            >
+              {loading ? (
+                <div className="px-3 py-4 text-sm text-muted-foreground">{workspaceCopy.loadingWorkspace}</div>
+              ) : sidebarFolder === PUBLIC_FEED_FOLDER && publicFeedLoading ? (
+                <div className="px-3 py-4 text-sm text-muted-foreground">{workspaceCopy.loadingPublicFeed}</div>
+              ) : sidebarFolder === PUBLIC_FEED_FOLDER && publicFeedError ? (
+                <div className="px-3 py-4 text-sm text-destructive">{publicFeedError}</div>
+              ) : listAfterFilter.length === 0 ? (
+                <div className="px-3 py-4 text-sm text-muted-foreground">
+                  {sidebarFolder === PUBLIC_FEED_FOLDER ? workspaceCopy.noPublicPastes : workspaceCopy.noPastesMatch}
+                </div>
+              ) : (
+                <>
+                  {listAfterFilter.map((paste) => (
+                    <ContextMenu key={paste.id}>
+                      <ContextMenuTrigger asChild>
+                        <div
                           className={cn(
-                            "h-4 w-4 shrink-0 rounded border-border",
-                            libraryViewMode === "archive" ? "mx-3 my-3 mt-4" : "mt-1.5"
+                            "transition",
+                            libraryViewMode === "archive"
+                              ? selectedPaste?.id === paste.id
+                                ? "flex items-stretch gap-0 rounded-lg border border-primary/50 bg-primary/10"
+                                : "flex items-stretch gap-0 rounded-lg border border-border/70 bg-card/45 hover:bg-muted/45"
+                              : selectedPaste?.id === paste.id
+                                ? "flex gap-2 rounded-[1.2rem] border border-primary/50 bg-primary/10 p-3"
+                                : "flex gap-2 rounded-[1.2rem] border border-border bg-muted/40 p-3 hover:bg-muted/60"
                           )}
-                          onChange={() => toggleBatchId(paste.id)}
-                          onClick={(e) => e.stopPropagation()}
-                          type="checkbox"
-                        />
-                      ) : null}
-                      <div className="min-w-0 flex-1">
-                        <div className={cn("flex items-start gap-2", libraryViewMode === "archive" && "w-full p-3 pl-0")}>
-                          <button
-                            className="min-w-0 flex-1 text-left"
-                            onClick={() => {
-                              setSelectedId(paste.id);
-                              if (phoneViewport) {
-                                setMobileLibraryOpen(false);
-                              }
-                            }}
-                            type="button"
-                          >
-                            {libraryViewMode === "archive" ? (
-                              <div className="space-y-1.5">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-start gap-2">
-                                      <p className="line-clamp-2 break-words font-medium leading-snug text-foreground">{paste.title}</p>
-                                      {paste.favorite ? (
-                                        <Badge className="h-5 gap-0.5 border-amber-500/35 bg-amber-500/15 px-1.5 text-[10px] text-amber-950 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
-                                          <Star className="h-3 w-3" />
-                                        </Badge>
-                                      ) : null}
-                                      {paste.archived ? (
-                                        <Badge className="h-5 border-border bg-transparent px-1.5 text-[10px]">Archived</Badge>
-                                      ) : null}
-                                      {paste.pinned ? <Badge className="h-5 px-1.5 text-[10px]">Pinned</Badge> : null}
-                                    </div>
-                                    <div className="mt-1 text-[11px] text-muted-foreground">
-                                      {paste.folder || "No folder"}
-                                    </div>
-                                  </div>
-                                  <span className="shrink-0 text-[11px] text-muted-foreground">
-                                    {formatLibrarySidebarDate(paste.updatedAt)}
-                                  </span>
-                                </div>
-                                <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                                  <span>{paste.language}</span>
-                                  <span>&bull;</span>
-                                  <span>{paste.visibility}</span>
-                                </div>
-                              </div>
-                            ) : (
-                              <>
-                                <div className="flex items-start justify-between gap-3">
-                                  <p className="line-clamp-2 break-words font-medium leading-snug text-foreground">{paste.title}</p>
-                                  <div className="flex shrink-0 flex-wrap items-center gap-1">
-                                    {paste.favorite ? (
-                                      <Badge className="gap-0.5 border-amber-500/35 bg-amber-500/15 px-1.5 text-amber-950 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
-                                        <Star className="h-3 w-3" />
-                                      </Badge>
-                                    ) : null}
-                                    {paste.archived ? (
-                                      <Badge className="border-border bg-transparent">Archived</Badge>
-                                    ) : null}
-                                    {paste.pinned ? <Badge>Pinned</Badge> : null}
-                                  </div>
-                                </div>
-                                <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm text-muted-foreground">
-                                  {paste.content || "Empty paste"}
-                                </p>
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                  <Badge>{paste.language}</Badge>
-                                  {paste.folder ? <Badge>{paste.folder}</Badge> : null}
-                                  <Badge>{paste.visibility}</Badge>
-                                </div>
-                              </>
-                            )}
-                          </button>
-                          {phoneViewport ? (
-                            <Button
-                              aria-label={`${paste.title} actions`}
-                              className="mt-0.5 h-9 w-9 shrink-0 touch-manipulation rounded-full p-0"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setMobilePasteActions({ open: true, pasteId: paste.id });
-                              }}
-                              size="sm"
-                              type="button"
-                              variant="outline"
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
+                        >
+                          {!sidebarShowsPublicFeed ? (
+                            <input
+                              aria-label={`Select ${paste.title}`}
+                              checked={batchSelected.has(paste.id)}
+                              className={cn(
+                                "h-4 w-4 shrink-0 rounded border-border",
+                                libraryViewMode === "archive" ? "mx-3 my-3 mt-4" : "mt-1.5"
+                              )}
+                              onChange={() => toggleBatchId(paste.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              type="checkbox"
+                            />
                           ) : null}
+                          <div className="min-w-0 flex-1">
+                            <div
+                              className={cn(
+                                "flex items-start gap-2",
+                                libraryViewMode === "archive" && "w-full p-3 pl-0"
+                              )}
+                            >
+                              <button
+                                className="min-w-0 flex-1 text-left"
+                                onClick={() => {
+                                  setSelectedId(paste.id);
+                                  if (phoneViewport) {
+                                    setMobileLibraryOpen(false);
+                                  }
+                                }}
+                                type="button"
+                              >
+                                {libraryViewMode === "archive" ? (
+                                  <div className="space-y-1.5">
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-start gap-2">
+                                          <p className="line-clamp-2 break-words font-medium leading-snug text-foreground">
+                                            {paste.title}
+                                          </p>
+                                          {paste.favorite ? (
+                                            <Badge className="h-5 gap-0.5 border-amber-500/35 bg-amber-500/15 px-1.5 text-[10px] text-amber-950 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+                                              <Star className="h-3 w-3" />
+                                            </Badge>
+                                          ) : null}
+                                          {paste.archived ? (
+                                            <Badge className="h-5 border-border bg-transparent px-1.5 text-[10px]">
+                                              Archived
+                                            </Badge>
+                                          ) : null}
+                                          {paste.pinned ? (
+                                            <Badge className="h-5 px-1.5 text-[10px]">Pinned</Badge>
+                                          ) : null}
+                                        </div>
+                                        <div className="mt-1 text-[11px] text-muted-foreground">
+                                          {paste.folder || "No folder"}
+                                        </div>
+                                      </div>
+                                      <span className="shrink-0 text-[11px] text-muted-foreground">
+                                        {formatLibrarySidebarDate(paste.updatedAt)}
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                                      <span>{paste.language}</span>
+                                      <span>&bull;</span>
+                                      <span>{paste.visibility}</span>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="flex items-start justify-between gap-3">
+                                      <p className="line-clamp-2 break-words font-medium leading-snug text-foreground">
+                                        {paste.title}
+                                      </p>
+                                      <div className="flex shrink-0 flex-wrap items-center gap-1">
+                                        {paste.favorite ? (
+                                          <Badge className="gap-0.5 border-amber-500/35 bg-amber-500/15 px-1.5 text-amber-950 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+                                            <Star className="h-3 w-3" />
+                                          </Badge>
+                                        ) : null}
+                                        {paste.archived ? (
+                                          <Badge className="border-border bg-transparent">Archived</Badge>
+                                        ) : null}
+                                        {paste.pinned ? <Badge>Pinned</Badge> : null}
+                                      </div>
+                                    </div>
+                                    <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm text-muted-foreground">
+                                      {paste.content || "Empty paste"}
+                                    </p>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                      <Badge>{paste.language}</Badge>
+                                      {paste.folder ? <Badge>{paste.folder}</Badge> : null}
+                                      <Badge>{paste.visibility}</Badge>
+                                    </div>
+                                  </>
+                                )}
+                              </button>
+                              {phoneViewport ? (
+                                <Button
+                                  aria-label={`${paste.title} actions`}
+                                  className="mt-0.5 h-9 w-9 shrink-0 touch-manipulation rounded-full p-0"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    setMobilePasteActions({ open: true, pasteId: paste.id });
+                                  }}
+                                  size="sm"
+                                  type="button"
+                                  variant="outline"
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              ) : null}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </ContextMenuTrigger>
-                  <ContextMenuContent className="w-56">
-                    <ContextMenuLabel className="max-w-[13rem] truncate">{paste.title}</ContextMenuLabel>
-                    <ContextMenuItem
-                      onSelect={() => {
-                        setSelectedId(paste.id);
-                        if (phoneViewport) {
-                          setMobileLibraryOpen(false);
-                        }
-                      }}
-                    >
-                      <FilePlus2 className="mr-2 h-4 w-4" />
-                      Open
-                    </ContextMenuItem>
-                    <ContextMenuItem onSelect={() => duplicatePasteById(paste.id)}>
-                      <WandSparkles className="mr-2 h-4 w-4" />
-                      Fork
-                    </ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem
-                      onSelect={() => {
-                        void navigator.clipboard.writeText(paste.content);
-                        setStatus("Copied paste contents to clipboard.");
-                      }}
-                    >
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copy all text
-                    </ContextMenuItem>
-                    {snapshot.pastes.some((workspacePaste) => workspacePaste.id === paste.id) ? (
-                      <>
-                        <ContextMenuItem onSelect={() => toggleWorkspacePasteFlag(paste.id, "pinned")}>
-                          {paste.pinned ? "Unpin" : "Pin"}
-                        </ContextMenuItem>
-                        <ContextMenuItem onSelect={() => toggleWorkspacePasteFlag(paste.id, "favorite")}>
-                          <Star className="mr-2 h-4 w-4" />
-                          {paste.favorite ? "Remove favorite" : "Favorite"}
-                        </ContextMenuItem>
-                        <ContextMenuItem onSelect={() => toggleWorkspacePasteFlag(paste.id, "archived")}>
-                          <EyeOff className="mr-2 h-4 w-4" />
-                          {paste.archived ? "Restore from archive" : "Archive"}
-                        </ContextMenuItem>
-                        <ContextMenuSeparator />
-                      </>
-                    ) : null}
-                    {paste.slug && !isAccountOnlyDraft(paste, mode) ? (
-                      <>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent className="w-56">
+                        <ContextMenuLabel className="max-w-[13rem] truncate">{paste.title}</ContextMenuLabel>
                         <ContextMenuItem
-                          disabled={paste.visibility === "private"}
                           onSelect={() => {
-                            const url = getPasteShareUrl(window.location.origin, paste.slug, paste.secretMode);
-                            void navigator.clipboard.writeText(url);
-                            setStatus("Copied share link.");
+                            setSelectedId(paste.id);
+                            if (phoneViewport) {
+                              setMobileLibraryOpen(false);
+                            }
                           }}
                         >
-                          <Share2 className="mr-2 h-4 w-4" />
-                          Copy share link
+                          <FilePlus2 className="mr-2 h-4 w-4" />
+                          Open
                         </ContextMenuItem>
+                        <ContextMenuItem onSelect={() => duplicatePasteById(paste.id)}>
+                          <WandSparkles className="mr-2 h-4 w-4" />
+                          Fork
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
                         <ContextMenuItem
-                          disabled={paste.visibility === "private"}
                           onSelect={() => {
-                            const url = `${window.location.origin}/raw/${paste.slug}`;
-                            void navigator.clipboard.writeText(url);
-                            setStatus("Copied raw URL.");
+                            void navigator.clipboard.writeText(paste.content);
+                            setStatus("Copied paste contents to clipboard.");
                           }}
                         >
-                          <Link2 className="mr-2 h-4 w-4" />
-                          Copy raw URL
+                          <Copy className="mr-2 h-4 w-4" />
+                          Copy all text
                         </ContextMenuItem>
-                      </>
-                    ) : null}
-                    {!sidebarShowsPublicFeed ? (
-                      <>
-                        <ContextMenuSeparator />
-                        <ContextMenuSub>
-                          <ContextMenuSubTrigger>Move to folder</ContextMenuSubTrigger>
-                          <ContextMenuSubContent className="max-h-64 overflow-y-auto">
-                            {snapshot.folders.length === 0 ? (
-                              <ContextMenuItem disabled>No folders yet</ContextMenuItem>
-                            ) : (
-                              snapshot.folders.map((f) => (
-                                <ContextMenuItem key={f} onSelect={() => void movePasteToFolder(paste.id, f)}>
-                                  {f}
+                        {snapshot.pastes.some((workspacePaste) => workspacePaste.id === paste.id) ? (
+                          <>
+                            <ContextMenuItem onSelect={() => toggleWorkspacePasteFlag(paste.id, "pinned")}>
+                              {paste.pinned ? "Unpin" : "Pin"}
+                            </ContextMenuItem>
+                            <ContextMenuItem onSelect={() => toggleWorkspacePasteFlag(paste.id, "favorite")}>
+                              <Star className="mr-2 h-4 w-4" />
+                              {paste.favorite ? "Remove favorite" : "Favorite"}
+                            </ContextMenuItem>
+                            <ContextMenuItem onSelect={() => toggleWorkspacePasteFlag(paste.id, "archived")}>
+                              <EyeOff className="mr-2 h-4 w-4" />
+                              {paste.archived ? "Restore from archive" : "Archive"}
+                            </ContextMenuItem>
+                            <ContextMenuSeparator />
+                          </>
+                        ) : null}
+                        {paste.slug && !isAccountOnlyDraft(paste, mode) ? (
+                          <>
+                            <ContextMenuItem
+                              disabled={paste.visibility === "private"}
+                              onSelect={() => {
+                                const url = getPasteShareUrl(window.location.origin, paste.slug, paste.secretMode);
+                                void navigator.clipboard.writeText(url);
+                                setStatus("Copied share link.");
+                              }}
+                            >
+                              <Share2 className="mr-2 h-4 w-4" />
+                              Copy share link
+                            </ContextMenuItem>
+                            <ContextMenuItem
+                              disabled={paste.visibility === "private"}
+                              onSelect={() => {
+                                const url = `${window.location.origin}/raw/${paste.slug}`;
+                                void navigator.clipboard.writeText(url);
+                                setStatus("Copied raw URL.");
+                              }}
+                            >
+                              <Link2 className="mr-2 h-4 w-4" />
+                              Copy raw URL
+                            </ContextMenuItem>
+                          </>
+                        ) : null}
+                        {!sidebarShowsPublicFeed ? (
+                          <>
+                            <ContextMenuSeparator />
+                            <ContextMenuSub>
+                              <ContextMenuSubTrigger>Move to folder</ContextMenuSubTrigger>
+                              <ContextMenuSubContent className="max-h-64 overflow-y-auto">
+                                {snapshot.folders.length === 0 ? (
+                                  <ContextMenuItem disabled>No folders yet</ContextMenuItem>
+                                ) : (
+                                  snapshot.folders.map((f) => (
+                                    <ContextMenuItem key={f} onSelect={() => void movePasteToFolder(paste.id, f)}>
+                                      {f}
+                                    </ContextMenuItem>
+                                  ))
+                                )}
+                                <ContextMenuSeparator />
+                                <ContextMenuItem
+                                  onSelect={() => {
+                                    setBatchSelected(new Set([paste.id]));
+                                    setBatchMoveOpen(true);
+                                  }}
+                                >
+                                  Other folder / new name…
                                 </ContextMenuItem>
-                              ))
-                            )}
+                              </ContextMenuSubContent>
+                            </ContextMenuSub>
                             <ContextMenuSeparator />
                             <ContextMenuItem
-                              onSelect={() => {
-                                setBatchSelected(new Set([paste.id]));
-                                setBatchMoveOpen(true);
-                              }}
-                            >
-                              Other folder / new name…
-                            </ContextMenuItem>
-                          </ContextMenuSubContent>
-                        </ContextMenuSub>
-                        <ContextMenuSeparator />
-                        <ContextMenuItem
-                          onSelect={() =>
-                            setBatchSelected((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(paste.id)) {
-                                next.delete(paste.id);
-                              } else {
-                                next.add(paste.id);
+                              onSelect={() =>
+                                setBatchSelected((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(paste.id)) {
+                                    next.delete(paste.id);
+                                  } else {
+                                    next.add(paste.id);
+                                  }
+                                  return next;
+                                })
                               }
-                              return next;
-                            })
-                          }
-                        >
-                          {batchSelected.has(paste.id) ? "Deselect for batch" : "Select for batch"}
-                        </ContextMenuItem>
-                        <ContextMenuSeparator />
-                        <ContextMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onSelect={() => void deletePasteById(paste.id)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          {isAccountOnlyDraft(paste, mode) ? "Discard draft" : "Delete"}
-                        </ContextMenuItem>
-                      </>
-                    ) : null}
-                  </ContextMenuContent>
-                </ContextMenu>
-                ))}
-              </>
-            )}
-          </div>
-
-          <input
-            accept={WORKSPACE_FILE_IMPORT_ACCEPT}
-            aria-label="Import workspace backup or text file"
-            className="hidden"
-            onChange={handleImportFile}
-            ref={fileInputRef}
-            type="file"
-          />
-          {!compactLibraryChrome ? (
-            <div className="border-t border-border px-5 py-4">
-              <div className="flex flex-wrap gap-3">
-                <Button onClick={() => fileInputRef.current?.click()} size="sm" type="button" variant="outline">
-                  <Upload className="h-4 w-4" />
-                  {workspaceCopy.importFile}
-                </Button>
-                <Button onClick={() => void handleExportWorkspace()} size="sm" type="button" variant="outline">
-                  <Download className="h-4 w-4" />
-                  {workspaceCopy.export}
-                </Button>
-              </div>
-              <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                <span className="font-medium text-foreground/80">{workspaceCopy.importJsonLabel}</span> restores the local library.{" "}
-                <span className="font-medium text-foreground/80">{workspaceCopy.importTextLabel}</span> and similar files create one new paste
-                (syntax from the file extension). Use “All files” in the picker if an extension is not listed.
-                {!sidebarShowsPublicFeed ? (
-                  <>
-                    {" "}
-                    <span className="font-medium text-foreground/80">{workspaceCopy.importDragDropLabel}</span> anywhere on this library panel to import.
-                  </>
-                ) : null}
-              </p>
+                            >
+                              {batchSelected.has(paste.id) ? "Deselect for batch" : "Select for batch"}
+                            </ContextMenuItem>
+                            <ContextMenuSeparator />
+                            <ContextMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onSelect={() => void deletePasteById(paste.id)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              {isAccountOnlyDraft(paste, mode) ? "Discard draft" : "Delete"}
+                            </ContextMenuItem>
+                          </>
+                        ) : null}
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  ))}
+                </>
+              )}
             </div>
-          ) : null}
-        </CardContent>
-      </Card>
+
+            <input
+              accept={WORKSPACE_FILE_IMPORT_ACCEPT}
+              aria-label="Import workspace backup or text file"
+              className="hidden"
+              onChange={handleImportFile}
+              ref={fileInputRef}
+              type="file"
+            />
+            {!compactLibraryChrome ? (
+              <div className="border-t border-border px-5 py-4">
+                <div className="flex flex-wrap gap-3">
+                  <Button onClick={() => fileInputRef.current?.click()} size="sm" type="button" variant="outline">
+                    <Upload className="h-4 w-4" />
+                    {workspaceCopy.importFile}
+                  </Button>
+                  <Button onClick={() => void handleExportWorkspace()} size="sm" type="button" variant="outline">
+                    <Download className="h-4 w-4" />
+                    {workspaceCopy.export}
+                  </Button>
+                </div>
+                <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                  <span className="font-medium text-foreground/80">{workspaceCopy.importJsonLabel}</span> restores the
+                  local library. <span className="font-medium text-foreground/80">{workspaceCopy.importTextLabel}</span>{" "}
+                  and similar files create one new paste (syntax from the file extension). Use “All files” in the picker
+                  if an extension is not listed.
+                  {!sidebarShowsPublicFeed ? (
+                    <>
+                      {" "}
+                      <span className="font-medium text-foreground/80">{workspaceCopy.importDragDropLabel}</span>{" "}
+                      anywhere on this library panel to import.
+                    </>
+                  ) : null}
+                </p>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
       </FileDropSurface>
     );
   }
@@ -4470,160 +4562,161 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
     return (
       <Card
         className={cn(
-          "flex h-full min-h-0 flex-1 flex-col overflow-hidden print:h-auto print:min-h-0 print:overflow-visible print:border-0 print:shadow-none",
+          "flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-[1.75rem] print:h-auto print:min-h-0 print:overflow-visible print:border-0 print:shadow-none",
           !selectedPaste && "print:hidden"
         )}
       >
         <CardContent
           className={cn(
-            "flex min-h-0 flex-1 flex-col p-3 print:overflow-visible sm:p-4 lg:p-6",
+            "flex min-h-0 flex-1 flex-col p-3 print:overflow-visible sm:p-4 lg:p-5 xl:p-6",
             selectedPaste ? "overflow-hidden" : "gap-4 overflow-y-auto workspace-scrollbar-hide sm:gap-6"
           )}
         >
           {selectedPaste ? (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden print:overflow-visible">
+              <div
+                className={cn(
+                  "shrink-0 z-20 -mx-3 isolate box-border flex flex-col justify-start border-b border-border px-3 [overflow-anchor:none] print:-mx-0 print:border-0 print:bg-transparent print:px-0 print:pb-2 print:shadow-none sm:-mx-4 sm:px-4 lg:-mx-6 lg:px-6",
+                  editorPaneCompact ? "bg-card shadow-md" : "bg-card",
+                  editorPaneCompact ? "pb-2 shadow-md" : "pb-3 shadow-none max-lg:pb-2 sm:pb-4"
+                )}
+                style={{ transition: "box-shadow 180ms ease-out" }}
+              >
                 <div
                   className={cn(
-                    "shrink-0 z-20 -mx-3 isolate box-border flex flex-col justify-start border-b border-border px-3 [overflow-anchor:none] print:-mx-0 print:border-0 print:bg-transparent print:px-0 print:pb-2 print:shadow-none sm:-mx-4 sm:px-4 lg:-mx-6 lg:px-6",
-                    editorPaneCompact ? "bg-card shadow-md" : "bg-card",
-                    editorPaneCompact ? "pb-2 shadow-md" : "pb-3 shadow-none max-lg:pb-2 sm:pb-4"
+                    "pt-0.5 sm:pt-1",
+                    editorPaneCompact ? "space-y-2" : "space-y-2 max-lg:space-y-2 sm:space-y-4"
                   )}
-                  style={{ transition: "box-shadow 180ms ease-out" }}
                 >
-                  <div className={cn("pt-0.5 sm:pt-1", editorPaneCompact ? "space-y-2" : "space-y-2 max-lg:space-y-2 sm:space-y-4")}>
-                    {!editorPaneCompact ? (
-                      <div className="max-lg:hidden">
-                        <PrismThemeLink theme={syntaxTheme} />
-                      </div>
-                    ) : null}
-                    <div className="flex flex-col gap-2 xl:flex-row xl:flex-wrap xl:items-start xl:justify-between xl:gap-3 2xl:gap-4">
-                      <div className="min-w-0 w-full flex-1 xl:w-auto">
-                        {phoneViewport ? (
-                          <Textarea
-                            className={cn(
-                              "min-h-0 resize-none overflow-hidden border-none bg-transparent px-0 py-0 font-semibold shadow-none focus-visible:ring-0 print:hidden",
-                              editorPaneCompact ? "text-lg leading-snug" : "text-2xl leading-tight"
-                            )}
-                            disabled={!selectedPasteInWorkspace}
-                            onChange={(event) =>
-                              updateSelectedPaste((paste) => ({
-                                ...paste,
-                                title: event.target.value,
-                                updatedAt: new Date().toISOString()
-                              }))
-                            }
-                            onInput={(event) => {
-                              const target = event.currentTarget;
-                              target.style.height = "0px";
-                              target.style.height = `${Math.min(target.scrollHeight, 144)}px`;
-                            }}
-                            rows={1}
-                            style={{ height: "auto" }}
-                            value={selectedPaste.title}
-                          />
-                        ) : (
-                          <Input
-                            className={cn(
-                              "border-none bg-transparent px-0 font-semibold shadow-none focus-visible:ring-0 print:hidden",
-                              editorPaneCompact
-                                ? "text-lg leading-snug sm:text-xl"
-                                : "text-xl leading-tight md:text-3xl"
-                            )}
-                            disabled={!selectedPasteInWorkspace}
-                            onChange={(event) =>
-                              updateSelectedPaste((paste) => ({
-                                ...paste,
-                                title: event.target.value,
-                                updatedAt: new Date().toISOString()
-                              }))
-                            }
-                            value={selectedPaste.title}
-                          />
-                        )}
-                        <h1 className="wox-print-title hidden text-2xl font-semibold leading-tight text-black print:block dark:print:text-black">
-                          {selectedPaste.title.trim() || "Untitled"}
-                        </h1>
-                        <p className="wox-print-title hidden text-sm text-neutral-700 print:block dark:print:text-neutral-800">
-                          {selectedPaste.language}
-                          {selectedPaste.folder ? ` · ${selectedPaste.folder}` : ""}
-                          {` · Updated ${formatDate(selectedPaste.updatedAt)}`}
-                        </p>
-                        {!editorPaneCompact ? (
-                          <div className="mt-1.5 hidden flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground print:hidden sm:mt-2 sm:flex">
-                            <span>
-                              {mode === "account"
-                                ? "Saved to Neon/Postgres through the account workspace."
-                                : "Stored locally in IndexedDB until you choose to sync or export."}
-                            </span>
-                            {mode === "account" && autosaveHint !== "idle" ? (
-                              <span className="text-xs font-medium text-primary/90">
-                                {autosaveHint === "pending" ? "Autosave…" : "Saved"}
-                              </span>
-                            ) : null}
-                          </div>
-                        ) : mode === "account" && autosaveHint !== "idle" ? (
-                          <p className="mt-0.5 text-[10px] font-medium text-primary/90 print:hidden">
-                            {autosaveHint === "pending" ? "Autosave…" : "Saved"}
-                          </p>
-                        ) : null}
-                        {!editorPaneCompact && selectedPasteLineageDisplay ? (
-                          <PasteLineageBanner
-                            className="mt-3 max-w-2xl print:hidden"
-                            forkedFrom={selectedPasteLineageDisplay.forkedFrom}
-                            plain={mode === "local"}
-                            replyTo={selectedPasteLineageDisplay.replyTo}
-                          />
-                        ) : null}
-                      </div>
-                      <div
-                        className={cn(
-                          "flex w-full print:hidden xl:w-auto xl:justify-end",
-                          phoneViewport
-                            ? "-mx-1 flex-nowrap gap-2 overflow-x-auto px-1 pb-1"
-                            : "flex-wrap",
-                          editorPaneCompact ? "gap-2" : "gap-2 sm:gap-3",
-                          "[&>button]:touch-manipulation [&>button]:shrink-0",
-                          phoneViewport
-                            ? "[&>button]:h-9 [&>button]:min-h-9 [&>button]:px-3 [&>button]:text-xs sm:[&>button]:text-sm"
-                            : "[&>button]:min-h-10 sm:[&>button]:min-h-0"
-                        )}
-                      >
-                        <Button
-                          className={phoneViewport ? "gap-1.5" : undefined}
-                          disabled={saving || !selectedPasteInWorkspace}
-                          onClick={() => void handleSavePaste()}
-                          size={editorPaneCompact ? "sm" : "default"}
-                          type="button"
-                        >
-                          <Save className="h-4 w-4" />
-                          {saving ? "Saving..." : "Save"}
-                        </Button>
-                        <Button
-                          className={phoneViewport ? "gap-1.5" : undefined}
-                          onClick={handleDuplicatePaste}
-                          size={editorPaneCompact ? "sm" : "default"}
-                          type="button"
-                          variant="outline"
-                        >
-                          <WandSparkles className="h-4 w-4" />
-                          Fork
-                        </Button>
-                        <Button
-                          className={phoneViewport ? "gap-1.5" : undefined}
-                          disabled={!selectedPasteInWorkspace}
-                          onClick={() => void handleDeletePaste()}
-                          size={editorPaneCompact ? "sm" : "default"}
-                          type="button"
-                          variant="destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          {selectedPaste && isAccountOnlyDraft(selectedPaste, mode) ? "Discard" : "Delete"}
-                        </Button>
-                      </div>
+                  {!editorPaneCompact ? (
+                    <div className="max-lg:hidden">
+                      <PrismThemeLink theme={syntaxTheme} />
                     </div>
+                  ) : null}
+                  <div className="flex flex-col gap-2 xl:flex-row xl:flex-wrap xl:items-start xl:justify-between xl:gap-3 2xl:gap-4">
+                    <div className="min-w-0 w-full flex-1 xl:w-auto">
+                      {phoneViewport ? (
+                        <Textarea
+                          className={cn(
+                            "min-h-0 resize-none overflow-hidden border-none bg-transparent px-0 py-0 font-semibold shadow-none focus-visible:ring-0 print:hidden",
+                            editorPaneCompact ? "text-lg leading-snug" : "text-2xl leading-tight"
+                          )}
+                          disabled={!selectedPasteInWorkspace}
+                          onChange={(event) =>
+                            updateSelectedPaste((paste) => ({
+                              ...paste,
+                              title: event.target.value,
+                              updatedAt: new Date().toISOString()
+                            }))
+                          }
+                          onInput={(event) => {
+                            const target = event.currentTarget;
+                            target.style.height = "0px";
+                            target.style.height = `${Math.min(target.scrollHeight, 144)}px`;
+                          }}
+                          rows={1}
+                          style={{ height: "auto" }}
+                          value={selectedPaste.title}
+                        />
+                      ) : (
+                        <Input
+                          className={cn(
+                            "border-none bg-transparent px-0 font-semibold shadow-none focus-visible:ring-0 print:hidden",
+                            editorPaneCompact ? "text-lg leading-snug sm:text-xl" : "text-xl leading-tight md:text-3xl"
+                          )}
+                          disabled={!selectedPasteInWorkspace}
+                          onChange={(event) =>
+                            updateSelectedPaste((paste) => ({
+                              ...paste,
+                              title: event.target.value,
+                              updatedAt: new Date().toISOString()
+                            }))
+                          }
+                          value={selectedPaste.title}
+                        />
+                      )}
+                      <h1 className="wox-print-title hidden text-2xl font-semibold leading-tight text-black print:block dark:print:text-black">
+                        {selectedPaste.title.trim() || "Untitled"}
+                      </h1>
+                      <p className="wox-print-title hidden text-sm text-neutral-700 print:block dark:print:text-neutral-800">
+                        {selectedPaste.language}
+                        {selectedPaste.folder ? ` · ${selectedPaste.folder}` : ""}
+                        {` · Updated ${formatDate(selectedPaste.updatedAt)}`}
+                      </p>
+                      {!editorPaneCompact ? (
+                        <div className="mt-1.5 hidden flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground print:hidden sm:mt-2 sm:flex">
+                          <span>
+                            {mode === "account"
+                              ? "Saved to Neon/Postgres through the account workspace."
+                              : "Stored locally in IndexedDB until you choose to sync or export."}
+                          </span>
+                          {mode === "account" && autosaveHint !== "idle" ? (
+                            <span className="text-xs font-medium text-primary/90">
+                              {autosaveHint === "pending" ? "Autosave…" : "Saved"}
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : mode === "account" && autosaveHint !== "idle" ? (
+                        <p className="mt-0.5 text-[10px] font-medium text-primary/90 print:hidden">
+                          {autosaveHint === "pending" ? "Autosave…" : "Saved"}
+                        </p>
+                      ) : null}
+                      {!editorPaneCompact && selectedPasteLineageDisplay ? (
+                        <PasteLineageBanner
+                          className="mt-3 max-w-2xl print:hidden"
+                          forkedFrom={selectedPasteLineageDisplay.forkedFrom}
+                          plain={mode === "local"}
+                          replyTo={selectedPasteLineageDisplay.replyTo}
+                        />
+                      ) : null}
+                    </div>
+                    <div
+                      className={cn(
+                        "flex w-full print:hidden xl:w-auto xl:justify-end",
+                        phoneViewport ? "-mx-1 flex-nowrap gap-2 overflow-x-auto px-1 pb-1" : "flex-wrap",
+                        editorPaneCompact ? "gap-2" : "gap-2 sm:gap-3",
+                        "[&>button]:touch-manipulation [&>button]:shrink-0",
+                        phoneViewport
+                          ? "[&>button]:h-9 [&>button]:min-h-9 [&>button]:px-3 [&>button]:text-xs sm:[&>button]:text-sm"
+                          : "[&>button]:min-h-10 sm:[&>button]:min-h-0"
+                      )}
+                    >
+                      <Button
+                        className={phoneViewport ? "gap-1.5" : undefined}
+                        disabled={saving || !selectedPasteInWorkspace}
+                        onClick={() => void handleSavePaste()}
+                        size={editorPaneCompact ? "sm" : "default"}
+                        type="button"
+                      >
+                        <Save className="h-4 w-4" />
+                        {saving ? "Saving..." : "Save"}
+                      </Button>
+                      <Button
+                        className={phoneViewport ? "gap-1.5" : undefined}
+                        onClick={handleDuplicatePaste}
+                        size={editorPaneCompact ? "sm" : "default"}
+                        type="button"
+                        variant="outline"
+                      >
+                        <WandSparkles className="h-4 w-4" />
+                        Fork
+                      </Button>
+                      <Button
+                        className={phoneViewport ? "gap-1.5" : undefined}
+                        disabled={!selectedPasteInWorkspace}
+                        onClick={() => void handleDeletePaste()}
+                        size={editorPaneCompact ? "sm" : "default"}
+                        type="button"
+                        variant="destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {selectedPaste && isAccountOnlyDraft(selectedPaste, mode) ? "Discard" : "Delete"}
+                      </Button>
+                    </div>
+                  </div>
 
-                    {!phoneViewport ? (
-                      <div className={cn("grid print:hidden md:grid-cols-2", editorPaneCompact ? "gap-2" : "gap-4")}>
+                  {!phoneViewport ? (
+                    <div className={cn("grid print:hidden md:grid-cols-2", editorPaneCompact ? "gap-2" : "gap-4")}>
                       <div>
                         <label
                           className={cn(
@@ -4642,13 +4735,13 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                           disabled={!selectedPasteInWorkspace}
                           id="wox-paste-language-select"
                           title="Paste language or format"
-                    onChange={(event) =>
-                      updateSelectedPaste((paste) => ({
-                        ...paste,
-                        language: event.target.value,
-                        updatedAt: new Date().toISOString()
-                      }))
-                    }
+                          onChange={(event) =>
+                            updateSelectedPaste((paste) => ({
+                              ...paste,
+                              language: event.target.value,
+                              updatedAt: new Date().toISOString()
+                            }))
+                          }
                           value={selectedPaste.language}
                         >
                           {LANGUAGES.map((language) => (
@@ -4756,81 +4849,83 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                           );
                         })()}
                       </div>
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="mt-2 border-t border-border/40 pt-2 print:hidden">
-                    <WorkspaceEditorRibbon
-                      activeIndentGuides={editorActiveIndentGuides}
-                      compact={editorPaneCompact}
-                collapsed={ribbonCollapsed}
-                findOpen={findOpen}
-                fontSize={editorFontSize}
-                formatJsonDisabled={!selectedPaste}
-                importUrlDisabled={!sessionUser}
-                isMarkdown={selectedPaste?.language === "markdown"}
-                lineNumbers={editorLineNumbers}
-                mdPreviewOpen={mdPreviewOpen}
-                onBold={() => editorApplyRangeEdit((v, s, e) => wrapSelection(v, s, e, "**", "**"))}
-                onBulletList={() => editorApplyRangeEdit(bulletBlock)}
-                onCaseLower={() => editorApplyRangeEdit((v, s, e) => transformSelectionCase(v, s, e, "lower"))}
-                onCaseTitle={() => editorApplyRangeEdit((v, s, e) => transformSelectionCase(v, s, e, "title"))}
-                onCaseUpper={() => editorApplyRangeEdit((v, s, e) => transformSelectionCase(v, s, e, "upper"))}
-                onCopyAll={handleEditorCopyAll}
-                onCopySelection={editorCopySelection}
-                onCut={editorCutSelection}
-                onDedupeLines={() => editorApplyRangeEdit(dedupeLinesInBlock)}
-                onDuplicateBlock={() => editorApplyRangeEdit(duplicateBlockLines)}
-                onFontSizeChange={setEditorFontSize}
-                onFormatJson={handleFormatJsonInEditor}
-                onIndent={() => editorApplyRangeEdit(applyTab)}
-                onInlineCode={() => editorApplyRangeEdit((v, s, e) => wrapSelection(v, s, e, "`", "`"))}
-                onInsertCodeFence={() => editorApplyRangeEdit((v, s, e) => insertCodeFence(v, s, e, ""))}
-                onInsertHeading={() => editorApplyRangeEdit((v, s, e) => insertAtSelection(v, s, e, "# "))}
-                onInsertHr={() => editorApplyRangeEdit(insertHorizontalRule)}
-                onInsertLink={() =>
-                  editorApplyRangeEdit((v, s, e) => insertAtSelection(v, s, e, "[Link text](https://example.com)"))
-                }
-                onInsertTable={() => editorApplyRangeEdit(insertMarkdownTable)}
-                onInsertTimestamp={() => editorApplyRangeEdit((v, s, e) => insertAtSelection(v, s, e, `${timestampLocal()}\n`))}
-                onInsertUuid={() =>
-                  editorApplyRangeEdit((v, s, e) => insertAtSelection(v, s, e, `${crypto.randomUUID()}\n`))
-                }
-                onItalic={() => editorApplyRangeEdit((v, s, e) => wrapSelection(v, s, e, "*", "*"))}
-                onMinifyJson={handleMinifyJsonInEditor}
-                onNumberList={() => editorApplyRangeEdit(numberBlock)}
-                onOpenCodeImage={() => setCodeImageOpen(true)}
-                onOpenImportUrl={() => setImportUrlOpen(true)}
-                onOpenShortcuts={() => setShortcutsOpen(true)}
-                onOpenTemplates={() => setTemplatesOpen(true)}
-                onOutdent={() => editorApplyRangeEdit(applyShiftTab)}
-                onPaste={editorPasteFromClipboard}
-                onPrint={handlePrintWorkspace}
-                onPrintLayoutPresetChange={setPrintLayoutPreset}
-                onQuote={() => editorApplyRangeEdit(quoteBlock)}
-                onTogglePrintWrapLongLines={() => setPrintWrapLongLines((v) => !v)}
-                printLayoutPreset={printLayoutPreset}
-                printWrapLongLines={printWrapLongLines}
-                onSelectAll={handleEditorSelectAll}
-                onSortLines={() => editorApplyRangeEdit(sortLinesInBlock)}
-                onStrike={() => editorApplyRangeEdit((v, s, e) => wrapSelection(v, s, e, "~~", "~~"))}
-                onTabChange={setRibbonTab}
-                onToggleCollapsed={() => setRibbonCollapsed((c) => !c)}
-                onToggleFind={() => setFindOpen((v) => !v)}
-                onToggleActiveIndentGuides={() => setEditorActiveIndentGuides((v) => !v)}
-                onToggleLineNumbers={() => setEditorLineNumbers((v) => !v)}
-                onToggleMdPreview={toggleMdPreviewRibbon}
-                onToggleReplace={() => setReplaceOpen((v) => !v)}
-                onToggleWordWrap={() => setEditorWordWrap((v) => !v)}
-                onTrimTrailing={() => editorApplyRangeEdit(trimTrailingInBlock)}
-                onUnderline={() => editorApplyRangeEdit((v, s, e) => wrapSelection(v, s, e, "<u>", "</u>"))}
-                pasteEditable={Boolean(selectedPaste && selectedPasteInWorkspace)}
-                replaceOpen={replaceOpen}
-                tab={ribbonTab}
-                wordWrap={editorWordWrap}
-                    />
-                  </div>
+                    </div>
+                  ) : null}
                 </div>
+                <div className="mt-2 border-t border-border/40 pt-2 print:hidden">
+                  <WorkspaceEditorRibbon
+                    activeIndentGuides={editorActiveIndentGuides}
+                    compact={editorPaneCompact}
+                    collapsed={ribbonCollapsed}
+                    findOpen={findOpen}
+                    fontSize={editorFontSize}
+                    formatJsonDisabled={!selectedPaste}
+                    importUrlDisabled={!sessionUser}
+                    isMarkdown={selectedPaste?.language === "markdown"}
+                    lineNumbers={editorLineNumbers}
+                    mdPreviewOpen={mdPreviewOpen}
+                    onBold={() => editorApplyRangeEdit((v, s, e) => wrapSelection(v, s, e, "**", "**"))}
+                    onBulletList={() => editorApplyRangeEdit(bulletBlock)}
+                    onCaseLower={() => editorApplyRangeEdit((v, s, e) => transformSelectionCase(v, s, e, "lower"))}
+                    onCaseTitle={() => editorApplyRangeEdit((v, s, e) => transformSelectionCase(v, s, e, "title"))}
+                    onCaseUpper={() => editorApplyRangeEdit((v, s, e) => transformSelectionCase(v, s, e, "upper"))}
+                    onCopyAll={handleEditorCopyAll}
+                    onCopySelection={editorCopySelection}
+                    onCut={editorCutSelection}
+                    onDedupeLines={() => editorApplyRangeEdit(dedupeLinesInBlock)}
+                    onDuplicateBlock={() => editorApplyRangeEdit(duplicateBlockLines)}
+                    onFontSizeChange={setEditorFontSize}
+                    onFormatJson={handleFormatJsonInEditor}
+                    onIndent={() => editorApplyRangeEdit(applyTab)}
+                    onInlineCode={() => editorApplyRangeEdit((v, s, e) => wrapSelection(v, s, e, "`", "`"))}
+                    onInsertCodeFence={() => editorApplyRangeEdit((v, s, e) => insertCodeFence(v, s, e, ""))}
+                    onInsertHeading={() => editorApplyRangeEdit((v, s, e) => insertAtSelection(v, s, e, "# "))}
+                    onInsertHr={() => editorApplyRangeEdit(insertHorizontalRule)}
+                    onInsertLink={() =>
+                      editorApplyRangeEdit((v, s, e) => insertAtSelection(v, s, e, "[Link text](https://example.com)"))
+                    }
+                    onInsertTable={() => editorApplyRangeEdit(insertMarkdownTable)}
+                    onInsertTimestamp={() =>
+                      editorApplyRangeEdit((v, s, e) => insertAtSelection(v, s, e, `${timestampLocal()}\n`))
+                    }
+                    onInsertUuid={() =>
+                      editorApplyRangeEdit((v, s, e) => insertAtSelection(v, s, e, `${crypto.randomUUID()}\n`))
+                    }
+                    onItalic={() => editorApplyRangeEdit((v, s, e) => wrapSelection(v, s, e, "*", "*"))}
+                    onMinifyJson={handleMinifyJsonInEditor}
+                    onNumberList={() => editorApplyRangeEdit(numberBlock)}
+                    onOpenCodeImage={() => setCodeImageOpen(true)}
+                    onOpenImportUrl={() => setImportUrlOpen(true)}
+                    onOpenShortcuts={() => setShortcutsOpen(true)}
+                    onOpenTemplates={() => setTemplatesOpen(true)}
+                    onOutdent={() => editorApplyRangeEdit(applyShiftTab)}
+                    onPaste={editorPasteFromClipboard}
+                    onPrint={handlePrintWorkspace}
+                    onPrintLayoutPresetChange={setPrintLayoutPreset}
+                    onQuote={() => editorApplyRangeEdit(quoteBlock)}
+                    onTogglePrintWrapLongLines={() => setPrintWrapLongLines((v) => !v)}
+                    printLayoutPreset={printLayoutPreset}
+                    printWrapLongLines={printWrapLongLines}
+                    onSelectAll={handleEditorSelectAll}
+                    onSortLines={() => editorApplyRangeEdit(sortLinesInBlock)}
+                    onStrike={() => editorApplyRangeEdit((v, s, e) => wrapSelection(v, s, e, "~~", "~~"))}
+                    onTabChange={setRibbonTab}
+                    onToggleCollapsed={() => setRibbonCollapsed((c) => !c)}
+                    onToggleFind={() => setFindOpen((v) => !v)}
+                    onToggleActiveIndentGuides={() => setEditorActiveIndentGuides((v) => !v)}
+                    onToggleLineNumbers={() => setEditorLineNumbers((v) => !v)}
+                    onToggleMdPreview={toggleMdPreviewRibbon}
+                    onToggleReplace={() => setReplaceOpen((v) => !v)}
+                    onToggleWordWrap={() => setEditorWordWrap((v) => !v)}
+                    onTrimTrailing={() => editorApplyRangeEdit(trimTrailingInBlock)}
+                    onUnderline={() => editorApplyRangeEdit((v, s, e) => wrapSelection(v, s, e, "<u>", "</u>"))}
+                    pasteEditable={Boolean(selectedPaste && selectedPasteInWorkspace)}
+                    replaceOpen={replaceOpen}
+                    tab={ribbonTab}
+                    wordWrap={editorWordWrap}
+                  />
+                </div>
+              </div>
               <div
                 ref={editorPaneScrollRef}
                 className="min-h-0 min-w-0 flex-1 overflow-auto [overflow-anchor:none] print:h-auto print:min-h-0 print:overflow-visible workspace-scrollbar-hide"
@@ -4849,651 +4944,673 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               >
                 <div className="space-y-6 pt-3 print:space-y-4 print:pt-0">
                   {findOpen ? (
-                <div className="flex flex-wrap items-end gap-2 rounded-xl border border-border bg-muted/40 p-3 print:hidden">
-                  <div className="min-w-[160px] flex-1">
-                    <label className="text-xs text-muted-foreground" htmlFor="wox-find-input">
-                      Find in paste
-                    </label>
-                    <Input
-                      className="mt-1"
-                      id="wox-find-input"
-                      onChange={(e) => setFindQuery(e.target.value)}
-                      placeholder="Search text…"
-                      ref={findInputRef}
-                      value={findQuery}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {findQuery
-                      ? `${findMatches.length} match${findMatches.length === 1 ? "" : "es"}`
-                      : "Type to search"}
-                  </p>
-                  <Button
-                    disabled={!findMatches.length}
-                    onClick={() => findInPasteNext(true)}
-                    size="sm"
-                    type="button"
-                    variant="outline"
-                  >
-                    Prev
-                  </Button>
-                  <Button
-                    disabled={!findMatches.length}
-                    onClick={() => findInPasteNext(false)}
-                    size="sm"
-                    type="button"
-                    variant="outline"
-                  >
-                    Next
-                  </Button>
-                  <Button
-                    disabled={!findMatches.length}
-                    onClick={() => findQuery && focusFindMatch(0)}
-                    size="sm"
-                    type="button"
-                    variant="ghost"
-                  >
-                    First
-                  </Button>
-                </div>
-              ) : null}
-
-              {replaceOpen ? (
-                <div className="flex flex-wrap items-end gap-2 rounded-xl border border-border bg-muted/40 p-3 print:hidden">
-                  <div className="min-w-[140px] flex-1">
-                    <label className="text-xs text-muted-foreground" htmlFor="wox-rep-find">
-                      Find
-                    </label>
-                    <Input
-                      className="mt-1"
-                      id="wox-rep-find"
-                      onChange={(e) => setReplaceFind(e.target.value)}
-                      ref={replaceFindInputRef}
-                      value={replaceFind}
-                    />
-                  </div>
-                  <div className="min-w-[140px] flex-1">
-                    <label className="text-xs text-muted-foreground" htmlFor="wox-rep-with">
-                      Replace with
-                    </label>
-                    <Input
-                      className="mt-1"
-                      id="wox-rep-with"
-                      onChange={(e) => setReplaceWith(e.target.value)}
-                      ref={replaceWithInputRef}
-                      value={replaceWith}
-                    />
-                  </div>
-                  <Button onClick={() => replaceInPasteOne()} size="sm" type="button" variant="outline">
-                    Replace
-                  </Button>
-                  <Button onClick={() => replaceInPasteAll()} size="sm" type="button" variant="destructive">
-                    Replace all
-                  </Button>
-                </div>
-              ) : null}
-
-              <div
-                className={
-                  mdPreviewOpen && selectedPaste.language === "markdown"
-                    ? "grid min-h-[min(52dvh,28rem)] gap-5 sm:gap-6 md:min-h-[55vh] lg:grid-cols-2 print:min-h-0 print:grid-cols-1 print:gap-4"
-                    : "grid min-h-[min(52dvh,28rem)] grid-cols-1 gap-5 md:min-h-[55vh] print:min-h-0 print:gap-4"
-                }
-              >
-                <ContextMenu>
-                  <ContextMenuTrigger asChild>
-                    <div className="min-h-0 min-w-0 outline-none print:h-auto print:min-h-0 [&:focus]:outline-none" data-tutorial="editor-main">
-                      <PrismOverlayEditor
-                        activeIndentGuides={editorActiveIndentGuides}
-                        className="print:overflow-visible"
-                        editorFontSizePx={effectiveEditorFontPx}
-                        enableFileDrop={selectedPasteInWorkspace}
-                        language={selectedPaste.language}
-                        lineNumbers={editorLineNumbers}
-                        minHeight="min-h-[min(48dvh,26rem)] md:min-h-[50vh]"
-                        onChange={(next) =>
-                          updateSelectedPaste((paste) => ({
-                            ...paste,
-                            content: next,
-                            updatedAt: new Date().toISOString()
-                          }))
-                        }
-                        onScrollInfo={handleMainEditorScrollInfo}
-                        placeholder="Start writing or paste code here… (drop a text file to append)"
-                        readOnly={!selectedPasteInWorkspace}
-                        ref={mainEditorRef}
-                        syntaxLight={isLightSyntaxTheme(syntaxTheme)}
-                        value={selectedPaste.content}
-                        wordWrap={editorWordWrap}
-                      />
+                    <div className="flex flex-wrap items-end gap-2 rounded-xl border border-border bg-muted/40 p-3 print:hidden">
+                      <div className="min-w-[160px] flex-1">
+                        <label className="text-xs text-muted-foreground" htmlFor="wox-find-input">
+                          Find in paste
+                        </label>
+                        <Input
+                          className="mt-1"
+                          id="wox-find-input"
+                          onChange={(e) => setFindQuery(e.target.value)}
+                          placeholder="Search text…"
+                          ref={findInputRef}
+                          value={findQuery}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {findQuery
+                          ? `${findMatches.length} match${findMatches.length === 1 ? "" : "es"}`
+                          : "Type to search"}
+                      </p>
+                      <Button
+                        disabled={!findMatches.length}
+                        onClick={() => findInPasteNext(true)}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        Prev
+                      </Button>
+                      <Button
+                        disabled={!findMatches.length}
+                        onClick={() => findInPasteNext(false)}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        Next
+                      </Button>
+                      <Button
+                        disabled={!findMatches.length}
+                        onClick={() => findQuery && focusFindMatch(0)}
+                        size="sm"
+                        type="button"
+                        variant="ghost"
+                      >
+                        First
+                      </Button>
                     </div>
-                  </ContextMenuTrigger>
-                  <ContextMenuContent className="w-56">
-                    <ContextMenuLabel>Editor</ContextMenuLabel>
-                    <ContextMenuItem onSelect={editorCutSelection}>
-                      <Scissors className="mr-2 h-4 w-4" />
-                      Cut
-                      <ContextMenuShortcut>⌘X</ContextMenuShortcut>
-                    </ContextMenuItem>
-                    <ContextMenuItem onSelect={editorCopySelection}>
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copy
-                      <ContextMenuShortcut>⌘C</ContextMenuShortcut>
-                    </ContextMenuItem>
-                    <ContextMenuItem onSelect={editorPasteFromClipboard}>
-                      <ClipboardPaste className="mr-2 h-4 w-4" />
-                      Paste
-                      <ContextMenuShortcut>⌘V</ContextMenuShortcut>
-                    </ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem onSelect={handleEditorCopyAll}>
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copy all
-                    </ContextMenuItem>
-                    <ContextMenuItem onSelect={handleEditorSelectAll}>
-                      Select all
-                      <ContextMenuShortcut>⌘A</ContextMenuShortcut>
-                    </ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem
-                      onSelect={() => {
-                        setFindOpen(true);
-                        setRibbonTab("home");
-                      }}
-                    >
-                      <Search className="mr-2 h-4 w-4" />
-                      Find…
-                    </ContextMenuItem>
-                    <ContextMenuItem
-                      onSelect={() => {
-                        setReplaceOpen(true);
-                        setRibbonTab("home");
-                      }}
-                    >
-                      Replace…
-                    </ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuSub>
-                      <ContextMenuSubTrigger>
-                        <FileJson className="mr-2 h-4 w-4" />
-                        JSON
-                      </ContextMenuSubTrigger>
-                      <ContextMenuSubContent className="w-48">
-                        <ContextMenuItem onSelect={() => void handleFormatJsonInEditor()}>
-                          Pretty-print document
-                        </ContextMenuItem>
-                        <ContextMenuItem onSelect={() => void handleMinifyJsonInEditor()}>
-                          Minify document
-                        </ContextMenuItem>
-                      </ContextMenuSubContent>
-                    </ContextMenuSub>
-                    <ContextMenuItem onSelect={editorSelectBracketPair}>
-                      <Brackets className="mr-2 h-4 w-4" />
-                      Select matching bracket
-                      <ContextMenuShortcut>⌘⇧B</ContextMenuShortcut>
-                    </ContextMenuItem>
-                    {selectedPaste.language === "markdown" ? (
-                      <ContextMenuItem
-                        onSelect={() => {
-                          toggleMdPreviewRibbon();
-                          setRibbonTab("home");
-                        }}
-                      >
-                        <PanelRight className="mr-2 h-4 w-4" />
-                        {mdPreviewOpen ? "Hide Markdown preview" : "Show Markdown preview"}
-                      </ContextMenuItem>
-                    ) : null}
-                    <ContextMenuSeparator />
-                    <ContextMenuItem onSelect={() => void handlePrintWorkspace()}>
-                      <Printer className="mr-2 h-4 w-4" />
-                      Print…
-                    </ContextMenuItem>
-                    <ContextMenuItem onSelect={() => setCodeImageOpen(true)}>
-                      <ImageIcon className="mr-2 h-4 w-4" />
-                      Export code as image…
-                    </ContextMenuItem>
-                    <ContextMenuItem onSelect={() => setTemplatesOpen(true)}>
-                      <LayoutTemplate className="mr-2 h-4 w-4" />
-                      Templates…
-                    </ContextMenuItem>
-                    <ContextMenuItem onSelect={() => setShortcutsOpen(true)}>
-                      <Keyboard className="mr-2 h-4 w-4" />
-                      Keyboard shortcuts…
-                    </ContextMenuItem>
-                    {sessionUser ? (
-                      <ContextMenuItem onSelect={() => setImportUrlOpen(true)}>
-                        <Link2 className="mr-2 h-4 w-4" />
-                        Import from URL…
-                      </ContextMenuItem>
-                    ) : null}
-                    <ContextMenuSeparator />
-                    <ContextMenuItem onSelect={() => setEditorWordWrap((w) => !w)}>
-                      {editorWordWrap ? "Disable word wrap" : "Enable word wrap"}
-                    </ContextMenuItem>
-                    <ContextMenuItem
-                      disabled={editorWordWrap}
-                      onSelect={() => setEditorActiveIndentGuides((g) => !g)}
-                    >
-                      {editorActiveIndentGuides ? "Hide active indent guides" : "Show active indent guides"}
-                    </ContextMenuItem>
-                    <ContextMenuItem onSelect={() => setEditorLineNumbers((n) => !n)}>
-                      {editorLineNumbers ? "Hide line numbers" : "Show line numbers"}
-                    </ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem onSelect={() => void handleSavePaste()}>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save paste
-                      <ContextMenuShortcut>⌘S</ContextMenuShortcut>
-                    </ContextMenuItem>
-                    <ContextMenuItem onSelect={handleDuplicatePaste}>
-                      <WandSparkles className="mr-2 h-4 w-4" />
-                      Fork paste
-                    </ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onSelect={editorClearDocument}
-                    >
-                      <Eraser className="mr-2 h-4 w-4" />
-                      Clear document…
-                    </ContextMenuItem>
-                  </ContextMenuContent>
-                </ContextMenu>
-                {mdPreviewOpen && selectedPaste.language === "markdown" ? (
-                  <ContextMenu>
-                    <ContextMenuTrigger asChild>
-                      <div
-                        className="wox-user-markdown wox-markdown-preview min-h-[min(48dvh,26rem)] overflow-y-auto rounded-[1.25rem] border border-border bg-muted/60 p-4 text-sm leading-relaxed text-foreground outline-none print:hidden md:min-h-[50vh] dark:bg-black/30"
-                        dangerouslySetInnerHTML={{
-                          __html: markdownPreviewHtml || "<p class='text-muted-foreground'>Nothing to preview.</p>"
-                        }}
-                        onScroll={(e) => {
-                          const pv = e.currentTarget;
-                          if (mdScrollLock.current === "editor") {
-                            return;
-                          }
-                          mdScrollLock.current = "preview";
-                          const pvMax = Math.max(1, pv.scrollHeight - pv.clientHeight);
-                          const ratio = pvMax ? pv.scrollTop / pvMax : 0;
-                          mainEditorRef.current?.setScrollRatio(ratio);
-                          requestAnimationFrame(() => {
-                            mdScrollLock.current = null;
-                          });
-                        }}
-                        ref={mdPreviewRef}
-                      />
-                    </ContextMenuTrigger>
-                    <ContextMenuContent className="w-52">
-                      <ContextMenuLabel>Markdown preview</ContextMenuLabel>
-                      <ContextMenuItem
-                        onSelect={() => {
-                          void navigator.clipboard.writeText(selectedPaste.content);
-                          setStatus("Copied Markdown source.");
-                        }}
-                      >
-                        <Copy className="mr-2 h-4 w-4" />
-                        Copy Markdown source
-                      </ContextMenuItem>
-                      <ContextMenuItem onSelect={toggleMdPreviewRibbon}>
-                        <PanelRight className="mr-2 h-4 w-4" />
-                        Toggle preview pane
-                      </ContextMenuItem>
-                      {!isAccountOnlyDraft(selectedPaste, mode) &&
-                      selectedPaste.slug &&
-                      selectedPaste.visibility !== "private" ? (
-                        <ContextMenuItem
-                          onSelect={() => {
-                            window.open(
-                              getPasteShareUrl(window.location.origin, selectedPaste.slug, selectedPaste.secretMode),
-                              "_blank",
-                              "noopener,noreferrer"
-                            );
-                          }}
-                        >
-                          <ExternalLink className="mr-2 h-4 w-4" />
-                          Open public page
-                        </ContextMenuItem>
-                      ) : null}
-                      {!isAccountOnlyDraft(selectedPaste, mode) &&
-                      selectedPaste.slug &&
-                      selectedPaste.visibility !== "private" ? (
-                        <ContextMenuItem
-                          onSelect={() => {
-                            const url = `${window.location.origin}/raw/${selectedPaste.slug}`;
-                            void navigator.clipboard.writeText(url);
-                            setStatus("Copied raw URL.");
-                          }}
-                        >
-                          <Link2 className="mr-2 h-4 w-4" />
-                          Copy raw URL
-                        </ContextMenuItem>
-                      ) : null}
-                    </ContextMenuContent>
-                  </ContextMenu>
-                ) : null}
-              </div>
+                  ) : null}
 
-              <FileDropSurface
-                activeClassName="rounded-2xl ring-2 ring-primary/20"
-                className="relative space-y-4 print:hidden"
-                data-tutorial="files-section"
-                disabled={!selectedPasteInWorkspace}
-                onFiles={(files) => {
-                  for (const f of files) {
-                    attachMediaFromFile(f, null);
-                  }
-                }}
-                overlayClassName="rounded-2xl"
-                overlayMessage="Drop images or videos to attach"
-              >
-                <input
-                  accept="image/png,image/jpeg,image/gif,image/webp,image/avif,image/bmp,video/mp4,video/webm,video/quicktime,video/ogg"
-                  aria-label="Attach image or video file to this paste"
-                  className="hidden"
-                  onChange={handlePasteAttachmentMediaPick}
-                  ref={pasteMediaFileInputRef}
-                  tabIndex={-1}
-                  type="file"
-                />
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Files</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Text/code attachments plus optional images and videos (stored as base64; counts toward your paste size
-                      limit). <span className="font-medium text-foreground/85">Drag &amp; drop</span> media here.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      disabled={!selectedPasteInWorkspace}
-                      onClick={() => {
-                        setPasteMediaAttachIndex(null);
-                        pasteMediaFileInputRef.current?.click();
-                      }}
-                      size="sm"
-                      type="button"
-                      variant="outline"
-                    >
-                      <ImageIcon className="h-4 w-4" />
-                      <Video className="h-4 w-4" />
-                      Add media
-                    </Button>
-                    <Button
-                      disabled={!selectedPasteInWorkspace}
-                      onClick={() =>
-                        updateSelectedPaste((paste) => ({
-                          ...paste,
-                          files: [
-                            ...paste.files,
-                            {
-                              filename: `file-${paste.files.length + 1}.txt`,
-                              content: "",
-                              language: paste.language,
-                              mediaKind: null,
-                              mimeType: null
+                  {replaceOpen ? (
+                    <div className="flex flex-wrap items-end gap-2 rounded-xl border border-border bg-muted/40 p-3 print:hidden">
+                      <div className="min-w-[140px] flex-1">
+                        <label className="text-xs text-muted-foreground" htmlFor="wox-rep-find">
+                          Find
+                        </label>
+                        <Input
+                          className="mt-1"
+                          id="wox-rep-find"
+                          onChange={(e) => setReplaceFind(e.target.value)}
+                          ref={replaceFindInputRef}
+                          value={replaceFind}
+                        />
+                      </div>
+                      <div className="min-w-[140px] flex-1">
+                        <label className="text-xs text-muted-foreground" htmlFor="wox-rep-with">
+                          Replace with
+                        </label>
+                        <Input
+                          className="mt-1"
+                          id="wox-rep-with"
+                          onChange={(e) => setReplaceWith(e.target.value)}
+                          ref={replaceWithInputRef}
+                          value={replaceWith}
+                        />
+                      </div>
+                      <Button onClick={() => replaceInPasteOne()} size="sm" type="button" variant="outline">
+                        Replace
+                      </Button>
+                      <Button onClick={() => replaceInPasteAll()} size="sm" type="button" variant="destructive">
+                        Replace all
+                      </Button>
+                    </div>
+                  ) : null}
+
+                  <div
+                    className={
+                      mdPreviewOpen && selectedPaste.language === "markdown"
+                        ? "grid min-h-[min(52dvh,28rem)] gap-5 sm:gap-6 md:min-h-[55vh] lg:grid-cols-2 print:min-h-0 print:grid-cols-1 print:gap-4"
+                        : "grid min-h-[min(52dvh,28rem)] grid-cols-1 gap-5 md:min-h-[55vh] print:min-h-0 print:gap-4"
+                    }
+                  >
+                    <ContextMenu>
+                      <ContextMenuTrigger asChild>
+                        <div
+                          className="min-h-0 min-w-0 outline-none print:h-auto print:min-h-0 [&:focus]:outline-none"
+                          data-tutorial="editor-main"
+                        >
+                          <PrismOverlayEditor
+                            activeIndentGuides={editorActiveIndentGuides}
+                            className="print:overflow-visible"
+                            editorFontSizePx={effectiveEditorFontPx}
+                            enableFileDrop={selectedPasteInWorkspace}
+                            language={selectedPaste.language}
+                            lineNumbers={editorLineNumbers}
+                            minHeight="min-h-[min(48dvh,26rem)] md:min-h-[50vh]"
+                            onChange={(next) =>
+                              updateSelectedPaste((paste) => ({
+                                ...paste,
+                                content: next,
+                                updatedAt: new Date().toISOString()
+                              }))
                             }
-                          ],
-                          updatedAt: new Date().toISOString()
-                        }))
-                      }
-                      size="sm"
-                      type="button"
-                      variant="outline"
-                    >
-                      <FilePlus2 className="h-4 w-4" />
-                      Add file
-                    </Button>
-                  </div>
-                </div>
-
-                {selectedPaste.files.length === 0 ? (
-                  <div className="rounded-[1.25rem] border border-dashed border-border bg-muted/50 p-4 text-sm text-muted-foreground dark:bg-black/10">
-                    No attached files yet. Add a text file for extra snippets, attach an image or video, or{" "}
-                    <span className="font-medium text-foreground/85">drop media files</span> into this section.
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {selectedPaste.files.map((file, index) => {
-                      const isMedia = isPasteFileMedia(file);
-                      const mediaSrc = isMedia ? dataUrlFromPasteFile(file) : null;
-                      return (
-                        <div key={`${file.filename}-${index}`} className="rounded-[1.25rem] border border-border bg-muted/40 p-4">
-                          <div className="grid gap-3 md:grid-cols-[1fr_180px_auto]">
-                            <Input
-                              disabled={!selectedPasteInWorkspace}
-                              onChange={(event) =>
-                                updateSelectedPaste((paste) => ({
-                                  ...paste,
-                                  files: paste.files.map((entry, entryIndex) =>
-                                    entryIndex === index ? { ...entry, filename: event.target.value } : entry
-                                  ),
-                                  updatedAt: new Date().toISOString()
-                                }))
+                            onScrollInfo={handleMainEditorScrollInfo}
+                            placeholder="Start writing or paste code here… (drop a text file to append)"
+                            readOnly={!selectedPasteInWorkspace}
+                            ref={mainEditorRef}
+                            syntaxLight={isLightSyntaxTheme(syntaxTheme)}
+                            value={selectedPaste.content}
+                            wordWrap={editorWordWrap}
+                          />
+                        </div>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent className="w-56">
+                        <ContextMenuLabel>Editor</ContextMenuLabel>
+                        <ContextMenuItem onSelect={editorCutSelection}>
+                          <Scissors className="mr-2 h-4 w-4" />
+                          Cut
+                          <ContextMenuShortcut>⌘X</ContextMenuShortcut>
+                        </ContextMenuItem>
+                        <ContextMenuItem onSelect={editorCopySelection}>
+                          <Copy className="mr-2 h-4 w-4" />
+                          Copy
+                          <ContextMenuShortcut>⌘C</ContextMenuShortcut>
+                        </ContextMenuItem>
+                        <ContextMenuItem onSelect={editorPasteFromClipboard}>
+                          <ClipboardPaste className="mr-2 h-4 w-4" />
+                          Paste
+                          <ContextMenuShortcut>⌘V</ContextMenuShortcut>
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem onSelect={handleEditorCopyAll}>
+                          <Copy className="mr-2 h-4 w-4" />
+                          Copy all
+                        </ContextMenuItem>
+                        <ContextMenuItem onSelect={handleEditorSelectAll}>
+                          Select all
+                          <ContextMenuShortcut>⌘A</ContextMenuShortcut>
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem
+                          onSelect={() => {
+                            setFindOpen(true);
+                            setRibbonTab("home");
+                          }}
+                        >
+                          <Search className="mr-2 h-4 w-4" />
+                          Find…
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          onSelect={() => {
+                            setReplaceOpen(true);
+                            setRibbonTab("home");
+                          }}
+                        >
+                          Replace…
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuSub>
+                          <ContextMenuSubTrigger>
+                            <FileJson className="mr-2 h-4 w-4" />
+                            JSON
+                          </ContextMenuSubTrigger>
+                          <ContextMenuSubContent className="w-48">
+                            <ContextMenuItem onSelect={() => void handleFormatJsonInEditor()}>
+                              Pretty-print document
+                            </ContextMenuItem>
+                            <ContextMenuItem onSelect={() => void handleMinifyJsonInEditor()}>
+                              Minify document
+                            </ContextMenuItem>
+                          </ContextMenuSubContent>
+                        </ContextMenuSub>
+                        <ContextMenuItem onSelect={editorSelectBracketPair}>
+                          <Brackets className="mr-2 h-4 w-4" />
+                          Select matching bracket
+                          <ContextMenuShortcut>⌘⇧B</ContextMenuShortcut>
+                        </ContextMenuItem>
+                        {selectedPaste.language === "markdown" ? (
+                          <ContextMenuItem
+                            onSelect={() => {
+                              toggleMdPreviewRibbon();
+                              setRibbonTab("home");
+                            }}
+                          >
+                            <PanelRight className="mr-2 h-4 w-4" />
+                            {mdPreviewOpen ? "Hide Markdown preview" : "Show Markdown preview"}
+                          </ContextMenuItem>
+                        ) : null}
+                        <ContextMenuSeparator />
+                        <ContextMenuItem onSelect={() => void handlePrintWorkspace()}>
+                          <Printer className="mr-2 h-4 w-4" />
+                          Print…
+                        </ContextMenuItem>
+                        <ContextMenuItem onSelect={() => setCodeImageOpen(true)}>
+                          <ImageIcon className="mr-2 h-4 w-4" />
+                          Export code as image…
+                        </ContextMenuItem>
+                        <ContextMenuItem onSelect={() => setTemplatesOpen(true)}>
+                          <LayoutTemplate className="mr-2 h-4 w-4" />
+                          Templates…
+                        </ContextMenuItem>
+                        <ContextMenuItem onSelect={() => setShortcutsOpen(true)}>
+                          <Keyboard className="mr-2 h-4 w-4" />
+                          Keyboard shortcuts…
+                        </ContextMenuItem>
+                        {sessionUser ? (
+                          <ContextMenuItem onSelect={() => setImportUrlOpen(true)}>
+                            <Link2 className="mr-2 h-4 w-4" />
+                            Import from URL…
+                          </ContextMenuItem>
+                        ) : null}
+                        <ContextMenuSeparator />
+                        <ContextMenuItem onSelect={() => setEditorWordWrap((w) => !w)}>
+                          {editorWordWrap ? "Disable word wrap" : "Enable word wrap"}
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          disabled={editorWordWrap}
+                          onSelect={() => setEditorActiveIndentGuides((g) => !g)}
+                        >
+                          {editorActiveIndentGuides ? "Hide active indent guides" : "Show active indent guides"}
+                        </ContextMenuItem>
+                        <ContextMenuItem onSelect={() => setEditorLineNumbers((n) => !n)}>
+                          {editorLineNumbers ? "Hide line numbers" : "Show line numbers"}
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem onSelect={() => void handleSavePaste()}>
+                          <Save className="mr-2 h-4 w-4" />
+                          Save paste
+                          <ContextMenuShortcut>⌘S</ContextMenuShortcut>
+                        </ContextMenuItem>
+                        <ContextMenuItem onSelect={handleDuplicatePaste}>
+                          <WandSparkles className="mr-2 h-4 w-4" />
+                          Fork paste
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onSelect={editorClearDocument}
+                        >
+                          <Eraser className="mr-2 h-4 w-4" />
+                          Clear document…
+                        </ContextMenuItem>
+                      </ContextMenuContent>
+                    </ContextMenu>
+                    {mdPreviewOpen && selectedPaste.language === "markdown" ? (
+                      <ContextMenu>
+                        <ContextMenuTrigger asChild>
+                          <div
+                            className="wox-user-markdown wox-markdown-preview min-h-[min(48dvh,26rem)] overflow-y-auto rounded-[1.25rem] border border-border bg-muted/60 p-4 text-sm leading-relaxed text-foreground outline-none print:hidden md:min-h-[50vh] dark:bg-black/30"
+                            dangerouslySetInnerHTML={{
+                              __html: markdownPreviewHtml || "<p class='text-muted-foreground'>Nothing to preview.</p>"
+                            }}
+                            onScroll={(e) => {
+                              const pv = e.currentTarget;
+                              if (mdScrollLock.current === "editor") {
+                                return;
                               }
-                              placeholder="Filename"
-                              value={file.filename}
-                            />
-                            {isMedia ? (
-                              <div className="flex h-11 items-center">
-                                <Badge className="capitalize border-border bg-muted text-foreground">{file.mediaKind}</Badge>
-                              </div>
-                            ) : (
-                              <select
-                                className="h-11 w-full rounded-2xl border border-border bg-card/80 px-4 text-sm"
-                                disabled={!selectedPasteInWorkspace}
-                                id={`wox-paste-file-language-${index}`}
-                                title="Syntax highlighting language for this attachment"
-                                onChange={(event) =>
-                                  updateSelectedPaste((paste) => ({
-                                    ...paste,
-                                    files: paste.files.map((entry, entryIndex) =>
-                                      entryIndex === index
-                                        ? {
-                                            ...entry,
-                                            language: event.target.value,
-                                            mediaKind: null,
-                                            mimeType: null
-                                          }
-                                        : entry
-                                    ),
-                                    updatedAt: new Date().toISOString()
-                                  }))
-                                }
-                                value={file.language}
-                              >
-                                {LANGUAGES.map((language) => (
-                                  <option key={`${file.filename}-${language}`} value={language}>
-                                    {language}
-                                  </option>
-                                ))}
-                              </select>
-                            )}
-                            <div className="flex flex-wrap items-center gap-1">
-                              {isMedia ? (
-                                <Button
-                                  disabled={!selectedPasteInWorkspace}
-                                  onClick={() => {
-                                    setPasteMediaAttachIndex(index);
-                                    pasteMediaFileInputRef.current?.click();
-                                  }}
-                                  size="sm"
-                                  type="button"
-                                  variant="outline"
-                                >
-                                  Replace
-                                </Button>
-                              ) : null}
-                              <Button
-                                disabled={!selectedPasteInWorkspace}
-                                onClick={() =>
-                                  updateSelectedPaste((paste) => ({
-                                    ...paste,
-                                    files: paste.files.filter((_, entryIndex) => entryIndex !== index),
-                                    updatedAt: new Date().toISOString()
-                                  }))
-                                }
-                                size="sm"
-                                type="button"
-                                variant="ghost"
-                              >
-                                Remove
-                              </Button>
-                            </div>
-                          </div>
-                          {isMedia && mediaSrc ? (
-                            <ContextMenu>
-                              <ContextMenuTrigger asChild>
-                                <div className="mt-3 overflow-hidden rounded-[1rem] border border-border bg-black/20">
-                                  {file.mediaKind === "image" ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img
-                                      alt=""
-                                      className="max-h-[min(70vh,520px)] w-full object-contain"
-                                      src={mediaSrc}
-                                    />
-                                  ) : (
-                                    <video className="max-h-[min(70vh,520px)] w-full" controls preload="metadata" src={mediaSrc} />
-                                  )}
-                                </div>
-                              </ContextMenuTrigger>
-                              <ContextMenuContent className="w-52">
-                                <ContextMenuLabel className="max-w-[12rem] truncate">{file.filename}</ContextMenuLabel>
-                                <ContextMenuItem
-                                  onSelect={() => {
-                                    const url = dataUrlFromPasteFile(file);
-                                    if (url) {
-                                      void navigator.clipboard.writeText(url);
-                                      setStatus("Copied data URL (can be large).");
-                                    }
-                                  }}
-                                >
-                                  <Copy className="mr-2 h-4 w-4" />
-                                  Copy data URL
-                                </ContextMenuItem>
-                                <ContextMenuItem
-                                  onSelect={() => {
-                                    void navigator.clipboard.writeText(file.filename);
-                                    setStatus(`Copied filename "${file.filename}".`);
-                                  }}
-                                >
-                                  <FileText className="mr-2 h-4 w-4" />
-                                  Copy filename
-                                </ContextMenuItem>
-                              </ContextMenuContent>
-                            </ContextMenu>
+                              mdScrollLock.current = "preview";
+                              const pvMax = Math.max(1, pv.scrollHeight - pv.clientHeight);
+                              const ratio = pvMax ? pv.scrollTop / pvMax : 0;
+                              mainEditorRef.current?.setScrollRatio(ratio);
+                              requestAnimationFrame(() => {
+                                mdScrollLock.current = null;
+                              });
+                            }}
+                            ref={mdPreviewRef}
+                          />
+                        </ContextMenuTrigger>
+                        <ContextMenuContent className="w-52">
+                          <ContextMenuLabel>Markdown preview</ContextMenuLabel>
+                          <ContextMenuItem
+                            onSelect={() => {
+                              void navigator.clipboard.writeText(selectedPaste.content);
+                              setStatus("Copied Markdown source.");
+                            }}
+                          >
+                            <Copy className="mr-2 h-4 w-4" />
+                            Copy Markdown source
+                          </ContextMenuItem>
+                          <ContextMenuItem onSelect={toggleMdPreviewRibbon}>
+                            <PanelRight className="mr-2 h-4 w-4" />
+                            Toggle preview pane
+                          </ContextMenuItem>
+                          {!isAccountOnlyDraft(selectedPaste, mode) &&
+                          selectedPaste.slug &&
+                          selectedPaste.visibility !== "private" ? (
+                            <ContextMenuItem
+                              onSelect={() => {
+                                window.open(
+                                  getPasteShareUrl(
+                                    window.location.origin,
+                                    selectedPaste.slug,
+                                    selectedPaste.secretMode
+                                  ),
+                                  "_blank",
+                                  "noopener,noreferrer"
+                                );
+                              }}
+                            >
+                              <ExternalLink className="mr-2 h-4 w-4" />
+                              Open public page
+                            </ContextMenuItem>
                           ) : null}
-                          {!isMedia ? (
-                            <ContextMenu>
-                              <ContextMenuTrigger asChild>
-                                <div className="mt-3 min-h-0 outline-none [&:focus]:outline-none">
-                                  <PrismOverlayEditor
-                                    activeIndentGuides={editorActiveIndentGuides}
-                                    editorFontSizePx={effectiveEditorFontPx}
-                                    enableFileDrop={selectedPasteInWorkspace}
-                                    language={file.language}
-                                    lineNumbers={false}
-                                    minHeight="min-h-[180px]"
-                                    onChange={(next) =>
+                          {!isAccountOnlyDraft(selectedPaste, mode) &&
+                          selectedPaste.slug &&
+                          selectedPaste.visibility !== "private" ? (
+                            <ContextMenuItem
+                              onSelect={() => {
+                                const url = `${window.location.origin}/raw/${selectedPaste.slug}`;
+                                void navigator.clipboard.writeText(url);
+                                setStatus("Copied raw URL.");
+                              }}
+                            >
+                              <Link2 className="mr-2 h-4 w-4" />
+                              Copy raw URL
+                            </ContextMenuItem>
+                          ) : null}
+                        </ContextMenuContent>
+                      </ContextMenu>
+                    ) : null}
+                  </div>
+
+                  <FileDropSurface
+                    activeClassName="rounded-2xl ring-2 ring-primary/20"
+                    className="defer-section relative space-y-4 print:hidden"
+                    data-tutorial="files-section"
+                    disabled={!selectedPasteInWorkspace}
+                    onFiles={(files) => {
+                      for (const f of files) {
+                        attachMediaFromFile(f, null);
+                      }
+                    }}
+                    overlayClassName="rounded-2xl"
+                    overlayMessage="Drop images or videos to attach"
+                  >
+                    <input
+                      accept="image/png,image/jpeg,image/gif,image/webp,image/avif,image/bmp,video/mp4,video/webm,video/quicktime,video/ogg"
+                      aria-label="Attach image or video file to this paste"
+                      className="hidden"
+                      onChange={handlePasteAttachmentMediaPick}
+                      ref={pasteMediaFileInputRef}
+                      tabIndex={-1}
+                      type="file"
+                    />
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Files</p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Text/code attachments plus optional images and videos (stored as base64; counts toward your
+                          paste size limit). <span className="font-medium text-foreground/85">Drag &amp; drop</span>{" "}
+                          media here.
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          disabled={!selectedPasteInWorkspace}
+                          onClick={() => {
+                            setPasteMediaAttachIndex(null);
+                            pasteMediaFileInputRef.current?.click();
+                          }}
+                          size="sm"
+                          type="button"
+                          variant="outline"
+                        >
+                          <ImageIcon className="h-4 w-4" />
+                          <Video className="h-4 w-4" />
+                          Add media
+                        </Button>
+                        <Button
+                          disabled={!selectedPasteInWorkspace}
+                          onClick={() =>
+                            updateSelectedPaste((paste) => ({
+                              ...paste,
+                              files: [
+                                ...paste.files,
+                                {
+                                  filename: `file-${paste.files.length + 1}.txt`,
+                                  content: "",
+                                  language: paste.language,
+                                  mediaKind: null,
+                                  mimeType: null
+                                }
+                              ],
+                              updatedAt: new Date().toISOString()
+                            }))
+                          }
+                          size="sm"
+                          type="button"
+                          variant="outline"
+                        >
+                          <FilePlus2 className="h-4 w-4" />
+                          Add file
+                        </Button>
+                      </div>
+                    </div>
+
+                    {selectedPaste.files.length === 0 ? (
+                      <div className="rounded-[1.25rem] border border-dashed border-border bg-muted/50 p-4 text-sm text-muted-foreground dark:bg-black/10">
+                        No attached files yet. Add a text file for extra snippets, attach an image or video, or{" "}
+                        <span className="font-medium text-foreground/85">drop media files</span> into this section.
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {selectedPaste.files.map((file, index) => {
+                          const isMedia = isPasteFileMedia(file);
+                          const mediaSrc = isMedia ? dataUrlFromPasteFile(file) : null;
+                          return (
+                            <div
+                              key={`${file.filename}-${index}`}
+                              className="rounded-[1.25rem] border border-border bg-muted/40 p-4"
+                            >
+                              <div className="grid gap-3 md:grid-cols-[1fr_180px_auto]">
+                                <Input
+                                  disabled={!selectedPasteInWorkspace}
+                                  onChange={(event) =>
+                                    updateSelectedPaste((paste) => ({
+                                      ...paste,
+                                      files: paste.files.map((entry, entryIndex) =>
+                                        entryIndex === index ? { ...entry, filename: event.target.value } : entry
+                                      ),
+                                      updatedAt: new Date().toISOString()
+                                    }))
+                                  }
+                                  placeholder="Filename"
+                                  value={file.filename}
+                                />
+                                {isMedia ? (
+                                  <div className="flex h-11 items-center">
+                                    <Badge className="capitalize border-border bg-muted text-foreground">
+                                      {file.mediaKind}
+                                    </Badge>
+                                  </div>
+                                ) : (
+                                  <select
+                                    className="h-11 w-full rounded-2xl border border-border bg-card/80 px-4 text-sm"
+                                    disabled={!selectedPasteInWorkspace}
+                                    id={`wox-paste-file-language-${index}`}
+                                    title="Syntax highlighting language for this attachment"
+                                    onChange={(event) =>
                                       updateSelectedPaste((paste) => ({
                                         ...paste,
                                         files: paste.files.map((entry, entryIndex) =>
-                                          entryIndex === index ? { ...entry, content: next } : entry
+                                          entryIndex === index
+                                            ? {
+                                                ...entry,
+                                                language: event.target.value,
+                                                mediaKind: null,
+                                                mimeType: null
+                                              }
+                                            : entry
                                         ),
                                         updatedAt: new Date().toISOString()
                                       }))
                                     }
-                                    placeholder="File content"
-                                    readOnly={!selectedPasteInWorkspace}
-                                    syntaxLight={isLightSyntaxTheme(syntaxTheme)}
-                                    value={file.content}
-                                    wordWrap={editorWordWrap}
-                                  />
-                                </div>
-                              </ContextMenuTrigger>
-                              <ContextMenuContent className="w-52">
-                                <ContextMenuLabel className="max-w-[12rem] truncate">{file.filename}</ContextMenuLabel>
-                                <ContextMenuItem
-                                  onSelect={() => {
-                                    void navigator.clipboard.writeText(file.content);
-                                    setStatus(`Copied "${file.filename}" to clipboard.`);
-                                  }}
-                                >
-                                  <Copy className="mr-2 h-4 w-4" />
-                                  Copy all
-                                </ContextMenuItem>
-                                <ContextMenuItem
-                                  onSelect={() => {
-                                    void navigator.clipboard.writeText(file.filename);
-                                    setStatus(`Copied filename "${file.filename}".`);
-                                  }}
-                                >
-                                  <FileText className="mr-2 h-4 w-4" />
-                                  Copy filename
-                                </ContextMenuItem>
-                                <ContextMenuItem
-                                  onSelect={() => {
-                                    if (!confirm(`Clear contents of "${file.filename}"?`)) {
-                                      return;
+                                    value={file.language}
+                                  >
+                                    {LANGUAGES.map((language) => (
+                                      <option key={`${file.filename}-${language}`} value={language}>
+                                        {language}
+                                      </option>
+                                    ))}
+                                  </select>
+                                )}
+                                <div className="flex flex-wrap items-center gap-1">
+                                  {isMedia ? (
+                                    <Button
+                                      disabled={!selectedPasteInWorkspace}
+                                      onClick={() => {
+                                        setPasteMediaAttachIndex(index);
+                                        pasteMediaFileInputRef.current?.click();
+                                      }}
+                                      size="sm"
+                                      type="button"
+                                      variant="outline"
+                                    >
+                                      Replace
+                                    </Button>
+                                  ) : null}
+                                  <Button
+                                    disabled={!selectedPasteInWorkspace}
+                                    onClick={() =>
+                                      updateSelectedPaste((paste) => ({
+                                        ...paste,
+                                        files: paste.files.filter((_, entryIndex) => entryIndex !== index),
+                                        updatedAt: new Date().toISOString()
+                                      }))
                                     }
-                                    updateSelectedPaste((paste) => ({
-                                      ...paste,
-                                      files: paste.files.map((entry, entryIndex) =>
-                                        entryIndex === index ? { ...entry, content: "" } : entry
-                                      ),
-                                      updatedAt: new Date().toISOString()
-                                    }));
-                                  }}
-                                >
-                                  <Eraser className="mr-2 h-4 w-4" />
-                                  Clear file…
-                                </ContextMenuItem>
-                              </ContextMenuContent>
-                            </ContextMenu>
-                          ) : null}
-                          {isMedia && !mediaSrc ? (
-                            <p className="mt-3 text-sm text-destructive">
-                              Missing or invalid media data. Replace the attachment or remove it.
-                            </p>
-                          ) : null}
-                        </div>
-                      );
-                    })}
+                                    size="sm"
+                                    type="button"
+                                    variant="ghost"
+                                  >
+                                    Remove
+                                  </Button>
+                                </div>
+                              </div>
+                              {isMedia && mediaSrc ? (
+                                <ContextMenu>
+                                  <ContextMenuTrigger asChild>
+                                    <div className="mt-3 overflow-hidden rounded-[1rem] border border-border bg-black/20">
+                                      {file.mediaKind === "image" ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img
+                                          alt=""
+                                          className="max-h-[min(70vh,520px)] w-full object-contain"
+                                          src={mediaSrc}
+                                        />
+                                      ) : (
+                                        <video
+                                          className="max-h-[min(70vh,520px)] w-full"
+                                          controls
+                                          preload="metadata"
+                                          src={mediaSrc}
+                                        />
+                                      )}
+                                    </div>
+                                  </ContextMenuTrigger>
+                                  <ContextMenuContent className="w-52">
+                                    <ContextMenuLabel className="max-w-[12rem] truncate">
+                                      {file.filename}
+                                    </ContextMenuLabel>
+                                    <ContextMenuItem
+                                      onSelect={() => {
+                                        const url = dataUrlFromPasteFile(file);
+                                        if (url) {
+                                          void navigator.clipboard.writeText(url);
+                                          setStatus("Copied data URL (can be large).");
+                                        }
+                                      }}
+                                    >
+                                      <Copy className="mr-2 h-4 w-4" />
+                                      Copy data URL
+                                    </ContextMenuItem>
+                                    <ContextMenuItem
+                                      onSelect={() => {
+                                        void navigator.clipboard.writeText(file.filename);
+                                        setStatus(`Copied filename "${file.filename}".`);
+                                      }}
+                                    >
+                                      <FileText className="mr-2 h-4 w-4" />
+                                      Copy filename
+                                    </ContextMenuItem>
+                                  </ContextMenuContent>
+                                </ContextMenu>
+                              ) : null}
+                              {!isMedia ? (
+                                <ContextMenu>
+                                  <ContextMenuTrigger asChild>
+                                    <div className="mt-3 min-h-0 outline-none [&:focus]:outline-none">
+                                      <PrismOverlayEditor
+                                        activeIndentGuides={editorActiveIndentGuides}
+                                        editorFontSizePx={effectiveEditorFontPx}
+                                        enableFileDrop={selectedPasteInWorkspace}
+                                        language={file.language}
+                                        lineNumbers={false}
+                                        minHeight="min-h-[180px]"
+                                        onChange={(next) =>
+                                          updateSelectedPaste((paste) => ({
+                                            ...paste,
+                                            files: paste.files.map((entry, entryIndex) =>
+                                              entryIndex === index ? { ...entry, content: next } : entry
+                                            ),
+                                            updatedAt: new Date().toISOString()
+                                          }))
+                                        }
+                                        placeholder="File content"
+                                        readOnly={!selectedPasteInWorkspace}
+                                        syntaxLight={isLightSyntaxTheme(syntaxTheme)}
+                                        value={file.content}
+                                        wordWrap={editorWordWrap}
+                                      />
+                                    </div>
+                                  </ContextMenuTrigger>
+                                  <ContextMenuContent className="w-52">
+                                    <ContextMenuLabel className="max-w-[12rem] truncate">
+                                      {file.filename}
+                                    </ContextMenuLabel>
+                                    <ContextMenuItem
+                                      onSelect={() => {
+                                        void navigator.clipboard.writeText(file.content);
+                                        setStatus(`Copied "${file.filename}" to clipboard.`);
+                                      }}
+                                    >
+                                      <Copy className="mr-2 h-4 w-4" />
+                                      Copy all
+                                    </ContextMenuItem>
+                                    <ContextMenuItem
+                                      onSelect={() => {
+                                        void navigator.clipboard.writeText(file.filename);
+                                        setStatus(`Copied filename "${file.filename}".`);
+                                      }}
+                                    >
+                                      <FileText className="mr-2 h-4 w-4" />
+                                      Copy filename
+                                    </ContextMenuItem>
+                                    <ContextMenuItem
+                                      onSelect={() => {
+                                        if (!confirm(`Clear contents of "${file.filename}"?`)) {
+                                          return;
+                                        }
+                                        updateSelectedPaste((paste) => ({
+                                          ...paste,
+                                          files: paste.files.map((entry, entryIndex) =>
+                                            entryIndex === index ? { ...entry, content: "" } : entry
+                                          ),
+                                          updatedAt: new Date().toISOString()
+                                        }));
+                                      }}
+                                    >
+                                      <Eraser className="mr-2 h-4 w-4" />
+                                      Clear file…
+                                    </ContextMenuItem>
+                                  </ContextMenuContent>
+                                </ContextMenu>
+                              ) : null}
+                              {isMedia && !mediaSrc ? (
+                                <p className="mt-3 text-sm text-destructive">
+                                  Missing or invalid media data. Replace the attachment or remove it.
+                                </p>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </FileDropSurface>
+
+                  <div className="defer-section print:hidden" data-tutorial="comments-section">
+                    <WorkspacePasteComments
+                      signedIn={Boolean(sessionUser)}
+                      slug={!isAccountOnlyDraft(selectedPaste, mode) ? (selectedPaste.slug ?? null) : null}
+                    />
                   </div>
-                )}
-              </FileDropSurface>
 
-              <div className="print:hidden" data-tutorial="comments-section">
-                <WorkspacePasteComments
-                  signedIn={Boolean(sessionUser)}
-                  slug={
-                    !isAccountOnlyDraft(selectedPaste, mode) ? (selectedPaste.slug ?? null) : null
-                  }
-                />
-              </div>
-
-              <div className="flex flex-wrap gap-3 text-sm text-muted-foreground print:hidden">
-                <span>{selectedPaste.content.length} characters</span>
-                <span>{selectedPaste.content.trim() ? selectedPaste.content.trim().split(/\s+/).length : 0} words</span>
-                <span>{formatBytes(selectedPasteStoredBytes)} total size</span>
-                <span>{selectedPaste.viewCount.toLocaleString()} view{selectedPaste.viewCount === 1 ? "" : "s"}</span>
-                <span>Updated {formatDate(selectedPaste.updatedAt)}</span>
-              </div>
+                  <div className="flex flex-wrap gap-3 text-sm text-muted-foreground print:hidden">
+                    <span>{selectedPaste.content.length} characters</span>
+                    <span>
+                      {selectedPaste.content.trim() ? selectedPaste.content.trim().split(/\s+/).length : 0} words
+                    </span>
+                    <span>{formatBytes(selectedPasteStoredBytes)} total size</span>
+                    <span>
+                      {selectedPaste.viewCount.toLocaleString()} view{selectedPaste.viewCount === 1 ? "" : "s"}
+                    </span>
+                    <span>Updated {formatDate(selectedPaste.updatedAt)}</span>
+                  </div>
                 </div>
               </div>
             </div>
           ) : (
             <>
               <PrismThemeLink theme={syntaxTheme} />
-            <div className="flex min-h-[55vh] flex-col items-center justify-center gap-4 text-center print:hidden">
-              <p className="text-2xl font-semibold">{workspaceCopy.emptyTitle}</p>
-              <p className="max-w-md text-sm leading-7 text-muted-foreground">
-                {workspaceCopy.emptyBody}
-              </p>
-              <Button onClick={handleNewPaste} type="button">
-                <FilePlus2 className="h-4 w-4" />
-                {workspaceCopy.createPaste}
-              </Button>
-            </div>
+              <div className="flex min-h-[55vh] flex-col items-center justify-center gap-4 text-center print:hidden">
+                <p className="text-2xl font-semibold">{workspaceCopy.emptyTitle}</p>
+                <p className="max-w-md text-sm leading-7 text-muted-foreground">{workspaceCopy.emptyBody}</p>
+                <Button onClick={handleNewPaste} type="button">
+                  <FilePlus2 className="h-4 w-4" />
+                  {workspaceCopy.createPaste}
+                </Button>
+              </div>
             </>
           )}
         </CardContent>
@@ -5516,7 +5633,11 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
       </Button>
     ) : null;
     return (
-      <div className="workspace-details flex h-full min-h-0 flex-col gap-5 overflow-y-auto workspace-scrollbar-hide" data-tutorial="details-panel" ref={detailsScrollRef}>
+      <div
+        className="workspace-details flex h-full min-h-0 flex-col gap-5 overflow-y-auto workspace-scrollbar-hide"
+        data-tutorial="details-panel"
+        ref={detailsScrollRef}
+      >
         {sessionUser && mode === "account" && accountPlan ? (
           <Card>
             <CardContent className="space-y-5">
@@ -5527,12 +5648,12 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge
-                  className={
-                    accountPlan.isPaid
-                      ? "border-amber-500/35 bg-amber-500/15 text-amber-950 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100"
-                      : undefined
-                  }
-                >
+                    className={
+                      accountPlan.isPaid
+                        ? "border-amber-500/35 bg-amber-500/15 text-amber-950 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100"
+                        : undefined
+                    }
+                  >
                     {formatPlanName(accountPlan.plan)}
                   </Badge>
                   <Badge className="capitalize border-border bg-transparent text-muted-foreground">
@@ -5544,16 +5665,16 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
 
               {accountPlan.plan !== accountPlan.effectivePlan ? (
                 <div className="rounded-[1rem] border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/5 dark:text-amber-100">
-                  Your {formatPlanName(accountPlan.plan)} billing is {formatPlanStatus(accountPlan.planStatus)}; feature access follows{" "}
-                  {formatPlanName(accountPlan.effectivePlan)} until paid access is active again.
+                  Your {formatPlanName(accountPlan.plan)} billing is {formatPlanStatus(accountPlan.planStatus)}; feature
+                  access follows {formatPlanName(accountPlan.effectivePlan)} until paid access is active again.
                 </div>
               ) : null}
 
               {accountPlan.effectivePlan !== accountPlan.quotaPlan ? (
                 <div className="rounded-[1rem] border border-sky-500/30 bg-sky-500/10 p-3 text-sm text-sky-950 dark:border-sky-400/25 dark:bg-sky-400/10 dark:text-sky-100">
                   Personal hosted quotas (pastes, storage, API keys, attachments) follow{" "}
-                  <strong>{formatPlanName(accountPlan.quotaPlan)}</strong>. Premium features such as webhooks still follow{" "}
-                  <strong>{formatPlanName(accountPlan.effectivePlan)}</strong>.
+                  <strong>{formatPlanName(accountPlan.quotaPlan)}</strong>. Premium features such as webhooks still
+                  follow <strong>{formatPlanName(accountPlan.effectivePlan)}</strong>.
                 </div>
               ) : null}
 
@@ -5595,22 +5716,22 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
 
               <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="min-w-0 rounded-[1rem] border border-border bg-muted/40 p-4">
-                  <p className="text-xs font-medium leading-snug text-muted-foreground text-balance">
-                    Files per paste
+                  <p className="text-xs font-medium leading-snug text-muted-foreground text-balance">Files per paste</p>
+                  <p className="mt-2 text-lg font-semibold tabular-nums">
+                    {formatCount(accountPlan.limits.filesPerPaste)}
                   </p>
-                  <p className="mt-2 text-lg font-semibold tabular-nums">{formatCount(accountPlan.limits.filesPerPaste)}</p>
                 </div>
                 <div className="min-w-0 rounded-[1rem] border border-border bg-muted/40 p-4">
-                  <p className="text-xs font-medium leading-snug text-muted-foreground text-balance">
-                    Max paste size
+                  <p className="text-xs font-medium leading-snug text-muted-foreground text-balance">Max paste size</p>
+                  <p className="mt-2 text-lg font-semibold tabular-nums">
+                    {formatBytes(accountPlan.limits.maxPasteBytes)}
                   </p>
-                  <p className="mt-2 text-lg font-semibold tabular-nums">{formatBytes(accountPlan.limits.maxPasteBytes)}</p>
                 </div>
                 <div className="min-w-0 rounded-[1rem] border border-border bg-muted/40 p-4">
-                  <p className="text-xs font-medium leading-snug text-muted-foreground text-balance">
-                    Saved versions
+                  <p className="text-xs font-medium leading-snug text-muted-foreground text-balance">Saved versions</p>
+                  <p className="mt-2 text-lg font-semibold tabular-nums">
+                    {formatCount(accountPlan.limits.versionHistory)}
                   </p>
-                  <p className="mt-2 text-lg font-semibold tabular-nums">{formatCount(accountPlan.limits.versionHistory)}</p>
                 </div>
               </div>
 
@@ -5871,9 +5992,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-xs uppercase tracking-[0.24em] text-muted-foreground">
-                    Tags
-                  </label>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.24em] text-muted-foreground">Tags</label>
                   <Input
                     disabled={!selectedPasteInWorkspace}
                     onChange={(event) =>
@@ -5947,7 +6066,8 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   <div className="rounded-[1.2rem] border border-border bg-muted/40 px-4 py-3">
                     <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">Engagement</p>
                     <p className="mt-2 font-medium text-foreground">
-                      {(selectedPaste.commentsCount ?? 0).toLocaleString()} comments · {(selectedPaste.stars ?? 0).toLocaleString()} stars
+                      {(selectedPaste.commentsCount ?? 0).toLocaleString()} comments ·{" "}
+                      {(selectedPaste.stars ?? 0).toLocaleString()} stars
                     </p>
                   </div>
                 </div>
@@ -5971,8 +6091,8 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   />
                   {selectedPaste.visibility === "public" && !selectedPaste.secretMode ? (
                     <p className="mt-2 text-xs text-muted-foreground">
-                      Public feed and archive only list public pastes with no password. Clear this field, then save, if you
-                      want the paste to appear there.
+                      Public feed and archive only list public pastes with no password. Clear this field, then save, if
+                      you want the paste to appear there.
                     </p>
                   ) : null}
                 </div>
@@ -5997,9 +6117,11 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                     />
                     <span className="min-w-0 leading-snug">
                       Secret link mode
-                        <span className="mt-1 block text-xs text-muted-foreground">
-                          Uses a dedicated <code className="rounded bg-background/70 px-1">/s/</code> URL, hides community features, and defaults to burn after read. This is still server-stored sharing, not client-side encrypted fragment sharing.
-                        </span>
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        Uses a dedicated <code className="rounded bg-background/70 px-1">/s/</code> URL, hides community
+                        features, and defaults to burn after read. This is still server-stored sharing, not client-side
+                        encrypted fragment sharing.
+                      </span>
                     </span>
                   </label>
                   <label className="flex w-full cursor-pointer items-center gap-3 rounded-[1.2rem] border border-border bg-muted/40 px-4 py-3 text-sm">
@@ -6261,7 +6383,9 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               </p>
             </div>
             {viewHistory.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No viewed pastes yet. Open any shared paste and it will appear here.</p>
+              <p className="text-sm text-muted-foreground">
+                No viewed pastes yet. Open any shared paste and it will appear here.
+              </p>
             ) : (
               <div className="space-y-3">
                 {viewHistory.slice(0, 8).map((entry) => (
@@ -6419,346 +6543,18 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   return (
     <main
       className={cn(
-        "wox-workspace-root workspace-full flex h-[100dvh] max-h-[100dvh] min-h-0 w-full flex-col gap-1.5 overflow-hidden px-2 py-1.5 motion-safe:animate-wox-fade-in md:gap-3 md:px-4 md:py-3",
+        "wox-workspace-root workspace-full mx-auto flex h-[100dvh] max-h-[100dvh] min-h-0 w-full max-w-[1960px] flex-col gap-2 overflow-hidden px-3 py-2 motion-safe:animate-wox-fade-in sm:px-4 sm:py-3 lg:gap-4 lg:px-6 lg:py-4 xl:px-8 2xl:px-10",
         workspaceTone === "deep" && "workspace-tone-deep",
         workspaceTone === "warm" && "workspace-tone-warm",
         workspaceTone === "forest" && "workspace-tone-forest"
       )}
     >
-      <div className="flex min-h-0 w-full flex-1 flex-col gap-1.5 md:gap-3" style={workspaceViewportStyle}>
-      <header className="glass-panel z-40 shrink-0 border-b border-border px-3 py-1.5 print:hidden sm:px-4 sm:py-1.5">
-        <div className="flex items-center justify-between gap-2 md:hidden">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-            <Link
-              className="min-w-0 shrink text-sm font-semibold tracking-tight text-foreground"
-              href="/app"
-              title={
-                mode === "account"
-                  ? "Account sync, public sharing, and launch-ready controls."
-                  : "Local-first drafting, fast capture, and portable exports."
-              }
-            >
-              WOX-Bin
-              <span className="font-normal text-muted-foreground"> workspace</span>
-            </Link>
-            {sessionUser ? (
-              <>
-                <Badge
-                  className={cn(
-                    "shrink-0 px-2 py-0 text-[10px] font-medium normal-case tracking-normal",
-                    displayedPlan === "free"
-                      ? "border-border bg-transparent"
-                      : "border-amber-500/35 bg-amber-500/15 text-amber-950 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100"
-                  )}
-                >
-                  {formatPlanName(displayedPlan)} plan
-                </Badge>
-                {displayedPlanStatus !== "active" ? (
-                  <Badge className="shrink-0 border-border bg-transparent px-2 py-0 text-[10px] capitalize text-muted-foreground">
-                    {formatPlanStatus(displayedPlanStatus)}
-                  </Badge>
-                ) : null}
-              </>
-            ) : null}
-          </div>
-          <Button
-            aria-controls="wox-workspace-mobile-nav"
-            aria-expanded={workspaceMobileMenuOpen}
-            aria-label={workspaceMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
-            className="h-10 w-10 shrink-0 touch-manipulation"
-            onClick={() => setWorkspaceMobileMenuOpen((open) => !open)}
-            size="icon"
-            type="button"
-            variant="outline"
-          >
-            {workspaceMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
-        </div>
-
-        <div
-          className={cn(
-            "border-border pb-1 pt-2 md:hidden",
-            workspaceMobileMenuOpen ? "block border-t" : "hidden"
-          )}
-          id="wox-workspace-mobile-nav"
-        >
-          <nav aria-label="Site" className="flex flex-col gap-0.5">
-            <Link
-              className={workspaceMobileNavClass(pathname === "/")}
-              href="/"
-              onClick={() => setWorkspaceMobileMenuOpen(false)}
-            >
-              Home
-            </Link>
-            <Link
-              className={workspaceMobileNavClass(pathname === "/feed")}
-              href="/feed"
-              onClick={() => setWorkspaceMobileMenuOpen(false)}
-            >
-              Feed
-            </Link>
-            <Link
-              className={workspaceMobileNavClass(pathname === "/archive")}
-              href="/archive"
-              onClick={() => setWorkspaceMobileMenuOpen(false)}
-            >
-              Archive
-            </Link>
-            <Link
-              className={workspaceMobileNavClass(Boolean(pathname?.startsWith("/app")))}
-              href="/app"
-              onClick={() => setWorkspaceMobileMenuOpen(false)}
-            >
-              Workspace
-            </Link>
-            <Link
-              className={workspaceMobileNavClass(pathname === "/help")}
-              href="/help"
-              onClick={() => setWorkspaceMobileMenuOpen(false)}
-            >
-              Help
-            </Link>
-            <Link
-              className={workspaceMobileNavClass(Boolean(pathname?.startsWith("/support")))}
-              href="/support"
-              onClick={() => setWorkspaceMobileMenuOpen(false)}
-            >
-              Support
-            </Link>
-            {sessionUser ? (
+      <div className="flex min-h-0 w-full flex-1 flex-col gap-2 lg:gap-4" style={workspaceViewportStyle}>
+        <header className="glass-panel z-40 shrink-0 border-b border-border px-3 py-2 print:hidden sm:px-4 lg:px-5">
+          <div className="flex items-center justify-between gap-2 md:hidden">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
               <Link
-                className={workspaceMobileNavClass(Boolean(pathname?.startsWith("/settings")))}
-                href="/settings/account"
-                onClick={() => setWorkspaceMobileMenuOpen(false)}
-              >
-                Settings
-              </Link>
-            ) : null}
-          </nav>
-          <WorkspaceHeaderAppearance
-            appHighContrast={appHighContrast}
-            className="mt-3"
-            onSyntaxThemeChange={setSyntaxTheme}
-            onToggleHighContrast={() => setAppHighContrast((v) => !v)}
-            onUiThemeChange={setUiTheme}
-            onWorkspaceToneChange={setWorkspaceTone}
-            stacked
-            syntaxTheme={syntaxTheme}
-            uiTheme={uiTheme}
-            workspaceTone={workspaceTone}
-          />
-          <div className="mt-3 rounded-[1.1rem] border border-border bg-muted/35 p-3">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Workspace zoom</p>
-              <button
-                className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-                onClick={() => setPageZoom(defaultWorkspaceZoom(phoneViewport))}
-                type="button"
-              >
-                Reset
-              </button>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                className="h-9 w-9 shrink-0"
-                disabled={pageZoom <= MIN_WORKSPACE_ZOOM}
-                onClick={() => changePageZoom(-WORKSPACE_ZOOM_STEP)}
-                size="icon"
-                type="button"
-                variant="outline"
-              >
-                <ZoomOut className="h-4 w-4" />
-              </Button>
-              <div className="min-w-0 flex-1 rounded-full border border-border bg-background/60 px-3 py-2 text-center text-sm font-medium tabular-nums">
-                {pageZoom}%
-              </div>
-              <Button
-                className="h-9 w-9 shrink-0"
-                disabled={pageZoom >= MAX_WORKSPACE_ZOOM}
-                onClick={() => changePageZoom(WORKSPACE_ZOOM_STEP)}
-                size="icon"
-                type="button"
-                variant="outline"
-              >
-                <ZoomIn className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {sessionUser ? (
-              <>
-                <div className="flex min-w-0 flex-1 rounded-full border border-border bg-muted/50 p-0.5">
-                  <Button
-                    className="h-10 min-h-11 flex-1 rounded-full px-3 text-xs"
-                    onClick={() => {
-                      void switchMode("account");
-                      setWorkspaceMobileMenuOpen(false);
-                    }}
-                    size="sm"
-                    title="Account sync (hosted)"
-                    type="button"
-                    variant={mode === "account" ? "default" : "ghost"}
-                  >
-                    <Cloud className="mr-1 h-4 w-4 shrink-0" />
-                    Account
-                  </Button>
-                  <Button
-                    className="h-10 min-h-11 flex-1 rounded-full px-3 text-xs"
-                    onClick={() => {
-                      void switchMode("local");
-                      setWorkspaceMobileMenuOpen(false);
-                    }}
-                    size="sm"
-                    title="Local drafts (device)"
-                    type="button"
-                    variant={mode === "local" ? "default" : "ghost"}
-                  >
-                    <FolderTree className="mr-1 h-4 w-4 shrink-0" />
-                    Local
-                  </Button>
-                </div>
-                <Button
-                  className="h-10 min-h-11 px-3 text-sm"
-                  onClick={() => {
-                    setWorkspaceMobileMenuOpen(false);
-                    openTutorial(0);
-                  }}
-                  type="button"
-                  variant="outline"
-                >
-                  <WandSparkles className="mr-1 h-4 w-4" />
-                  Tutorial
-                </Button>
-                {sessionUser.role === "admin" ? (
-                  <Button asChild className="h-10 min-h-11 px-3 text-sm" type="button" variant="outline">
-                    <Link className="inline-flex items-center gap-1.5" href="/admin" onClick={() => setWorkspaceMobileMenuOpen(false)}>
-                      <Shield className="h-4 w-4" />
-                      Admin
-                    </Link>
-                  </Button>
-                ) : null}
-                <Button
-                  className="h-10 min-h-11 px-3 text-sm"
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                  type="button"
-                  variant="outline"
-                >
-                  <LogOut className="mr-1 h-4 w-4" />
-                  Sign out
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  className="h-10 min-h-11 flex-1 text-sm"
-                  onClick={() => {
-                    setWorkspaceMobileMenuOpen(false);
-                    openTutorial(0);
-                  }}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  <WandSparkles className="mr-1 h-4 w-4" />
-                  Tutorial
-                </Button>
-                <Button
-                  asChild
-                  className="h-10 min-h-11 flex-1 text-sm"
-                  size="sm"
-                  variant="outline"
-                >
-                  <Link href="/sign-in" onClick={() => setWorkspaceMobileMenuOpen(false)}>
-                    Sign in
-                  </Link>
-                </Button>
-                <Button asChild className="h-10 min-h-11 flex-1 text-sm" size="sm">
-                  <Link href="/sign-up" onClick={() => setWorkspaceMobileMenuOpen(false)}>
-                    Sign up
-                  </Link>
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {!phoneViewport ? (
-          <div className="mt-2 flex flex-wrap items-center gap-2 md:hidden">
-          {sessionUser ? (
-            <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
-                <div className="flex flex-1 rounded-full border border-border bg-muted/50 p-0.5 min-[400px]:flex-initial">
-                  <Button
-                    className="h-10 min-h-11 flex-1 rounded-full px-3 text-xs min-[400px]:flex-initial sm:text-sm"
-                    onClick={() => void switchMode("account")}
-                    size="sm"
-                    title="Account sync (hosted)"
-                    type="button"
-                    variant={mode === "account" ? "default" : "ghost"}
-                  >
-                    <Cloud className="mr-1 h-4 w-4 shrink-0" />
-                    Account
-                  </Button>
-                  <Button
-                    className="h-10 min-h-11 flex-1 rounded-full px-3 text-xs min-[400px]:flex-initial sm:text-sm"
-                    onClick={() => void switchMode("local")}
-                    size="sm"
-                    title="Local drafts (device)"
-                    type="button"
-                    variant={mode === "local" ? "default" : "ghost"}
-                  >
-                    <FolderTree className="mr-1 h-4 w-4 shrink-0" />
-                    Local
-                  </Button>
-                </div>
-                <Button
-                  className="h-10 min-h-11 px-3 text-sm"
-                  onClick={() => openTutorial(0)}
-                  type="button"
-                  variant="outline"
-                >
-                  <WandSparkles className="mr-1 h-4 w-4" />
-                  Tutorial
-                </Button>
-                {sessionUser.role === "admin" ? (
-                  <Button asChild className="h-10 min-h-11 px-3 text-sm" type="button" variant="outline">
-                    <Link className="inline-flex items-center gap-1.5" href="/admin">
-                      <Shield className="h-4 w-4" />
-                      Admin
-                    </Link>
-                  </Button>
-                ) : null}
-                <Button
-                  className="h-10 min-h-11 px-3 text-sm"
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                  type="button"
-                  variant="outline"
-                >
-                  <LogOut className="mr-1 h-4 w-4" />
-                  Sign out
-                </Button>
-            </div>
-          ) : (
-            <div className="flex w-full flex-wrap gap-2">
-              <Button className="h-10 min-h-11 flex-1 text-sm sm:flex-initial" onClick={() => openTutorial(0)} size="sm" type="button" variant="outline">
-                <WandSparkles className="mr-1 h-4 w-4" />
-                {t("workspace.tutorial")}
-              </Button>
-              <Button asChild className="h-10 min-h-11 flex-1 text-sm sm:flex-initial" size="sm" variant="outline">
-                <Link href="/sign-in">{t("nav.signIn")}</Link>
-              </Button>
-              <Button asChild className="h-10 min-h-11 flex-1 text-sm sm:flex-initial" size="sm">
-                <Link href="/sign-up">Sign up</Link>
-              </Button>
-            </div>
-          )}
-          </div>
-        ) : null}
-
-        <div className="mt-1.5 hidden md:grid md:gap-2.5">
-          <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-2.5 gap-y-1.5">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 sm:gap-x-2.5">
-              <Link
-                className="shrink-0 text-[13px] font-semibold tracking-tight text-foreground lg:text-sm"
+                className="min-w-0 shrink text-sm font-semibold tracking-tight text-foreground"
                 href="/app"
                 title={
                   mode === "account"
@@ -6767,7 +6563,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 }
               >
                 WOX-Bin
-                <span className="hidden font-normal text-muted-foreground xl:inline"> workspace</span>
+                <span className="font-normal text-muted-foreground"> workspace</span>
               </Link>
               {sessionUser ? (
                 <>
@@ -6789,1174 +6585,1560 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 </>
               ) : null}
             </div>
+            <Button
+              aria-controls="wox-workspace-mobile-nav"
+              aria-expanded={workspaceMobileMenuOpen}
+              aria-label={workspaceMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+              className="h-10 w-10 shrink-0 touch-manipulation"
+              onClick={() => setWorkspaceMobileMenuOpen((open) => !open)}
+              size="icon"
+              type="button"
+              variant="outline"
+            >
+              {workspaceMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+          </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 xl:justify-end">
+          <div
+            className={cn("border-border pb-1 pt-2 md:hidden", workspaceMobileMenuOpen ? "block border-t" : "hidden")}
+            id="wox-workspace-mobile-nav"
+          >
+            <nav aria-label="Site" className="flex flex-col gap-0.5">
+              <Link
+                className={workspaceMobileNavClass(pathname === "/")}
+                href="/"
+                onClick={() => setWorkspaceMobileMenuOpen(false)}
+              >
+                Home
+              </Link>
+              <Link
+                className={workspaceMobileNavClass(pathname === "/feed")}
+                href="/feed"
+                onClick={() => setWorkspaceMobileMenuOpen(false)}
+              >
+                Feed
+              </Link>
+              <Link
+                className={workspaceMobileNavClass(pathname === "/archive")}
+                href="/archive"
+                onClick={() => setWorkspaceMobileMenuOpen(false)}
+              >
+                Archive
+              </Link>
+              <Link
+                className={workspaceMobileNavClass(Boolean(pathname?.startsWith("/app")))}
+                href="/app"
+                onClick={() => setWorkspaceMobileMenuOpen(false)}
+              >
+                Workspace
+              </Link>
+              <Link
+                className={workspaceMobileNavClass(pathname === "/help")}
+                href="/help"
+                onClick={() => setWorkspaceMobileMenuOpen(false)}
+              >
+                Help
+              </Link>
+              <Link
+                className={workspaceMobileNavClass(Boolean(pathname?.startsWith("/support")))}
+                href="/support"
+                onClick={() => setWorkspaceMobileMenuOpen(false)}
+              >
+                Support
+              </Link>
+              {sessionUser ? (
+                <Link
+                  className={workspaceMobileNavClass(Boolean(pathname?.startsWith("/settings")))}
+                  href="/settings/account"
+                  onClick={() => setWorkspaceMobileMenuOpen(false)}
+                >
+                  Settings
+                </Link>
+              ) : null}
+            </nav>
+            <WorkspaceHeaderAppearance
+              appHighContrast={appHighContrast}
+              className="mt-3"
+              onSyntaxThemeChange={setSyntaxTheme}
+              onToggleHighContrast={() => setAppHighContrast((v) => !v)}
+              onUiThemeChange={setUiTheme}
+              onWorkspaceToneChange={setWorkspaceTone}
+              stacked
+              syntaxTheme={syntaxTheme}
+              uiTheme={uiTheme}
+              workspaceTone={workspaceTone}
+            />
+            <div className="mt-3 rounded-[1.1rem] border border-border bg-muted/35 p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Workspace zoom</p>
+                <button
+                  className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                  onClick={() => setPageZoom(defaultWorkspaceZoom(phoneViewport))}
+                  type="button"
+                >
+                  Reset
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  className="h-9 w-9 shrink-0"
+                  disabled={pageZoom <= MIN_WORKSPACE_ZOOM}
+                  onClick={() => changePageZoom(-WORKSPACE_ZOOM_STEP)}
+                  size="icon"
+                  type="button"
+                  variant="outline"
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+                <div className="min-w-0 flex-1 rounded-full border border-border bg-background/60 px-3 py-2 text-center text-sm font-medium tabular-nums">
+                  {pageZoom}%
+                </div>
+                <Button
+                  className="h-9 w-9 shrink-0"
+                  disabled={pageZoom >= MAX_WORKSPACE_ZOOM}
+                  onClick={() => changePageZoom(WORKSPACE_ZOOM_STEP)}
+                  size="icon"
+                  type="button"
+                  variant="outline"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
               {sessionUser ? (
                 <>
-                  <div className="rounded-full border border-border bg-muted/50 p-0.5">
+                  <div className="flex min-w-0 flex-1 rounded-full border border-border bg-muted/50 p-0.5">
                     <Button
-                      className="h-[1.875rem] rounded-full px-2 text-[11px] sm:px-2.5 sm:text-xs"
+                      className="h-10 min-h-11 flex-1 rounded-full px-3 text-xs"
+                      onClick={() => {
+                        void switchMode("account");
+                        setWorkspaceMobileMenuOpen(false);
+                      }}
+                      size="sm"
+                      title="Account sync (hosted)"
+                      type="button"
+                      variant={mode === "account" ? "default" : "ghost"}
+                    >
+                      <Cloud className="mr-1 h-4 w-4 shrink-0" />
+                      Account
+                    </Button>
+                    <Button
+                      className="h-10 min-h-11 flex-1 rounded-full px-3 text-xs"
+                      onClick={() => {
+                        void switchMode("local");
+                        setWorkspaceMobileMenuOpen(false);
+                      }}
+                      size="sm"
+                      title="Local drafts (device)"
+                      type="button"
+                      variant={mode === "local" ? "default" : "ghost"}
+                    >
+                      <FolderTree className="mr-1 h-4 w-4 shrink-0" />
+                      Local
+                    </Button>
+                  </div>
+                  <Button
+                    className="h-10 min-h-11 px-3 text-sm"
+                    onClick={() => {
+                      setWorkspaceMobileMenuOpen(false);
+                      openTutorial(0);
+                    }}
+                    type="button"
+                    variant="outline"
+                  >
+                    <WandSparkles className="mr-1 h-4 w-4" />
+                    Tutorial
+                  </Button>
+                  {sessionUser.role === "admin" ? (
+                    <Button asChild className="h-10 min-h-11 px-3 text-sm" type="button" variant="outline">
+                      <Link
+                        className="inline-flex items-center gap-1.5"
+                        href="/admin"
+                        onClick={() => setWorkspaceMobileMenuOpen(false)}
+                      >
+                        <Shield className="h-4 w-4" />
+                        Admin
+                      </Link>
+                    </Button>
+                  ) : null}
+                  <Button
+                    className="h-10 min-h-11 px-3 text-sm"
+                    onClick={() => signOut({ callbackUrl: "/" })}
+                    type="button"
+                    variant="outline"
+                  >
+                    <LogOut className="mr-1 h-4 w-4" />
+                    Sign out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    className="h-10 min-h-11 flex-1 text-sm"
+                    onClick={() => {
+                      setWorkspaceMobileMenuOpen(false);
+                      openTutorial(0);
+                    }}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    <WandSparkles className="mr-1 h-4 w-4" />
+                    Tutorial
+                  </Button>
+                  <Button asChild className="h-10 min-h-11 flex-1 text-sm" size="sm" variant="outline">
+                    <Link href="/sign-in" onClick={() => setWorkspaceMobileMenuOpen(false)}>
+                      Sign in
+                    </Link>
+                  </Button>
+                  <Button asChild className="h-10 min-h-11 flex-1 text-sm" size="sm">
+                    <Link href="/sign-up" onClick={() => setWorkspaceMobileMenuOpen(false)}>
+                      Sign up
+                    </Link>
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {!phoneViewport ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2 md:hidden">
+              {sessionUser ? (
+                <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
+                  <div className="flex flex-1 rounded-full border border-border bg-muted/50 p-0.5 min-[400px]:flex-initial">
+                    <Button
+                      className="h-10 min-h-11 flex-1 rounded-full px-3 text-xs min-[400px]:flex-initial sm:text-sm"
                       onClick={() => void switchMode("account")}
                       size="sm"
                       title="Account sync (hosted)"
                       type="button"
                       variant={mode === "account" ? "default" : "ghost"}
                     >
-                      <Cloud className="h-3.5 w-3.5 sm:mr-1 sm:h-3.5 sm:w-3.5" />
-                      <span className="hidden sm:inline">Account</span>
+                      <Cloud className="mr-1 h-4 w-4 shrink-0" />
+                      Account
                     </Button>
                     <Button
-                      className="h-[1.875rem] rounded-full px-2 text-[11px] sm:px-2.5 sm:text-xs"
+                      className="h-10 min-h-11 flex-1 rounded-full px-3 text-xs min-[400px]:flex-initial sm:text-sm"
                       onClick={() => void switchMode("local")}
                       size="sm"
                       title="Local drafts (device)"
                       type="button"
                       variant={mode === "local" ? "default" : "ghost"}
                     >
-                      <FolderTree className="h-3.5 w-3.5 sm:mr-1 sm:h-3.5 sm:w-3.5" />
-                      <span className="hidden sm:inline">Local</span>
+                      <FolderTree className="mr-1 h-4 w-4 shrink-0" />
+                      Local
                     </Button>
                   </div>
-                  <Button className="h-[1.875rem] px-2 text-[11px] sm:px-2.5 sm:text-xs" onClick={() => openTutorial(0)} type="button" variant="outline">
-                    <WandSparkles className="h-3.5 w-3.5 sm:mr-1 sm:h-3.5 sm:w-3.5" />
-                    <span className="hidden sm:inline">{t("workspace.tutorial")}</span>
+                  <Button
+                    className="h-10 min-h-11 px-3 text-sm"
+                    onClick={() => openTutorial(0)}
+                    type="button"
+                    variant="outline"
+                  >
+                    <WandSparkles className="mr-1 h-4 w-4" />
+                    Tutorial
                   </Button>
-                  <div className="flex items-center gap-1 rounded-full border border-border bg-muted/40 p-0.5">
-                    <Button
-                      className="h-[1.875rem] w-[1.875rem] rounded-full px-0"
-                      disabled={pageZoom <= MIN_WORKSPACE_ZOOM}
-                      onClick={() => changePageZoom(-WORKSPACE_ZOOM_STEP)}
-                      size="icon"
-                      title="Zoom out"
-                      type="button"
-                      variant="ghost"
-                    >
-                      <ZoomOut className="h-3.5 w-3.5" />
-                    </Button>
-                    <button
-                      className="min-w-[3.1rem] rounded-full px-1.5 py-1 text-center text-[11px] font-medium tabular-nums text-foreground"
-                      onClick={() => setPageZoom(defaultWorkspaceZoom(phoneViewport))}
-                      title="Reset zoom"
-                      type="button"
-                    >
-                      {pageZoom}%
-                    </button>
-                    <Button
-                      className="h-[1.875rem] w-[1.875rem] rounded-full px-0"
-                      disabled={pageZoom >= MAX_WORKSPACE_ZOOM}
-                      onClick={() => changePageZoom(WORKSPACE_ZOOM_STEP)}
-                      size="icon"
-                      title="Zoom in"
-                      type="button"
-                      variant="ghost"
-                    >
-                      <ZoomIn className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
                   {sessionUser.role === "admin" ? (
-                    <Button asChild className="h-[1.875rem] px-2 text-[11px] sm:px-2.5 sm:text-xs" type="button" variant="outline">
+                    <Button asChild className="h-10 min-h-11 px-3 text-sm" type="button" variant="outline">
                       <Link className="inline-flex items-center gap-1.5" href="/admin">
-                        <Shield className="h-3.5 w-3.5" />
+                        <Shield className="h-4 w-4" />
                         Admin
                       </Link>
                     </Button>
                   ) : null}
                   <Button
-                    className="h-[1.875rem] px-2 text-[11px] sm:px-2.5 sm:text-xs"
+                    className="h-10 min-h-11 px-3 text-sm"
                     onClick={() => signOut({ callbackUrl: "/" })}
                     type="button"
                     variant="outline"
                   >
-                    <LogOut className="h-3.5 w-3.5 sm:mr-1" />
+                    <LogOut className="mr-1 h-4 w-4" />
                     Sign out
                   </Button>
-                </>
+                </div>
               ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  <div className="flex items-center gap-1 rounded-full border border-border bg-muted/40 p-0.5">
-                    <Button
-                      className="h-[1.875rem] w-[1.875rem] rounded-full px-0"
-                      disabled={pageZoom <= MIN_WORKSPACE_ZOOM}
-                      onClick={() => changePageZoom(-WORKSPACE_ZOOM_STEP)}
-                      size="icon"
-                      title="Zoom out"
-                      type="button"
-                      variant="ghost"
-                    >
-                      <ZoomOut className="h-3.5 w-3.5" />
-                    </Button>
-                    <button
-                      className="min-w-[3.1rem] rounded-full px-1.5 py-1 text-center text-[11px] font-medium tabular-nums text-foreground"
-                      onClick={() => setPageZoom(defaultWorkspaceZoom(phoneViewport))}
-                      title="Reset zoom"
-                      type="button"
-                    >
-                      {pageZoom}%
-                    </button>
-                    <Button
-                      className="h-[1.875rem] w-[1.875rem] rounded-full px-0"
-                      disabled={pageZoom >= MAX_WORKSPACE_ZOOM}
-                      onClick={() => changePageZoom(WORKSPACE_ZOOM_STEP)}
-                      size="icon"
-                      title="Zoom in"
-                      type="button"
-                      variant="ghost"
-                    >
-                      <ZoomIn className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                  <Button className="h-[1.875rem] px-2 text-[11px] sm:px-2.5 sm:text-xs" onClick={() => openTutorial(0)} size="sm" type="button" variant="outline">
-                    <WandSparkles className="h-3.5 w-3.5 sm:mr-1" />
-                    Tutorial
+                <div className="flex w-full flex-wrap gap-2">
+                  <Button
+                    className="h-10 min-h-11 flex-1 text-sm sm:flex-initial"
+                    onClick={() => openTutorial(0)}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    <WandSparkles className="mr-1 h-4 w-4" />
+                    {t("workspace.tutorial")}
                   </Button>
-                  <Button asChild className="h-[1.875rem] px-2 text-[11px] sm:px-2.5 sm:text-xs" size="sm" variant="outline">
-                    <Link href="/sign-in">Sign in</Link>
+                  <Button asChild className="h-10 min-h-11 flex-1 text-sm sm:flex-initial" size="sm" variant="outline">
+                    <Link href="/sign-in">{t("nav.signIn")}</Link>
                   </Button>
-                  <Button asChild className="h-[1.875rem] px-2 text-[11px] sm:px-2.5 sm:text-xs" size="sm">
+                  <Button asChild className="h-10 min-h-11 flex-1 text-sm sm:flex-initial" size="sm">
                     <Link href="/sign-up">Sign up</Link>
                   </Button>
                 </div>
               )}
             </div>
-          </div>
+          ) : null}
 
-          <div className="flex min-w-0 flex-wrap items-start gap-1.5 2xl:items-center">
-            <nav
-              aria-label="Site"
-              className="flex min-w-0 flex-wrap items-center gap-0.5"
-              data-tutorial="workspace-nav"
-            >
-              <Link className={workspaceHeaderNavClass(pathname === "/")} href="/">
-                Home
-              </Link>
-              <Link className={workspaceHeaderNavClass(pathname === "/feed")} href="/feed">
-                Feed
-              </Link>
-              <Link className={workspaceHeaderNavClass(pathname === "/archive")} href="/archive">
-                Archive
-              </Link>
-              <Link
-                className={workspaceHeaderNavClass(Boolean(pathname?.startsWith("/app")))}
-                href="/app"
-              >
-                Workspace
-              </Link>
-              <Link className={workspaceHeaderNavClass(pathname === "/help")} href="/help">
-                {t("nav.help")}
-              </Link>
-              <Link
-                className={workspaceHeaderNavClass(Boolean(pathname?.startsWith("/support")))}
-                href="/support"
-              >
-                {t("nav.support")}
-              </Link>
-              {sessionUser ? (
+          <div className="mt-1.5 hidden md:grid md:gap-2.5">
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-2.5 gap-y-1.5">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 sm:gap-x-2.5">
                 <Link
-                  className={workspaceHeaderNavClass(Boolean(pathname?.startsWith("/settings")))}
-                  href="/settings/account"
+                  className="shrink-0 text-[13px] font-semibold tracking-tight text-foreground lg:text-sm"
+                  href="/app"
+                  title={
+                    mode === "account"
+                      ? "Account sync, public sharing, and launch-ready controls."
+                      : "Local-first drafting, fast capture, and portable exports."
+                  }
                 >
-                  {t("settings.title")}
+                  WOX-Bin
+                  <span className="hidden font-normal text-muted-foreground xl:inline"> workspace</span>
                 </Link>
-              ) : null}
-            </nav>
+                {sessionUser ? (
+                  <>
+                    <Badge
+                      className={cn(
+                        "shrink-0 px-2 py-0 text-[10px] font-medium normal-case tracking-normal",
+                        displayedPlan === "free"
+                          ? "border-border bg-transparent"
+                          : "border-amber-500/35 bg-amber-500/15 text-amber-950 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100"
+                      )}
+                    >
+                      {formatPlanName(displayedPlan)} plan
+                    </Badge>
+                    {displayedPlanStatus !== "active" ? (
+                      <Badge className="shrink-0 border-border bg-transparent px-2 py-0 text-[10px] capitalize text-muted-foreground">
+                        {formatPlanStatus(displayedPlanStatus)}
+                      </Badge>
+                    ) : null}
+                  </>
+                ) : null}
+              </div>
 
-            <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 rounded-[1rem] border border-border/70 bg-muted/20 px-2 py-1.5 2xl:ml-auto 2xl:basis-auto 2xl:border-0 2xl:bg-transparent 2xl:px-0 2xl:py-0">
-              <WorkspaceHeaderAppearance
-                appHighContrast={appHighContrast}
-                className="sm:border-0 sm:pl-0"
-                onSyntaxThemeChange={setSyntaxTheme}
-                onToggleHighContrast={() => setAppHighContrast((v) => !v)}
-                onUiThemeChange={setUiTheme}
-                onWorkspaceToneChange={setWorkspaceTone}
-                syntaxTheme={syntaxTheme}
-                uiTheme={uiTheme}
-                workspaceTone={workspaceTone}
-              />
-              <div className="hidden h-6 w-px bg-border/60 2xl:block" />
-              <LanguageSwitcher className="py-1.5" compact />
-              <PwaInstallButton compact />
+              <div className="flex flex-wrap items-center gap-1.5 xl:justify-end">
+                {sessionUser ? (
+                  <>
+                    <div className="rounded-full border border-border bg-muted/50 p-0.5">
+                      <Button
+                        className="h-[1.875rem] rounded-full px-2 text-[11px] sm:px-2.5 sm:text-xs"
+                        onClick={() => void switchMode("account")}
+                        size="sm"
+                        title="Account sync (hosted)"
+                        type="button"
+                        variant={mode === "account" ? "default" : "ghost"}
+                      >
+                        <Cloud className="h-3.5 w-3.5 sm:mr-1 sm:h-3.5 sm:w-3.5" />
+                        <span className="hidden sm:inline">Account</span>
+                      </Button>
+                      <Button
+                        className="h-[1.875rem] rounded-full px-2 text-[11px] sm:px-2.5 sm:text-xs"
+                        onClick={() => void switchMode("local")}
+                        size="sm"
+                        title="Local drafts (device)"
+                        type="button"
+                        variant={mode === "local" ? "default" : "ghost"}
+                      >
+                        <FolderTree className="h-3.5 w-3.5 sm:mr-1 sm:h-3.5 sm:w-3.5" />
+                        <span className="hidden sm:inline">Local</span>
+                      </Button>
+                    </div>
+                    <Button
+                      className="h-[1.875rem] px-2 text-[11px] sm:px-2.5 sm:text-xs"
+                      onClick={() => openTutorial(0)}
+                      type="button"
+                      variant="outline"
+                    >
+                      <WandSparkles className="h-3.5 w-3.5 sm:mr-1 sm:h-3.5 sm:w-3.5" />
+                      <span className="hidden sm:inline">{t("workspace.tutorial")}</span>
+                    </Button>
+                    <div className="flex items-center gap-1 rounded-full border border-border bg-muted/40 p-0.5">
+                      <Button
+                        className="h-[1.875rem] w-[1.875rem] rounded-full px-0"
+                        disabled={pageZoom <= MIN_WORKSPACE_ZOOM}
+                        onClick={() => changePageZoom(-WORKSPACE_ZOOM_STEP)}
+                        size="icon"
+                        title="Zoom out"
+                        type="button"
+                        variant="ghost"
+                      >
+                        <ZoomOut className="h-3.5 w-3.5" />
+                      </Button>
+                      <button
+                        className="min-w-[3.1rem] rounded-full px-1.5 py-1 text-center text-[11px] font-medium tabular-nums text-foreground"
+                        onClick={() => setPageZoom(defaultWorkspaceZoom(phoneViewport))}
+                        title="Reset zoom"
+                        type="button"
+                      >
+                        {pageZoom}%
+                      </button>
+                      <Button
+                        className="h-[1.875rem] w-[1.875rem] rounded-full px-0"
+                        disabled={pageZoom >= MAX_WORKSPACE_ZOOM}
+                        onClick={() => changePageZoom(WORKSPACE_ZOOM_STEP)}
+                        size="icon"
+                        title="Zoom in"
+                        type="button"
+                        variant="ghost"
+                      >
+                        <ZoomIn className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    {sessionUser.role === "admin" ? (
+                      <Button
+                        asChild
+                        className="h-[1.875rem] px-2 text-[11px] sm:px-2.5 sm:text-xs"
+                        type="button"
+                        variant="outline"
+                      >
+                        <Link className="inline-flex items-center gap-1.5" href="/admin">
+                          <Shield className="h-3.5 w-3.5" />
+                          Admin
+                        </Link>
+                      </Button>
+                    ) : null}
+                    <Button
+                      className="h-[1.875rem] px-2 text-[11px] sm:px-2.5 sm:text-xs"
+                      onClick={() => signOut({ callbackUrl: "/" })}
+                      type="button"
+                      variant="outline"
+                    >
+                      <LogOut className="h-3.5 w-3.5 sm:mr-1" />
+                      Sign out
+                    </Button>
+                  </>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    <div className="flex items-center gap-1 rounded-full border border-border bg-muted/40 p-0.5">
+                      <Button
+                        className="h-[1.875rem] w-[1.875rem] rounded-full px-0"
+                        disabled={pageZoom <= MIN_WORKSPACE_ZOOM}
+                        onClick={() => changePageZoom(-WORKSPACE_ZOOM_STEP)}
+                        size="icon"
+                        title="Zoom out"
+                        type="button"
+                        variant="ghost"
+                      >
+                        <ZoomOut className="h-3.5 w-3.5" />
+                      </Button>
+                      <button
+                        className="min-w-[3.1rem] rounded-full px-1.5 py-1 text-center text-[11px] font-medium tabular-nums text-foreground"
+                        onClick={() => setPageZoom(defaultWorkspaceZoom(phoneViewport))}
+                        title="Reset zoom"
+                        type="button"
+                      >
+                        {pageZoom}%
+                      </button>
+                      <Button
+                        className="h-[1.875rem] w-[1.875rem] rounded-full px-0"
+                        disabled={pageZoom >= MAX_WORKSPACE_ZOOM}
+                        onClick={() => changePageZoom(WORKSPACE_ZOOM_STEP)}
+                        size="icon"
+                        title="Zoom in"
+                        type="button"
+                        variant="ghost"
+                      >
+                        <ZoomIn className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <Button
+                      className="h-[1.875rem] px-2 text-[11px] sm:px-2.5 sm:text-xs"
+                      onClick={() => openTutorial(0)}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      <WandSparkles className="h-3.5 w-3.5 sm:mr-1" />
+                      Tutorial
+                    </Button>
+                    <Button
+                      asChild
+                      className="h-[1.875rem] px-2 text-[11px] sm:px-2.5 sm:text-xs"
+                      size="sm"
+                      variant="outline"
+                    >
+                      <Link href="/sign-in">Sign in</Link>
+                    </Button>
+                    <Button asChild className="h-[1.875rem] px-2 text-[11px] sm:px-2.5 sm:text-xs" size="sm">
+                      <Link href="/sign-up">Sign up</Link>
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
-      </header>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden print:overflow-visible">
-        <div
-          className={cn(
-            "flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-auto overscroll-y-contain print:overflow-visible workspace-scrollbar-hide md:gap-3",
-            selectedPaste && phoneViewport
-              ? "pb-[calc(4.5rem+env(safe-area-inset-bottom))]"
-              : selectedPaste
-                ? "max-md:pb-[calc(5.25rem+env(safe-area-inset-bottom))]"
-                : null
-          )}
-        >
-      {localImportCount > 0 && sessionUser && mode === "account" ? (
-        <Card className="shrink-0 border-cyan-600/25 bg-cyan-600/10 print:hidden dark:border-cyan-400/20 dark:bg-cyan-400/5">
-          <CardContent className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium text-foreground">Local drafts are ready to merge</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Found {localImportCount} local draft{localImportCount === 1 ? "" : "s"} in IndexedDB. Import them into your account when you are ready.
-              </p>
-            </div>
-            <Button disabled={saving} onClick={() => void handleMergeLocalIntoAccount()} type="button">
-              <Upload className="h-4 w-4" />
-              Import local drafts
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {status ? (
-        <div
-          aria-live="polite"
-          className="flex shrink-0 items-start gap-2 rounded-2xl border border-emerald-600/25 bg-emerald-600/10 px-3 py-2.5 text-sm text-emerald-950 print:hidden dark:border-emerald-400/20 dark:bg-emerald-400/5 dark:text-emerald-100 sm:px-4 sm:py-3"
-          role="status"
-        >
-          <p className="min-w-0 flex-1 leading-snug">{status}</p>
-          <Button
-            aria-label="Dismiss message"
-            className="h-7 w-7 shrink-0 text-emerald-900 hover:bg-emerald-600/20 dark:text-emerald-100 dark:hover:bg-emerald-400/15"
-            onClick={() => setStatus(null)}
-            size="icon"
-            type="button"
-            variant="ghost"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      ) : null}
-
-      {error ? (
-        <div
-          aria-live="assertive"
-          className="flex shrink-0 items-start gap-2 rounded-2xl border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm text-destructive print:hidden dark:text-destructive-foreground sm:px-4 sm:py-3"
-          role="alert"
-        >
-          <p className="min-w-0 flex-1 leading-snug">{error}</p>
-          <Button
-            aria-label="Dismiss error"
-            className="h-7 w-7 shrink-0 hover:bg-destructive/15"
-            onClick={() => setError(null)}
-            size="icon"
-            type="button"
-            variant="ghost"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      ) : null}
-
-      <section className="flex min-h-0 flex-1 flex-col gap-1.5 print:block print:min-h-0 max-lg:gap-1.5 lg:flex-row lg:gap-4">
-        {phoneViewport ? (
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col print:w-full print:max-w-none">
-            <div className="mb-1 flex items-center justify-between gap-2 print:hidden">
-              <Button
-                className="h-9 px-3 text-xs"
-                data-tutorial="library-button"
-                onClick={() => setMobileLibraryOpen(true)}
-                size="sm"
-                type="button"
-                variant="outline"
+            <div className="flex min-w-0 flex-wrap items-start gap-1.5 2xl:items-center">
+              <nav
+                aria-label="Site"
+                className="flex min-w-0 flex-wrap items-center gap-0.5"
+                data-tutorial="workspace-nav"
               >
-                <PanelLeft className="h-4 w-4" />
-                {workspaceCopy.libraryButton}
-              </Button>
-              <Button
-                className="h-9 px-3 text-xs"
-                data-tutorial="details-button"
-                disabled={!selectedPaste}
-                onClick={() => setMobileDetailsOpen(true)}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                <PanelRight className="h-4 w-4" />
-                {workspaceCopy.detailsButton}
-              </Button>
-            </div>
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-              {renderEditor()}
+                <Link className={workspaceHeaderNavClass(pathname === "/")} href="/">
+                  Home
+                </Link>
+                <Link className={workspaceHeaderNavClass(pathname === "/feed")} href="/feed">
+                  Feed
+                </Link>
+                <Link className={workspaceHeaderNavClass(pathname === "/archive")} href="/archive">
+                  Archive
+                </Link>
+                <Link className={workspaceHeaderNavClass(Boolean(pathname?.startsWith("/app")))} href="/app">
+                  Workspace
+                </Link>
+                <Link className={workspaceHeaderNavClass(pathname === "/help")} href="/help">
+                  {t("nav.help")}
+                </Link>
+                <Link className={workspaceHeaderNavClass(Boolean(pathname?.startsWith("/support")))} href="/support">
+                  {t("nav.support")}
+                </Link>
+                {sessionUser ? (
+                  <Link
+                    className={workspaceHeaderNavClass(Boolean(pathname?.startsWith("/settings")))}
+                    href="/settings/account"
+                  >
+                    {t("settings.title")}
+                  </Link>
+                ) : null}
+              </nav>
+
+              <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 rounded-[1rem] border border-border/70 bg-muted/20 px-2 py-1.5 2xl:ml-auto 2xl:basis-auto 2xl:border-0 2xl:bg-transparent 2xl:px-0 2xl:py-0">
+                <WorkspaceHeaderAppearance
+                  appHighContrast={appHighContrast}
+                  className="sm:border-0 sm:pl-0"
+                  onSyntaxThemeChange={setSyntaxTheme}
+                  onToggleHighContrast={() => setAppHighContrast((v) => !v)}
+                  onUiThemeChange={setUiTheme}
+                  onWorkspaceToneChange={setWorkspaceTone}
+                  syntaxTheme={syntaxTheme}
+                  uiTheme={uiTheme}
+                  workspaceTone={workspaceTone}
+                />
+                <div className="hidden h-6 w-px bg-border/60 2xl:block" />
+                <LanguageSwitcher className="py-1.5" compact />
+                <PwaInstallButton compact />
+              </div>
             </div>
           </div>
-        ) : (
-          <>
-        {leftSidebarCollapsed && rightSidebarCollapsed ? (
-          <div className="flex shrink-0 flex-row items-center justify-center gap-4 border-b border-border py-1 print:hidden lg:hidden">
-            <Button
-              aria-label="Show library sidebar"
-              className="h-9 w-9 touch-manipulation"
-              onClick={() => setLeftSidebarCollapsed(false)}
-              size="icon"
-              type="button"
-              variant="outline"
-            >
-              <ChevronsRight className="h-4 w-4" />
-            </Button>
-            <Button
-              aria-label="Show details sidebar"
-              className="h-9 w-9 touch-manipulation"
-              onClick={() => setRightSidebarCollapsed(false)}
-              size="icon"
-              type="button"
-              variant="outline"
-            >
-              <ChevronsLeft className="h-4 w-4" />
-            </Button>
-          </div>
-        ) : null}
-        {leftSidebarCollapsed ? (
+        </header>
+
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden print:overflow-visible">
           <div
             className={cn(
-              "flex shrink-0 justify-center border-b border-border py-1.5 print:hidden lg:w-11 lg:flex-col lg:border-b-0 lg:border-r lg:py-3",
-              leftSidebarCollapsed && rightSidebarCollapsed && "hidden lg:flex"
+              "flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-auto overscroll-y-contain print:overflow-visible workspace-scrollbar-hide md:gap-3",
+              selectedPaste && phoneViewport
+                ? "pb-[calc(4.5rem+env(safe-area-inset-bottom))]"
+                : selectedPaste
+                  ? "max-md:pb-[calc(5.25rem+env(safe-area-inset-bottom))]"
+                  : null
             )}
           >
-            <Button
-              aria-label="Show library sidebar"
-              className="h-9 w-9 touch-manipulation"
-              onClick={() => setLeftSidebarCollapsed(false)}
-              size="icon"
-              type="button"
-              variant="outline"
-            >
-              <ChevronsRight className="h-4 w-4" />
-            </Button>
+            {localImportCount > 0 && sessionUser && mode === "account" ? (
+              <Card className="shrink-0 border-cyan-600/25 bg-cyan-600/10 print:hidden dark:border-cyan-400/20 dark:bg-cyan-400/5">
+                <CardContent className="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Local drafts are ready to merge</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Found {localImportCount} local draft{localImportCount === 1 ? "" : "s"} in IndexedDB. Import them
+                      into your account when you are ready.
+                    </p>
+                  </div>
+                  <Button disabled={saving} onClick={() => void handleMergeLocalIntoAccount()} type="button">
+                    <Upload className="h-4 w-4" />
+                    Import local drafts
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : null}
+
+            {status ? (
+              <div
+                aria-live="polite"
+                className="flex shrink-0 items-start gap-2 rounded-2xl border border-emerald-600/25 bg-emerald-600/10 px-3 py-2.5 text-sm text-emerald-950 print:hidden dark:border-emerald-400/20 dark:bg-emerald-400/5 dark:text-emerald-100 sm:px-4 sm:py-3"
+                role="status"
+              >
+                <p className="min-w-0 flex-1 leading-snug">{status}</p>
+                <Button
+                  aria-label="Dismiss message"
+                  className="h-7 w-7 shrink-0 text-emerald-900 hover:bg-emerald-600/20 dark:text-emerald-100 dark:hover:bg-emerald-400/15"
+                  onClick={() => setStatus(null)}
+                  size="icon"
+                  type="button"
+                  variant="ghost"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : null}
+
+            {error ? (
+              <div
+                aria-live="assertive"
+                className="flex shrink-0 items-start gap-2 rounded-2xl border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm text-destructive print:hidden dark:text-destructive-foreground sm:px-4 sm:py-3"
+                role="alert"
+              >
+                <p className="min-w-0 flex-1 leading-snug">{error}</p>
+                <Button
+                  aria-label="Dismiss error"
+                  className="h-7 w-7 shrink-0 hover:bg-destructive/15"
+                  onClick={() => setError(null)}
+                  size="icon"
+                  type="button"
+                  variant="ghost"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : null}
+
+            <section className="flex min-h-0 flex-1 flex-col gap-1.5 print:block print:min-h-0 max-lg:gap-1.5 lg:flex-row lg:gap-4">
+              {phoneViewport ? (
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col print:w-full print:max-w-none">
+                  <div className="mb-1 flex items-center justify-between gap-2 print:hidden">
+                    <Button
+                      className="h-9 px-3 text-xs"
+                      data-tutorial="library-button"
+                      onClick={() => setMobileLibraryOpen(true)}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      <PanelLeft className="h-4 w-4" />
+                      {workspaceCopy.libraryButton}
+                    </Button>
+                    <Button
+                      className="h-9 px-3 text-xs"
+                      data-tutorial="details-button"
+                      disabled={!selectedPaste}
+                      onClick={() => setMobileDetailsOpen(true)}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      <PanelRight className="h-4 w-4" />
+                      {workspaceCopy.detailsButton}
+                    </Button>
+                  </div>
+                  <div className="flex min-h-0 min-w-0 flex-1 flex-col">{renderEditor()}</div>
+                </div>
+              ) : (
+                <>
+                  {leftSidebarCollapsed && rightSidebarCollapsed ? (
+                    <div className="flex shrink-0 flex-row items-center justify-center gap-4 border-b border-border py-1 print:hidden lg:hidden">
+                      <Button
+                        aria-label="Show library sidebar"
+                        className="h-9 w-9 touch-manipulation"
+                        onClick={() => setLeftSidebarCollapsed(false)}
+                        size="icon"
+                        type="button"
+                        variant="outline"
+                      >
+                        <ChevronsRight className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        aria-label="Show details sidebar"
+                        className="h-9 w-9 touch-manipulation"
+                        onClick={() => setRightSidebarCollapsed(false)}
+                        size="icon"
+                        type="button"
+                        variant="outline"
+                      >
+                        <ChevronsLeft className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : null}
+                  {leftSidebarCollapsed ? (
+                    <div
+                      className={cn(
+                        "flex shrink-0 justify-center border-b border-border py-1.5 print:hidden lg:w-11 lg:flex-col lg:border-b-0 lg:border-r lg:py-3",
+                        leftSidebarCollapsed && rightSidebarCollapsed && "hidden lg:flex"
+                      )}
+                    >
+                      <Button
+                        aria-label="Show library sidebar"
+                        className="h-9 w-9 touch-manipulation"
+                        onClick={() => setLeftSidebarCollapsed(false)}
+                        size="icon"
+                        type="button"
+                        variant="outline"
+                      >
+                        <ChevronsRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="min-h-0 min-w-0 max-h-[min(40dvh,20rem)] shrink-0 overflow-hidden print:hidden lg:max-h-none lg:w-[min(100%,272px)] lg:max-w-[300px] lg:shrink-0 xl:w-[min(100%,300px)] xl:max-w-[330px] 2xl:w-[min(100%,340px)] 2xl:max-w-[380px]">
+                      {renderSidebar()}
+                    </div>
+                  )}
+                  <div className="flex min-h-0 min-w-0 flex-1 flex-col print:w-full print:max-w-none max-lg:min-h-[min(58dvh,24rem)]">
+                    {renderEditor()}
+                  </div>
+                  {rightSidebarCollapsed ? (
+                    <div
+                      className={cn(
+                        "flex shrink-0 justify-center border-t border-border py-1.5 print:hidden lg:w-12 lg:flex-col lg:items-center lg:border-l lg:border-t-0 lg:py-3 lg:pl-1.5",
+                        leftSidebarCollapsed && rightSidebarCollapsed && "hidden lg:flex"
+                      )}
+                    >
+                      <Button
+                        aria-label="Show details sidebar"
+                        className="h-9 w-9 touch-manipulation"
+                        onClick={() => setRightSidebarCollapsed(false)}
+                        size="icon"
+                        type="button"
+                        variant="outline"
+                      >
+                        <ChevronsLeft className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="min-h-0 min-w-0 max-h-[min(36dvh,18rem)] shrink-0 overflow-y-auto overflow-x-hidden print:hidden lg:max-h-none lg:w-[min(100%,290px)] lg:max-w-[320px] lg:shrink-0 xl:w-[min(100%,320px)] xl:max-w-[360px] 2xl:w-[min(100%,360px)] 2xl:max-w-[420px]">
+                      {renderDetails()}
+                    </div>
+                  )}
+                </>
+              )}
+            </section>
           </div>
-        ) : (
-          <div className="min-h-0 min-w-0 max-h-[min(40dvh,20rem)] shrink-0 overflow-hidden print:hidden lg:max-h-none lg:w-[min(100%,272px)] lg:max-w-[300px] lg:shrink-0 xl:w-[min(100%,300px)] xl:max-w-[330px] 2xl:w-[min(100%,340px)] 2xl:max-w-[380px]">
+
+          {selectedPaste ? (
+            phoneViewport ? (
+              <div className="glass-panel z-10 flex shrink-0 items-center justify-between gap-2 border-t border-border px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] print:hidden md:hidden">
+                <Button
+                  className="h-9 min-h-9 flex-1 gap-1.5 px-2.5 text-[11px]"
+                  data-tutorial="library-button"
+                  onClick={() => setMobileLibraryOpen(true)}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  <PanelLeft className="h-4 w-4" />
+                  {workspaceCopy.libraryButton}
+                </Button>
+                <Button
+                  className="h-9 min-h-9 flex-1 gap-1.5 px-2.5 text-[11px]"
+                  onClick={() => void handleSavePaste()}
+                  size="sm"
+                  type="button"
+                >
+                  <Save className="h-4 w-4" />
+                  Save
+                </Button>
+                <Button
+                  className="h-9 min-h-9 flex-1 gap-1.5 px-2.5 text-[11px]"
+                  onClick={handleNewPaste}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  <FilePlus2 className="h-4 w-4" />
+                  {workspaceCopy.newPaste}
+                </Button>
+                <Button
+                  className="h-9 min-h-9 flex-1 gap-1.5 px-2.5 text-[11px]"
+                  data-tutorial="details-button"
+                  disabled={!selectedPaste}
+                  onClick={() => setMobileDetailsOpen(true)}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  <PanelRight className="h-4 w-4" />
+                  {workspaceCopy.detailsButton}
+                </Button>
+              </div>
+            ) : (
+              <div className="glass-panel z-10 flex shrink-0 items-start justify-between gap-3 border-t border-border px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] print:hidden md:hidden">
+                <div className="min-w-0 flex-1 pr-1">
+                  <p
+                    className="line-clamp-2 text-sm font-medium leading-snug break-words"
+                    title={(selectedPaste.title || "Untitled").trim() || "Untitled"}
+                  >
+                    {(selectedPaste.title || "Untitled").trim() || "Untitled"}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{selectedPaste.language}</p>
+                </div>
+                <div className="flex shrink-0 touch-manipulation gap-2 self-start pt-0.5">
+                  <Button
+                    className="h-9 min-h-9 gap-1.5 px-3 text-xs"
+                    onClick={() => void handleSavePaste()}
+                    size="sm"
+                    type="button"
+                  >
+                    <Save className="h-4 w-4" />
+                    Save
+                  </Button>
+                  <Button
+                    className="h-9 min-h-9 gap-1.5 px-3 text-xs"
+                    onClick={handleNewPaste}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    <FilePlus2 className="h-4 w-4" />
+                    New
+                  </Button>
+                </div>
+              </div>
+            )
+          ) : null}
+        </div>
+
+        <WorkspaceTutorial
+          onClose={closeTutorial}
+          onStepIndexChange={setTutorialStepIndex}
+          onTourChange={changeTutorialTour}
+          open={tutorialOpen}
+          stepIndex={tutorialStepIndex}
+          tourId={activeTutorialTour?.id ?? tutorialTourId}
+          tours={tutorialTours}
+        />
+
+        <Dialog onOpenChange={setMobileLibraryOpen} open={phoneViewport && mobileLibraryOpen}>
+          <DialogContent className="flex h-[min(92dvh,56rem)] w-[calc(100vw-1rem)] max-w-none flex-col overflow-hidden rounded-[1.25rem] p-0 sm:max-w-xl">
+            <DialogHeader className="sr-only">
+              <DialogTitle>{workspaceCopy.workspaceLibraryTitle}</DialogTitle>
+              <DialogDescription>{workspaceCopy.workspaceLibraryDescription}</DialogDescription>
+            </DialogHeader>
             {renderSidebar()}
-          </div>
-        )}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col print:w-full print:max-w-none max-lg:min-h-[min(58dvh,24rem)]">
-          {renderEditor()}
-        </div>
-        {rightSidebarCollapsed ? (
-          <div
-            className={cn(
-              "flex shrink-0 justify-center border-t border-border py-1.5 print:hidden lg:w-12 lg:flex-col lg:items-center lg:border-l lg:border-t-0 lg:py-3 lg:pl-1.5",
-              leftSidebarCollapsed && rightSidebarCollapsed && "hidden lg:flex"
-            )}
-          >
-            <Button
-              aria-label="Show details sidebar"
-              className="h-9 w-9 touch-manipulation"
-              onClick={() => setRightSidebarCollapsed(false)}
-              size="icon"
-              type="button"
-              variant="outline"
-            >
-              <ChevronsLeft className="h-4 w-4" />
-            </Button>
-          </div>
-        ) : (
-          <div className="min-h-0 min-w-0 max-h-[min(36dvh,18rem)] shrink-0 overflow-y-auto overflow-x-hidden print:hidden lg:max-h-none lg:w-[min(100%,290px)] lg:max-w-[320px] lg:shrink-0 xl:w-[min(100%,320px)] xl:max-w-[360px] 2xl:w-[min(100%,360px)] 2xl:max-w-[420px]">
-            {renderDetails()}
-          </div>
-        )}
-          </>
-        )}
-      </section>
-        </div>
+          </DialogContent>
+        </Dialog>
 
-      {selectedPaste ? (
-        phoneViewport ? (
-          <div className="glass-panel z-10 flex shrink-0 items-center justify-between gap-2 border-t border-border px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] print:hidden md:hidden">
-            <Button className="h-9 min-h-9 flex-1 gap-1.5 px-2.5 text-[11px]" data-tutorial="library-button" onClick={() => setMobileLibraryOpen(true)} size="sm" type="button" variant="outline">
-              <PanelLeft className="h-4 w-4" />
-              {workspaceCopy.libraryButton}
-            </Button>
-            <Button className="h-9 min-h-9 flex-1 gap-1.5 px-2.5 text-[11px]" onClick={() => void handleSavePaste()} size="sm" type="button">
-              <Save className="h-4 w-4" />
-              Save
-            </Button>
-              <Button className="h-9 min-h-9 flex-1 gap-1.5 px-2.5 text-[11px]" onClick={handleNewPaste} size="sm" type="button" variant="outline">
-                <FilePlus2 className="h-4 w-4" />
-                {workspaceCopy.newPaste}
-              </Button>
-            <Button
-              className="h-9 min-h-9 flex-1 gap-1.5 px-2.5 text-[11px]"
-              data-tutorial="details-button"
-              disabled={!selectedPaste}
-              onClick={() => setMobileDetailsOpen(true)}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              <PanelRight className="h-4 w-4" />
-              {workspaceCopy.detailsButton}
-            </Button>
-          </div>
-        ) : (
-          <div className="glass-panel z-10 flex shrink-0 items-start justify-between gap-3 border-t border-border px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] print:hidden md:hidden">
-            <div className="min-w-0 flex-1 pr-1">
-              <p
-                className="line-clamp-2 text-sm font-medium leading-snug break-words"
-                title={(selectedPaste.title || "Untitled").trim() || "Untitled"}
-              >
-                {(selectedPaste.title || "Untitled").trim() || "Untitled"}
-              </p>
-              <p className="mt-0.5 text-xs text-muted-foreground">{selectedPaste.language}</p>
-            </div>
-            <div className="flex shrink-0 touch-manipulation gap-2 self-start pt-0.5">
-              <Button className="h-9 min-h-9 gap-1.5 px-3 text-xs" onClick={() => void handleSavePaste()} size="sm" type="button">
-                <Save className="h-4 w-4" />
-                Save
-              </Button>
-              <Button className="h-9 min-h-9 gap-1.5 px-3 text-xs" onClick={handleNewPaste} size="sm" type="button" variant="outline">
-                <FilePlus2 className="h-4 w-4" />
-                New
-              </Button>
-            </div>
-          </div>
-        )
-      ) : null}
-      </div>
+        <Dialog onOpenChange={setMobileDetailsOpen} open={phoneViewport && mobileDetailsOpen}>
+          <DialogContent className="flex h-[min(92dvh,56rem)] w-[calc(100vw-1rem)] max-w-none flex-col overflow-hidden rounded-[1.25rem] p-4 sm:max-w-xl">
+            <DialogHeader className="sr-only">
+              <DialogTitle>{workspaceCopy.pasteDetailsTitle}</DialogTitle>
+              <DialogDescription>{workspaceCopy.pasteDetailsDescription}</DialogDescription>
+            </DialogHeader>
+            <div className="min-h-0 flex-1 overflow-hidden">{renderDetails()}</div>
+          </DialogContent>
+        </Dialog>
 
-      <WorkspaceTutorial
-        onClose={closeTutorial}
-        onStepIndexChange={setTutorialStepIndex}
-        onTourChange={changeTutorialTour}
-        open={tutorialOpen}
-        stepIndex={tutorialStepIndex}
-        tourId={activeTutorialTour?.id ?? tutorialTourId}
-        tours={tutorialTours}
-      />
-
-      <Dialog onOpenChange={setMobileLibraryOpen} open={phoneViewport && mobileLibraryOpen}>
-        <DialogContent className="flex h-[min(92dvh,56rem)] w-[calc(100vw-1rem)] max-w-none flex-col overflow-hidden rounded-[1.25rem] p-0 sm:max-w-xl">
-          <DialogHeader className="sr-only">
-            <DialogTitle>{workspaceCopy.workspaceLibraryTitle}</DialogTitle>
-            <DialogDescription>{workspaceCopy.workspaceLibraryDescription}</DialogDescription>
-          </DialogHeader>
-          {renderSidebar()}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog onOpenChange={setMobileDetailsOpen} open={phoneViewport && mobileDetailsOpen}>
-        <DialogContent className="flex h-[min(92dvh,56rem)] w-[calc(100vw-1rem)] max-w-none flex-col overflow-hidden rounded-[1.25rem] p-4 sm:max-w-xl">
-          <DialogHeader className="sr-only">
-            <DialogTitle>{workspaceCopy.pasteDetailsTitle}</DialogTitle>
-            <DialogDescription>{workspaceCopy.pasteDetailsDescription}</DialogDescription>
-          </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-hidden">{renderDetails()}</div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        onOpenChange={(open) => {
-          if (!open) {
-            setMobileFolderActions({ open: false });
-          }
-        }}
-        open={phoneViewport && mobileFolderActions.open}
-      >
-        <DialogContent className="w-[calc(100vw-1rem)] max-w-sm rounded-[1.25rem] p-5">
-          <DialogHeader>
-            <DialogTitle>
-              {mobileFolderActions.open
-                ? mobileFolderActions.kind === "all"
-                  ? workspaceCopy.folderActionsAllTitle
-                  : mobileFolderActions.folderName
-                : workspaceCopy.folderActionsTitle}
-            </DialogTitle>
-            <DialogDescription>
-              {mobileFolderActions.open && mobileFolderActions.kind === "all"
-                ? workspaceCopy.folderActionsAllDescription
-                : workspaceCopy.folderActionsFolderDescription}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-2 flex flex-col gap-2">
-            <Button
-              className="justify-start"
-              onClick={() => {
-                if (!mobileFolderActions.open) {
-                  return;
-                }
-                setSidebarFolder("all");
-                setMobileFolderActions({ open: false });
-              }}
-              type="button"
-              variant="outline"
-            >
-              <FolderInput className="h-4 w-4" />
-              {workspaceCopy.showAllPastes}
-            </Button>
-            {mobileFolderActions.open && mobileFolderActions.kind === "folder" ? (
-              <Button
-                className="justify-start"
-                onClick={() => {
-                  void navigator.clipboard.writeText(mobileFolderActions.folderName);
-                  setStatus(`Copied folder name "${mobileFolderActions.folderName}".`);
-                  setMobileFolderActions({ open: false });
-                }}
-                type="button"
-                variant="outline"
-              >
-                <Copy className="h-4 w-4" />
-                {workspaceCopy.copyFolderName}
-              </Button>
-            ) : null}
-            {mobileFolderActions.open && mobileFolderActions.kind === "folder" ? (
-              <Button
-                className="justify-start"
-                onClick={() => {
-                  const folderName = mobileFolderActions.folderName;
-                  setSidebarFolder(folderName);
-                  setMobileFolderActions({ open: false });
-                }}
-                type="button"
-                variant="outline"
-              >
-                <Search className="h-4 w-4" />
-                {workspaceCopy.filterToThisFolder}
-              </Button>
-            ) : null}
-            <Button
-              className="justify-start"
-              onClick={() => {
-                setMobileFolderActions({ open: false });
-                window.setTimeout(() => openNewFolderModal(), 0);
-              }}
-              type="button"
-              variant="outline"
-            >
-              <FolderPlus className="h-4 w-4" />
-              {workspaceCopy.newFolder}
-            </Button>
-            {mobileFolderActions.open && mobileFolderActions.kind === "folder" ? (
-              <Button
-                className="justify-start"
-                onClick={() => {
-                  const folderName = mobileFolderActions.folderName;
-                  setMobileFolderActions({ open: false });
-                  window.setTimeout(() => openRenameFolderModal(folderName), 0);
-                }}
-                type="button"
-                variant="outline"
-              >
-                <Pencil className="h-4 w-4" />
-                Rename folder…
-              </Button>
-            ) : null}
-            {mobileFolderActions.open && mobileFolderActions.kind === "folder" ? (
-              <Button
-                className="justify-start"
-                onClick={() => {
-                  const folderName = mobileFolderActions.folderName;
-                  setMobileFolderActions({ open: false });
-                  void handleDeleteFolder(folderName);
-                }}
-                type="button"
-                variant="destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-                Delete folder…
-              </Button>
-            ) : null}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        onOpenChange={(open) => {
-          if (!open) {
-            setMobilePasteActions({ open: false });
-          }
-        }}
-        open={phoneViewport && mobilePasteActions.open}
-      >
-        <DialogContent className="w-[calc(100vw-1rem)] max-w-sm rounded-[1.25rem] p-5">
-          <DialogHeader>
-            <DialogTitle>{mobilePasteActionTarget?.title ?? "Paste actions"}</DialogTitle>
-            <DialogDescription>Everything you’d normally reach with right-click on desktop.</DialogDescription>
-          </DialogHeader>
-          {mobilePasteActionTarget ? (
+        <Dialog
+          onOpenChange={(open) => {
+            if (!open) {
+              setMobileFolderActions({ open: false });
+            }
+          }}
+          open={phoneViewport && mobileFolderActions.open}
+        >
+          <DialogContent className="w-[calc(100vw-1rem)] max-w-sm rounded-[1.25rem] p-5">
+            <DialogHeader>
+              <DialogTitle>
+                {mobileFolderActions.open
+                  ? mobileFolderActions.kind === "all"
+                    ? workspaceCopy.folderActionsAllTitle
+                    : mobileFolderActions.folderName
+                  : workspaceCopy.folderActionsTitle}
+              </DialogTitle>
+              <DialogDescription>
+                {mobileFolderActions.open && mobileFolderActions.kind === "all"
+                  ? workspaceCopy.folderActionsAllDescription
+                  : workspaceCopy.folderActionsFolderDescription}
+              </DialogDescription>
+            </DialogHeader>
             <div className="mt-2 flex flex-col gap-2">
               <Button
                 className="justify-start"
                 onClick={() => {
-                  setSelectedId(mobilePasteActionTarget.id);
-                  setMobilePasteActions({ open: false });
-                  setMobileLibraryOpen(false);
+                  if (!mobileFolderActions.open) {
+                    return;
+                  }
+                  setSidebarFolder("all");
+                  setMobileFolderActions({ open: false });
                 }}
                 type="button"
                 variant="outline"
               >
-                <FilePlus2 className="h-4 w-4" />
-                Open
+                <FolderInput className="h-4 w-4" />
+                {workspaceCopy.showAllPastes}
               </Button>
-              {snapshot.pastes.some((paste) => paste.id === mobilePasteActionTarget.id) ? (
+              {mobileFolderActions.open && mobileFolderActions.kind === "folder" ? (
+                <Button
+                  className="justify-start"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(mobileFolderActions.folderName);
+                    setStatus(`Copied folder name "${mobileFolderActions.folderName}".`);
+                    setMobileFolderActions({ open: false });
+                  }}
+                  type="button"
+                  variant="outline"
+                >
+                  <Copy className="h-4 w-4" />
+                  {workspaceCopy.copyFolderName}
+                </Button>
+              ) : null}
+              {mobileFolderActions.open && mobileFolderActions.kind === "folder" ? (
+                <Button
+                  className="justify-start"
+                  onClick={() => {
+                    const folderName = mobileFolderActions.folderName;
+                    setSidebarFolder(folderName);
+                    setMobileFolderActions({ open: false });
+                  }}
+                  type="button"
+                  variant="outline"
+                >
+                  <Search className="h-4 w-4" />
+                  {workspaceCopy.filterToThisFolder}
+                </Button>
+              ) : null}
+              <Button
+                className="justify-start"
+                onClick={() => {
+                  setMobileFolderActions({ open: false });
+                  window.setTimeout(() => openNewFolderModal(), 0);
+                }}
+                type="button"
+                variant="outline"
+              >
+                <FolderPlus className="h-4 w-4" />
+                {workspaceCopy.newFolder}
+              </Button>
+              {mobileFolderActions.open && mobileFolderActions.kind === "folder" ? (
+                <Button
+                  className="justify-start"
+                  onClick={() => {
+                    const folderName = mobileFolderActions.folderName;
+                    setMobileFolderActions({ open: false });
+                    window.setTimeout(() => openRenameFolderModal(folderName), 0);
+                  }}
+                  type="button"
+                  variant="outline"
+                >
+                  <Pencil className="h-4 w-4" />
+                  Rename folder…
+                </Button>
+              ) : null}
+              {mobileFolderActions.open && mobileFolderActions.kind === "folder" ? (
+                <Button
+                  className="justify-start"
+                  onClick={() => {
+                    const folderName = mobileFolderActions.folderName;
+                    setMobileFolderActions({ open: false });
+                    void handleDeleteFolder(folderName);
+                  }}
+                  type="button"
+                  variant="destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete folder…
+                </Button>
+              ) : null}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          onOpenChange={(open) => {
+            if (!open) {
+              setMobilePasteActions({ open: false });
+            }
+          }}
+          open={phoneViewport && mobilePasteActions.open}
+        >
+          <DialogContent className="w-[calc(100vw-1rem)] max-w-sm rounded-[1.25rem] p-5">
+            <DialogHeader>
+              <DialogTitle>{mobilePasteActionTarget?.title ?? "Paste actions"}</DialogTitle>
+              <DialogDescription>Everything you’d normally reach with right-click on desktop.</DialogDescription>
+            </DialogHeader>
+            {mobilePasteActionTarget ? (
+              <div className="mt-2 flex flex-col gap-2">
                 <Button
                   className="justify-start"
                   onClick={() => {
                     setSelectedId(mobilePasteActionTarget.id);
                     setMobilePasteActions({ open: false });
                     setMobileLibraryOpen(false);
-                    window.setTimeout(() => setMobileDetailsOpen(true), 0);
                   }}
                   type="button"
                   variant="outline"
                 >
-                  <PanelRight className="h-4 w-4" />
-                  Open details
+                  <FilePlus2 className="h-4 w-4" />
+                  Open
                 </Button>
-              ) : null}
-              <Button
-                className="justify-start"
-                onClick={() => {
-                  duplicatePasteById(mobilePasteActionTarget.id);
-                  setMobilePasteActions({ open: false });
-                }}
-                type="button"
-                variant="outline"
-              >
-                <WandSparkles className="h-4 w-4" />
-                Fork
-              </Button>
-              <Button
-                className="justify-start"
-                onClick={() => {
-                  void navigator.clipboard.writeText(mobilePasteActionTarget.content);
-                  setStatus("Copied paste contents to clipboard.");
-                  setMobilePasteActions({ open: false });
-                }}
-                type="button"
-                variant="outline"
-              >
-                <Copy className="h-4 w-4" />
-                Copy all text
-              </Button>
-              {snapshot.pastes.some((paste) => paste.id === mobilePasteActionTarget.id) ? (
-                <>
+                {snapshot.pastes.some((paste) => paste.id === mobilePasteActionTarget.id) ? (
                   <Button
                     className="justify-start"
                     onClick={() => {
-                      toggleWorkspacePasteFlag(mobilePasteActionTarget.id, "pinned");
+                      setSelectedId(mobilePasteActionTarget.id);
                       setMobilePasteActions({ open: false });
+                      setMobileLibraryOpen(false);
+                      window.setTimeout(() => setMobileDetailsOpen(true), 0);
                     }}
                     type="button"
                     variant="outline"
                   >
-                    <Save className="h-4 w-4" />
-                    {mobilePasteActionTarget.pinned ? "Unpin" : "Pin"}
+                    <PanelRight className="h-4 w-4" />
+                    Open details
                   </Button>
-                  <Button
-                    className="justify-start"
-                    onClick={() => {
-                      toggleWorkspacePasteFlag(mobilePasteActionTarget.id, "favorite");
-                      setMobilePasteActions({ open: false });
-                    }}
-                    type="button"
-                    variant="outline"
-                  >
-                    <Star className="h-4 w-4" />
-                    {mobilePasteActionTarget.favorite ? "Remove favorite" : "Favorite"}
-                  </Button>
-                  <Button
-                    className="justify-start"
-                    onClick={() => {
-                      toggleWorkspacePasteFlag(mobilePasteActionTarget.id, "archived");
-                      setMobilePasteActions({ open: false });
-                    }}
-                    type="button"
-                    variant="outline"
-                  >
-                    <EyeOff className="h-4 w-4" />
-                    {mobilePasteActionTarget.archived ? "Restore from archive" : "Archive"}
-                  </Button>
-                </>
-              ) : null}
-              {mobilePasteActionTarget.slug &&
-              !isAccountOnlyDraft(mobilePasteActionTarget, mode) &&
-              mobilePasteActionTarget.visibility !== "private" ? (
+                ) : null}
                 <Button
                   className="justify-start"
                   onClick={() => {
-                    const url = getPasteShareUrl(
-                      window.location.origin,
-                      mobilePasteActionTarget.slug!,
-                      mobilePasteActionTarget.secretMode
-                    );
-                    void navigator.clipboard.writeText(url);
-                    setStatus("Copied share link.");
+                    duplicatePasteById(mobilePasteActionTarget.id);
                     setMobilePasteActions({ open: false });
                   }}
                   type="button"
                   variant="outline"
                 >
-                  <Share2 className="h-4 w-4" />
-                  Copy share link
+                  <WandSparkles className="h-4 w-4" />
+                  Fork
                 </Button>
-              ) : null}
-              {mobilePasteActionTarget.slug &&
-              !isAccountOnlyDraft(mobilePasteActionTarget, mode) &&
-              mobilePasteActionTarget.visibility !== "private" ? (
                 <Button
                   className="justify-start"
                   onClick={() => {
-                    const url = `${window.location.origin}/raw/${mobilePasteActionTarget.slug}`;
-                    void navigator.clipboard.writeText(url);
-                    setStatus("Copied raw URL.");
+                    void navigator.clipboard.writeText(mobilePasteActionTarget.content);
+                    setStatus("Copied paste contents to clipboard.");
                     setMobilePasteActions({ open: false });
                   }}
                   type="button"
                   variant="outline"
                 >
-                  <Link2 className="h-4 w-4" />
-                  Copy raw URL
+                  <Copy className="h-4 w-4" />
+                  Copy all text
                 </Button>
-              ) : null}
-              {snapshot.pastes.some((paste) => paste.id === mobilePasteActionTarget.id) ? (
-                <>
+                {snapshot.pastes.some((paste) => paste.id === mobilePasteActionTarget.id) ? (
+                  <>
+                    <Button
+                      className="justify-start"
+                      onClick={() => {
+                        toggleWorkspacePasteFlag(mobilePasteActionTarget.id, "pinned");
+                        setMobilePasteActions({ open: false });
+                      }}
+                      type="button"
+                      variant="outline"
+                    >
+                      <Save className="h-4 w-4" />
+                      {mobilePasteActionTarget.pinned ? "Unpin" : "Pin"}
+                    </Button>
+                    <Button
+                      className="justify-start"
+                      onClick={() => {
+                        toggleWorkspacePasteFlag(mobilePasteActionTarget.id, "favorite");
+                        setMobilePasteActions({ open: false });
+                      }}
+                      type="button"
+                      variant="outline"
+                    >
+                      <Star className="h-4 w-4" />
+                      {mobilePasteActionTarget.favorite ? "Remove favorite" : "Favorite"}
+                    </Button>
+                    <Button
+                      className="justify-start"
+                      onClick={() => {
+                        toggleWorkspacePasteFlag(mobilePasteActionTarget.id, "archived");
+                        setMobilePasteActions({ open: false });
+                      }}
+                      type="button"
+                      variant="outline"
+                    >
+                      <EyeOff className="h-4 w-4" />
+                      {mobilePasteActionTarget.archived ? "Restore from archive" : "Archive"}
+                    </Button>
+                  </>
+                ) : null}
+                {mobilePasteActionTarget.slug &&
+                !isAccountOnlyDraft(mobilePasteActionTarget, mode) &&
+                mobilePasteActionTarget.visibility !== "private" ? (
                   <Button
                     className="justify-start"
                     onClick={() => {
-                      setBatchSelected(new Set([mobilePasteActionTarget.id]));
+                      const url = getPasteShareUrl(
+                        window.location.origin,
+                        mobilePasteActionTarget.slug!,
+                        mobilePasteActionTarget.secretMode
+                      );
+                      void navigator.clipboard.writeText(url);
+                      setStatus("Copied share link.");
                       setMobilePasteActions({ open: false });
-                      window.setTimeout(() => setBatchMoveOpen(true), 0);
                     }}
                     type="button"
                     variant="outline"
                   >
-                    <FolderInput className="h-4 w-4" />
-                    Move / rename…
+                    <Share2 className="h-4 w-4" />
+                    Copy share link
                   </Button>
+                ) : null}
+                {mobilePasteActionTarget.slug &&
+                !isAccountOnlyDraft(mobilePasteActionTarget, mode) &&
+                mobilePasteActionTarget.visibility !== "private" ? (
                   <Button
                     className="justify-start"
                     onClick={() => {
-                      toggleBatchId(mobilePasteActionTarget.id);
+                      const url = `${window.location.origin}/raw/${mobilePasteActionTarget.slug}`;
+                      void navigator.clipboard.writeText(url);
+                      setStatus("Copied raw URL.");
                       setMobilePasteActions({ open: false });
                     }}
                     type="button"
                     variant="outline"
                   >
-                    <ListOrdered className="h-4 w-4" />
-                    {batchSelected.has(mobilePasteActionTarget.id) ? "Deselect for batch" : "Select for batch"}
+                    <Link2 className="h-4 w-4" />
+                    Copy raw URL
                   </Button>
-                  <Button
-                    className="justify-start"
-                    onClick={() => {
-                      setMobilePasteActions({ open: false });
-                      void deletePasteById(mobilePasteActionTarget.id);
-                    }}
-                    type="button"
-                    variant="destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    {isAccountOnlyDraft(mobilePasteActionTarget, mode) ? "Discard draft" : "Delete"}
-                  </Button>
-                </>
-              ) : null}
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+                ) : null}
+                {snapshot.pastes.some((paste) => paste.id === mobilePasteActionTarget.id) ? (
+                  <>
+                    <Button
+                      className="justify-start"
+                      onClick={() => {
+                        setBatchSelected(new Set([mobilePasteActionTarget.id]));
+                        setMobilePasteActions({ open: false });
+                        window.setTimeout(() => setBatchMoveOpen(true), 0);
+                      }}
+                      type="button"
+                      variant="outline"
+                    >
+                      <FolderInput className="h-4 w-4" />
+                      Move / rename…
+                    </Button>
+                    <Button
+                      className="justify-start"
+                      onClick={() => {
+                        toggleBatchId(mobilePasteActionTarget.id);
+                        setMobilePasteActions({ open: false });
+                      }}
+                      type="button"
+                      variant="outline"
+                    >
+                      <ListOrdered className="h-4 w-4" />
+                      {batchSelected.has(mobilePasteActionTarget.id) ? "Deselect for batch" : "Select for batch"}
+                    </Button>
+                    <Button
+                      className="justify-start"
+                      onClick={() => {
+                        setMobilePasteActions({ open: false });
+                        void deletePasteById(mobilePasteActionTarget.id);
+                      }}
+                      type="button"
+                      variant="destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {isAccountOnlyDraft(mobilePasteActionTarget, mode) ? "Discard draft" : "Delete"}
+                    </Button>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
+          </DialogContent>
+        </Dialog>
 
-      {selectedPaste ? (
-        <CodeImageDialog
-          content={selectedPaste.content}
-          exportBasename={selectedPaste.title}
-          language={selectedPaste.language}
-          onOpenChange={setCodeImageOpen}
-          open={codeImageOpen}
-        />
-      ) : null}
-
-      <Dialog
-        onOpenChange={(open) => {
-          if (!open) {
-            setFolderModal({ open: false });
-          }
-        }}
-        open={folderModal.open}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {folderModal.open ? (folderModal.mode === "rename" ? "Rename folder" : "New folder") : "Folder"}
-            </DialogTitle>
-            <DialogDescription>
-              {folderModal.open && folderModal.mode === "rename" ? (
-                <>
-                  Change the name for &quot;{folderModal.from}&quot;. Pastes in this folder are updated automatically.
-                </>
-              ) : (
-                <>Folders show up in the library filter bar so you can organize pastes before or after saving.</>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <Input
-            autoFocus
-            id="wox-folder-modal-name"
-            onChange={(event) => setFolderModalName(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                if (!folderModal.open) {
-                  return;
-                }
-                if (folderModal.mode === "new") {
-                  void submitCreateFolder(folderModalName);
-                } else {
-                  void submitRenameFolder(folderModal.from, folderModalName);
-                }
-              }
-            }}
-            placeholder="Folder name"
-            value={folderModalName}
+        {selectedPaste ? (
+          <CodeImageDialog
+            content={selectedPaste.content}
+            exportBasename={selectedPaste.title}
+            language={selectedPaste.language}
+            onOpenChange={setCodeImageOpen}
+            open={codeImageOpen}
           />
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button onClick={() => setFolderModal({ open: false })} type="button" variant="ghost">
-              Cancel
-            </Button>
-            <Button
-              disabled={saving || !folderModalName.trim()}
-              onClick={() => {
-                if (!folderModal.open) {
-                  return;
-                }
-                if (folderModal.mode === "new") {
-                  void submitCreateFolder(folderModalName);
-                } else {
-                  void submitRenameFolder(folderModal.from, folderModalName);
+        ) : null}
+
+        <Dialog
+          onOpenChange={(open) => {
+            if (!open) {
+              setFolderModal({ open: false });
+            }
+          }}
+          open={folderModal.open}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {folderModal.open ? (folderModal.mode === "rename" ? "Rename folder" : "New folder") : "Folder"}
+              </DialogTitle>
+              <DialogDescription>
+                {folderModal.open && folderModal.mode === "rename" ? (
+                  <>
+                    Change the name for &quot;{folderModal.from}&quot;. Pastes in this folder are updated automatically.
+                  </>
+                ) : (
+                  <>Folders show up in the library filter bar so you can organize pastes before or after saving.</>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <Input
+              autoFocus
+              id="wox-folder-modal-name"
+              onChange={(event) => setFolderModalName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  if (!folderModal.open) {
+                    return;
+                  }
+                  if (folderModal.mode === "new") {
+                    void submitCreateFolder(folderModalName);
+                  } else {
+                    void submitRenameFolder(folderModal.from, folderModalName);
+                  }
                 }
               }}
-              type="button"
-            >
-              {folderModal.open && folderModal.mode === "rename" ? "Rename" : "Create"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        onOpenChange={(open) => {
-          setBatchMoveOpen(open);
-          if (!open) {
-            setBatchMoveFolder("");
-          }
-        }}
-        open={batchMoveOpen}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Move to folder</DialogTitle>
-            <DialogDescription>
-              Applies to {batchSelected.size} selected paste{batchSelected.size === 1 ? "" : "s"}. Type an existing folder name or a new
-              one — new names are added to your workspace list.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="wox-batch-move-folder">
-              Folder name
-            </label>
-            <Input
-              id="wox-batch-move-folder"
-              list="wox-batch-move-datalist"
-              onChange={(event) => setBatchMoveFolder(event.target.value)}
-              placeholder="e.g. Notes, Code, Snippets"
-              value={batchMoveFolder}
+              placeholder="Folder name"
+              value={folderModalName}
             />
-            <datalist id="wox-batch-move-datalist">
-              {[...snapshot.folders].sort((a, b) => a.localeCompare(b)).map((folder) => (
-                <option key={folder} value={folder} />
-              ))}
-            </datalist>
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button onClick={() => setBatchMoveOpen(false)} type="button" variant="ghost">
-              Cancel
-            </Button>
-            <Button
-              disabled={saving || !batchMoveFolder.trim()}
-              onClick={() => void handleBatchMove()}
-              type="button"
-            >
-              Move
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button onClick={() => setFolderModal({ open: false })} type="button" variant="ghost">
+                Cancel
+              </Button>
+              <Button
+                disabled={saving || !folderModalName.trim()}
+                onClick={() => {
+                  if (!folderModal.open) {
+                    return;
+                  }
+                  if (folderModal.mode === "new") {
+                    void submitCreateFolder(folderModalName);
+                  } else {
+                    void submitRenameFolder(folderModal.from, folderModalName);
+                  }
+                }}
+                type="button"
+              >
+                {folderModal.open && folderModal.mode === "rename" ? "Rename" : "Create"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      <Dialog onOpenChange={setTemplatesOpen} open={templatesOpen}>
-        <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Templates</DialogTitle>
-            <DialogDescription>Built-in starters or pastes you marked with &quot;Save as template&quot;.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-6 text-sm">
-            <div>
-              <p className="mb-2 font-medium text-foreground">Built-in</p>
-              <ul className="space-y-2">
-                {BUILTIN_TEMPLATES.map((t) => (
-                  <li className="flex items-start justify-between gap-3" key={t.id}>
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-foreground">{t.title}</p>
-                      {t.description ? <p className="text-xs text-muted-foreground">{t.description}</p> : null}
-                    </div>
-                    <Button onClick={() => applyBuiltinTemplate(t)} size="sm" type="button">
-                      Use
-                    </Button>
-                  </li>
-                ))}
-              </ul>
+        <Dialog
+          onOpenChange={(open) => {
+            setBatchMoveOpen(open);
+            if (!open) {
+              setBatchMoveFolder("");
+            }
+          }}
+          open={batchMoveOpen}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Move to folder</DialogTitle>
+              <DialogDescription>
+                Applies to {batchSelected.size} selected paste{batchSelected.size === 1 ? "" : "s"}. Type an existing
+                folder name or a new one — new names are added to your workspace list.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground" htmlFor="wox-batch-move-folder">
+                Folder name
+              </label>
+              <Input
+                id="wox-batch-move-folder"
+                list="wox-batch-move-datalist"
+                onChange={(event) => setBatchMoveFolder(event.target.value)}
+                placeholder="e.g. Notes, Code, Snippets"
+                value={batchMoveFolder}
+              />
+              <datalist id="wox-batch-move-datalist">
+                {[...snapshot.folders]
+                  .sort((a, b) => a.localeCompare(b))
+                  .map((folder) => (
+                    <option key={folder} value={folder} />
+                  ))}
+              </datalist>
             </div>
-            <div>
-              <p className="mb-2 font-medium text-foreground">Your templates</p>
-              {snapshot.pastes.filter((p) => p.template).length === 0 ? (
-                <p className="text-muted-foreground">Enable &quot;Save as template&quot; in paste details.</p>
-              ) : (
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button onClick={() => setBatchMoveOpen(false)} type="button" variant="ghost">
+                Cancel
+              </Button>
+              <Button disabled={saving || !batchMoveFolder.trim()} onClick={() => void handleBatchMove()} type="button">
+                Move
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog onOpenChange={setTemplatesOpen} open={templatesOpen}>
+          <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Templates</DialogTitle>
+              <DialogDescription>
+                Built-in starters or pastes you marked with &quot;Save as template&quot;.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-6 text-sm">
+              <div>
+                <p className="mb-2 font-medium text-foreground">Built-in</p>
                 <ul className="space-y-2">
-                  {snapshot.pastes
-                    .filter((p) => p.template)
-                    .map((p) => (
-                      <li className="flex flex-wrap items-center justify-between gap-2" key={p.id}>
-                        <span className="truncate">{p.title}</span>
-                        <div className="flex gap-2">
-                          <Button onClick={() => applyUserTemplate(p)} size="sm" type="button">
-                            Use
-                          </Button>
-                          <Button
-                            disabled={saving}
-                            onClick={() => void removeTemplateFromPaste(p)}
-                            size="sm"
-                            type="button"
-                            variant="outline"
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      </li>
-                    ))}
+                  {BUILTIN_TEMPLATES.map((t) => (
+                    <li className="flex items-start justify-between gap-3" key={t.id}>
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-foreground">{t.title}</p>
+                        {t.description ? <p className="text-xs text-muted-foreground">{t.description}</p> : null}
+                      </div>
+                      <Button onClick={() => applyBuiltinTemplate(t)} size="sm" type="button">
+                        Use
+                      </Button>
+                    </li>
+                  ))}
                 </ul>
-              )}
+              </div>
+              <div>
+                <p className="mb-2 font-medium text-foreground">Your templates</p>
+                {snapshot.pastes.filter((p) => p.template).length === 0 ? (
+                  <p className="text-muted-foreground">Enable &quot;Save as template&quot; in paste details.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {snapshot.pastes
+                      .filter((p) => p.template)
+                      .map((p) => (
+                        <li className="flex flex-wrap items-center justify-between gap-2" key={p.id}>
+                          <span className="truncate">{p.title}</span>
+                          <div className="flex gap-2">
+                            <Button onClick={() => applyUserTemplate(p)} size="sm" type="button">
+                              Use
+                            </Button>
+                            <Button
+                              disabled={saving}
+                              onClick={() => void removeTemplateFromPaste(p)}
+                              size="sm"
+                              type="button"
+                              variant="outline"
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        </li>
+                      ))}
+                  </ul>
+                )}
+              </div>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
 
-      <Dialog onOpenChange={setShortcutsOpen} open={shortcutsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Keyboard shortcuts</DialogTitle>
-            <DialogDescription>Same spirit as the legacy desktop app.</DialogDescription>
-          </DialogHeader>
-          <ul className="space-y-2 text-sm text-foreground">
-            <li>
-              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + K</kbd>{" "}
-              — Focus library search
-            </li>
-            <li>
-              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + N</kbd> — New
-              paste
-            </li>
-            <li>
-              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + S</kbd> — Save
-              paste
-            </li>
-            <li>
-              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + D</kbd> — Duplicate
-              current paste
-            </li>
-            <li>
-              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + Shift + E</kbd>{" "}
-              — Export workspace backup
-            </li>
-            <li>
-              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + F</kbd> — Find
-              in editor
-            </li>
-            <li>
-              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + Shift + B</kbd>{" "}
-              — Jump to matching bracket
-            </li>
-            <li>
-              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + H</kbd> — Replace
-              dialog
-            </li>
-            <li>
-              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + P</kbd> — Quick
-              open paste (library picker)
-            </li>
-            <li>
-              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + Shift + P</kbd>{" "}
-              — Toggle pin on current paste
-            </li>
-            <li>
-              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + Shift + F</kbd>{" "}
-              — Toggle favorite on current paste
-            </li>
-            <li>
-              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + Shift + A</kbd>{" "}
-              — Toggle archive on current paste
-            </li>
-            <li>
-              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">Alt + 1..4</kbd> — Switch
-              ribbon tabs
-            </li>
-            <li>
-              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">?</kbd> — Shortcuts (when
-              not typing in a field)
-            </li>
-          </ul>
-          <p className="text-muted-foreground mt-4 border-t border-border pt-3 text-xs leading-relaxed">
-            <span className="font-medium text-foreground">Header:</span> app UI (dark / light / system), syntax colors, workspace
-            backdrop, and high-contrast borders (whole site).{" "}
-            <span className="font-medium text-foreground">Editor (View ribbon):</span> line numbers, word wrap,{" "}
-            <strong>active indent guides</strong> (VS Code–style vertical lines only at the caret line’s tab-stop depths),
-            and <strong>print</strong> options (wrap long lines on paper, comfortable / minimal / document layout). Guides use
-            a <strong>canvas overlay</strong> (content-aware), not CSS alone; they stay off while word wrap is enabled.
-            Preferences are saved in this browser (<code className="rounded bg-muted px-1">localStorage</code>).
-          </p>
-        </DialogContent>
-      </Dialog>
+        <Dialog onOpenChange={setShortcutsOpen} open={shortcutsOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Keyboard shortcuts</DialogTitle>
+              <DialogDescription>Same spirit as the legacy desktop app.</DialogDescription>
+            </DialogHeader>
+            <ul className="space-y-2 text-sm text-foreground">
+              <li>
+                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + K</kbd>{" "}
+                — Focus library search
+              </li>
+              <li>
+                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + N</kbd>{" "}
+                — New paste
+              </li>
+              <li>
+                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + S</kbd>{" "}
+                — Save paste
+              </li>
+              <li>
+                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + D</kbd>{" "}
+                — Duplicate current paste
+              </li>
+              <li>
+                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">
+                  ⌘/Ctrl + Shift + E
+                </kbd>{" "}
+                — Export workspace backup
+              </li>
+              <li>
+                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + F</kbd>{" "}
+                — Find in editor
+              </li>
+              <li>
+                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">
+                  ⌘/Ctrl + Shift + B
+                </kbd>{" "}
+                — Jump to matching bracket
+              </li>
+              <li>
+                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + H</kbd>{" "}
+                — Replace dialog
+              </li>
+              <li>
+                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘/Ctrl + P</kbd>{" "}
+                — Quick open paste (library picker)
+              </li>
+              <li>
+                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">
+                  ⌘/Ctrl + Shift + P
+                </kbd>{" "}
+                — Toggle pin on current paste
+              </li>
+              <li>
+                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">
+                  ⌘/Ctrl + Shift + F
+                </kbd>{" "}
+                — Toggle favorite on current paste
+              </li>
+              <li>
+                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">
+                  ⌘/Ctrl + Shift + A
+                </kbd>{" "}
+                — Toggle archive on current paste
+              </li>
+              <li>
+                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">Alt + 1..4</kbd>{" "}
+                — Switch ribbon tabs
+              </li>
+              <li>
+                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">?</kbd> —
+                Shortcuts (when not typing in a field)
+              </li>
+            </ul>
+            <p className="text-muted-foreground mt-4 border-t border-border pt-3 text-xs leading-relaxed">
+              <span className="font-medium text-foreground">Header:</span> app UI (dark / light / system), syntax
+              colors, workspace backdrop, and high-contrast borders (whole site).{" "}
+              <span className="font-medium text-foreground">Editor (View ribbon):</span> line numbers, word wrap,{" "}
+              <strong>active indent guides</strong> (VS Code–style vertical lines only at the caret line’s tab-stop
+              depths), and <strong>print</strong> options (wrap long lines on paper, comfortable / minimal / document
+              layout). Guides use a <strong>canvas overlay</strong> (content-aware), not CSS alone; they stay off while
+              word wrap is enabled. Preferences are saved in this browser (
+              <code className="rounded bg-muted px-1">localStorage</code>).
+            </p>
+          </DialogContent>
+        </Dialog>
 
-      <Dialog
-        onOpenChange={(open) => {
-          setQuickOpenOpen(open);
-          if (!open) {
-            setQuickOpenQuery("");
-          }
-        }}
-        open={quickOpenOpen}
-      >
-        <DialogContent className="max-h-[85vh] max-w-lg overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Quick open</DialogTitle>
-            <DialogDescription>Jump to a paste in your workspace (legacy Ctrl+P).</DialogDescription>
-          </DialogHeader>
-          <Input
-            autoFocus
-            onChange={(e) => setQuickOpenQuery(e.target.value)}
-            placeholder="Filter by title or content…"
-            value={quickOpenQuery}
-          />
-          <div className="max-h-64 space-y-1 overflow-y-auto pr-1 text-sm">
-            {snapshot.pastes
-              .filter((p) => {
-                const q = quickOpenQuery.trim().toLowerCase();
-                if (!q) {
-                  return true;
-                }
-                return `${p.title}\n${p.content}`.toLowerCase().includes(q);
-              })
-              .slice(0, 80)
-              .map((p) => (
-                <button
-                  className="w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-left hover:bg-muted/70"
-                  key={p.id}
-                  onClick={() => {
-                    setSidebarFolder("all");
-                    setSelectedId(p.id);
-                    setQuickOpenOpen(false);
-                    setQuickOpenQuery("");
-                  }}
-                  type="button"
-                >
-                  <span className="font-medium text-foreground">{p.title}</span>
-                  <span className="mt-1 line-clamp-1 block text-xs text-muted-foreground">{p.content || "Empty"}</span>
-                </button>
-              ))}
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setQuickOpenOpen(false)} type="button" variant="ghost">
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        onOpenChange={(open) => {
-          setShareBuilderOpen(open);
-          if (!open) {
-            setShareLineStart("");
-            setShareLineEnd("");
-          }
-        }}
-        open={shareBuilderOpen}
-      >
-        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Share builder</DialogTitle>
-            <DialogDescription>Link variants, embed, and QR (legacy-style helpers).</DialogDescription>
-          </DialogHeader>
-          {selectedPaste &&
-          !isAccountOnlyDraft(selectedPaste, mode) &&
-          selectedPaste.slug ? (
-            <ShareBuilderPanel
-              lineEnd={shareLineEnd}
-              lineStart={shareLineStart}
-              onLineEndChange={setShareLineEnd}
-              onLineStartChange={setShareLineStart}
-              slug={selectedPaste.slug}
-              secretMode={selectedPaste.secretMode}
+        <Dialog
+          onOpenChange={(open) => {
+            setQuickOpenOpen(open);
+            if (!open) {
+              setQuickOpenQuery("");
+            }
+          }}
+          open={quickOpenOpen}
+        >
+          <DialogContent className="max-h-[85vh] max-w-lg overflow-hidden">
+            <DialogHeader>
+              <DialogTitle>Quick open</DialogTitle>
+              <DialogDescription>Jump to a paste in your workspace (legacy Ctrl+P).</DialogDescription>
+            </DialogHeader>
+            <Input
+              autoFocus
+              onChange={(e) => setQuickOpenQuery(e.target.value)}
+              placeholder="Filter by title or content…"
+              value={quickOpenQuery}
             />
-          ) : (
-            <p className="text-sm text-muted-foreground">Save this paste to your account to get a public slug and share URLs.</p>
-          )}
-          <DialogFooter>
-            <Button onClick={() => setShareBuilderOpen(false)} type="button" variant="ghost">
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <div className="max-h-64 space-y-1 overflow-y-auto pr-1 text-sm">
+              {snapshot.pastes
+                .filter((p) => {
+                  const q = quickOpenQuery.trim().toLowerCase();
+                  if (!q) {
+                    return true;
+                  }
+                  return `${p.title}\n${p.content}`.toLowerCase().includes(q);
+                })
+                .slice(0, 80)
+                .map((p) => (
+                  <button
+                    className="w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-left hover:bg-muted/70"
+                    key={p.id}
+                    onClick={() => {
+                      setSidebarFolder("all");
+                      setSelectedId(p.id);
+                      setQuickOpenOpen(false);
+                      setQuickOpenQuery("");
+                    }}
+                    type="button"
+                  >
+                    <span className="font-medium text-foreground">{p.title}</span>
+                    <span className="mt-1 line-clamp-1 block text-xs text-muted-foreground">
+                      {p.content || "Empty"}
+                    </span>
+                  </button>
+                ))}
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setQuickOpenOpen(false)} type="button" variant="ghost">
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      <Dialog onOpenChange={setImportUrlOpen} open={importUrlOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Import from URL</DialogTitle>
-            <DialogDescription className="space-y-2">
-              <span className="block">
-                Paste a link to a <strong>raw</strong> file, or a normal page from{" "}
-                <strong>Pastebin</strong>, <strong>Hastebin</strong>, <strong>dpaste</strong>, <strong>rentry</strong>,{" "}
-                <strong>paste.ee</strong>, <strong>paste.mozilla.org</strong>, <strong>paste.debian.net</strong>, or a{" "}
-                <strong>GitHub Gist</strong> — we resolve the right endpoint when you import (signed in).
-              </span>
-              <span className="block text-muted-foreground">
-                Signed in: server fetch (recommended for Pastebin and similar). Signed out: direct browser fetch only if the site
-                allows CORS; otherwise sign in.
-              </span>
-            </DialogDescription>
-          </DialogHeader>
-          <Input
-            onChange={(e) => setImportUrl(e.target.value)}
-            placeholder="https://pastebin.com/AbCdEf12 or https://gist.github.com/you/id"
-            value={importUrl}
-          />
-          <DialogFooter>
-            <Button onClick={() => setImportUrlOpen(false)} type="button" variant="outline">
-              Cancel
-            </Button>
-            <Button disabled={importUrlBusy} onClick={() => void submitImportUrl()} type="button">
-              {importUrlBusy ? "Fetching…" : "Import"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        <Dialog
+          onOpenChange={(open) => {
+            setShareBuilderOpen(open);
+            if (!open) {
+              setShareLineStart("");
+              setShareLineEnd("");
+            }
+          }}
+          open={shareBuilderOpen}
+        >
+          <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Share builder</DialogTitle>
+              <DialogDescription>Link variants, embed, and QR (legacy-style helpers).</DialogDescription>
+            </DialogHeader>
+            {selectedPaste && !isAccountOnlyDraft(selectedPaste, mode) && selectedPaste.slug ? (
+              <ShareBuilderPanel
+                lineEnd={shareLineEnd}
+                lineStart={shareLineStart}
+                onLineEndChange={setShareLineEnd}
+                onLineStartChange={setShareLineStart}
+                slug={selectedPaste.slug}
+                secretMode={selectedPaste.secretMode}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Save this paste to your account to get a public slug and share URLs.
+              </p>
+            )}
+            <DialogFooter>
+              <Button onClick={() => setShareBuilderOpen(false)} type="button" variant="ghost">
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      <Dialog
-        onOpenChange={(open) => {
-          if (!open) {
-            setDiffVersion(null);
-          }
-        }}
-        open={Boolean(diffVersion)}
-      >
-        <DialogContent className="flex max-h-[85vh] max-w-3xl flex-col overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Diff: version → current</DialogTitle>
-            <DialogDescription>Green = added in current, red = removed (was in saved version).</DialogDescription>
-          </DialogHeader>
-          <div
-            className="diff-pretty-html min-h-0 flex-1 overflow-auto rounded-lg border border-border bg-muted/60 p-3 text-sm leading-relaxed dark:bg-black/30"
-            dangerouslySetInnerHTML={{ __html: diffVersionHtml || "<p class='text-muted-foreground'>No diff.</p>" }}
-          />
-        </DialogContent>
-      </Dialog>
+        <Dialog onOpenChange={setImportUrlOpen} open={importUrlOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Import from URL</DialogTitle>
+              <DialogDescription className="space-y-2">
+                <span className="block">
+                  Paste a link to a <strong>raw</strong> file, or a normal page from <strong>Pastebin</strong>,{" "}
+                  <strong>Hastebin</strong>, <strong>dpaste</strong>, <strong>rentry</strong>, <strong>paste.ee</strong>
+                  , <strong>paste.mozilla.org</strong>, <strong>paste.debian.net</strong>, or a{" "}
+                  <strong>GitHub Gist</strong> — we resolve the right endpoint when you import (signed in).
+                </span>
+                <span className="block text-muted-foreground">
+                  Signed in: server fetch (recommended for Pastebin and similar). Signed out: direct browser fetch only
+                  if the site allows CORS; otherwise sign in.
+                </span>
+              </DialogDescription>
+            </DialogHeader>
+            <Input
+              onChange={(e) => setImportUrl(e.target.value)}
+              placeholder="https://pastebin.com/AbCdEf12 or https://gist.github.com/you/id"
+              value={importUrl}
+            />
+            <DialogFooter>
+              <Button onClick={() => setImportUrlOpen(false)} type="button" variant="outline">
+                Cancel
+              </Button>
+              <Button disabled={importUrlBusy} onClick={() => void submitImportUrl()} type="button">
+                {importUrlBusy ? "Fetching…" : "Import"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          onOpenChange={(open) => {
+            if (!open) {
+              setDiffVersion(null);
+            }
+          }}
+          open={Boolean(diffVersion)}
+        >
+          <DialogContent className="flex max-h-[85vh] max-w-3xl flex-col overflow-hidden">
+            <DialogHeader>
+              <DialogTitle>Diff: version → current</DialogTitle>
+              <DialogDescription>Green = added in current, red = removed (was in saved version).</DialogDescription>
+            </DialogHeader>
+            <div
+              className="diff-pretty-html min-h-0 flex-1 overflow-auto rounded-lg border border-border bg-muted/60 p-3 text-sm leading-relaxed dark:bg-black/30"
+              dangerouslySetInnerHTML={{ __html: diffVersionHtml || "<p class='text-muted-foreground'>No diff.</p>" }}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
     </main>
   );
