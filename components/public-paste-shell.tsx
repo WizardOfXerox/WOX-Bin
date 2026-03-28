@@ -1,7 +1,8 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useDeferredValue, useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   AppWindow,
   BookOpen,
@@ -26,13 +27,10 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { SiteHeader } from "@/components/site/site-header";
 import { Textarea } from "@/components/ui/textarea";
-import { ShareAnywhereDialog } from "@/components/share/share-anywhere";
 import { PasteLineageBanner } from "@/components/paste-lineage-banner";
 import { readTurnstileToken, resetTurnstileFields, TurnstileField } from "@/components/turnstile-field";
-import { CodeImageDialog } from "@/components/workspace/code-image-dialog";
 import { PrismLineMap } from "@/components/workspace/prism-line-map";
 import { buildThreadedComments, commentAuthorLabel } from "@/lib/comment-thread";
-import { parseUserMarkdown } from "@/lib/markdown/parse-user-markdown";
 import { getPasteShareUrl } from "@/lib/paste-links";
 import { rememberViewedPaste } from "@/lib/paste-view-history";
 import {
@@ -84,6 +82,16 @@ const RISKY_HTML_PREVIEW_SANDBOX =
     "allow-storage-access-by-user-activation",
     "allow-top-navigation-by-user-activation"
   ].join(" ");
+
+const ShareAnywhereDialog = dynamic(
+  () => import("@/components/share/share-anywhere").then((mod) => mod.ShareAnywhereDialog),
+  { loading: () => null }
+);
+
+const CodeImageDialog = dynamic(
+  () => import("@/components/workspace/code-image-dialog").then((mod) => mod.CodeImageDialog),
+  { loading: () => null }
+);
 
 function SandboxedHtmlPreviewFrame({
   html,
@@ -238,6 +246,11 @@ export function PublicPasteShell({
   const [mdView, setMdView] = useState<PublicPasteMdView>("source");
   const [htmlView, setHtmlView] = useState<PublicPasteHtmlView>("source");
   const [viewerPrefsReady, setViewerPrefsReady] = useState(false);
+  const [markdownPreviewHtml, setMarkdownPreviewHtml] = useState("");
+  const [markdownPreviewPending, setMarkdownPreviewPending] = useState(false);
+  const deferredMarkdownPreviewSource = useDeferredValue(
+    paste.language === "markdown" && mdView === "preview" ? paste.content : ""
+  );
 
   const threadedComments = useMemo(() => buildThreadedComments(comments), [comments]);
   const replyTarget = replyToId != null ? comments.find((entry) => entry.id === replyToId) ?? null : null;
@@ -298,12 +311,42 @@ export function PublicPasteShell({
     writeHtmlViewPref(htmlView);
   }, [htmlView, viewerPrefsReady]);
 
-  const markdownPreviewHtml = useMemo(() => {
-    if (paste.language !== "markdown") {
-      return "";
+  useEffect(() => {
+    if (paste.language !== "markdown" || mdView !== "preview") {
+      setMarkdownPreviewPending(false);
+      return;
     }
-    return parseUserMarkdown(paste.content, { breaks: true });
-  }, [paste.language, paste.content]);
+
+    const source = deferredMarkdownPreviewSource;
+    if (!source.trim()) {
+      setMarkdownPreviewHtml("");
+      setMarkdownPreviewPending(false);
+      return;
+    }
+
+    let cancelled = false;
+    setMarkdownPreviewPending(true);
+
+    void import("@/lib/markdown/parse-user-markdown")
+      .then(({ parseUserMarkdown }) => {
+        if (cancelled) {
+          return;
+        }
+        setMarkdownPreviewHtml(parseUserMarkdown(source, { breaks: true }));
+        setMarkdownPreviewPending(false);
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+        setMarkdownPreviewHtml("");
+        setMarkdownPreviewPending(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [deferredMarkdownPreviewSource, mdView, paste.language]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -791,9 +834,12 @@ export function PublicPasteShell({
 
                 {paste.language === "markdown" && mdView === "preview" ? (
                   <div
+                    aria-busy={markdownPreviewPending}
                     className="wox-user-markdown wox-markdown-preview min-h-[50vh] overflow-auto rounded-[1.25rem] border border-border bg-muted/60 p-4 text-sm leading-relaxed text-foreground dark:bg-black/30"
                     dangerouslySetInnerHTML={{
-                      __html: markdownPreviewHtml || `<p class="text-muted-foreground">${copy.nothingToPreview}</p>`
+                      __html: markdownPreviewPending
+                        ? `<p class="text-muted-foreground">${copy.renderingPreview}</p>`
+                        : markdownPreviewHtml || `<p class="text-muted-foreground">${copy.nothingToPreview}</p>`
                     }}
                   />
                 ) : paste.language === "markup" && htmlView === "preview" ? (

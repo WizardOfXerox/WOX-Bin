@@ -49,6 +49,7 @@ type PublicPasteCopy = {
   lineNumbers: string;
   lineGuides: string;
   wordWrap: string;
+  renderingPreview: string;
   nothingToPreview: string;
   attachedFiles: string;
   attachedFilesDescription: string;
@@ -147,6 +148,7 @@ export const PUBLIC_PASTE_COPY: Record<UiLanguage, PublicPasteCopy> = {
     lineNumbers: "Line numbers",
     lineGuides: "Line guides",
     wordWrap: "Wrap long lines",
+    renderingPreview: "Rendering preview...",
     nothingToPreview: "Nothing to preview.",
     attachedFiles: "Attached files",
     attachedFilesDescription: "Multi-file pastes stay grouped together so shared snippets keep their context.",
@@ -244,6 +246,7 @@ export const PUBLIC_PASTE_COPY: Record<UiLanguage, PublicPasteCopy> = {
     lineNumbers: "Line numbers",
     lineGuides: "Line guides",
     wordWrap: "Wrap long lines",
+    renderingPreview: "Binubuo ang preview...",
     nothingToPreview: "Walang maipakitang preview.",
     attachedFiles: "Attached files",
     attachedFilesDescription: "Magkakasama ang multi-file pastes para manatili ang context ng shared snippets.",
@@ -341,6 +344,7 @@ export const PUBLIC_PASTE_COPY: Record<UiLanguage, PublicPasteCopy> = {
     lineNumbers: "行番号",
     lineGuides: "ガイド線",
     wordWrap: "折り返し",
+    renderingPreview: "プレビューを生成しています...",
     nothingToPreview: "プレビューできる内容がありません。",
     attachedFiles: "添付ファイル",
     attachedFilesDescription: "複数ファイルのペーストはひとまとまりのまま表示され、共有された断片の文脈を保ちます。",
@@ -438,6 +442,7 @@ export const PUBLIC_PASTE_COPY: Record<UiLanguage, PublicPasteCopy> = {
     lineNumbers: "Números de línea",
     lineGuides: "Guías de línea",
     wordWrap: "Ajuste de línea",
+    renderingPreview: "Generando vista previa...",
     nothingToPreview: "No hay nada que previsualizar.",
     attachedFiles: "Archivos adjuntos",
     attachedFilesDescription: "Los pastes con varios archivos siguen agrupados para que los snippets compartidos mantengan su contexto.",

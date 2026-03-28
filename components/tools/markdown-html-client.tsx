@@ -7,16 +7,28 @@ import { useCallback, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FileDropSurface } from "@/components/ui/file-drop-surface";
 import { Textarea } from "@/components/ui/textarea";
-import { parseUserMarkdown } from "@/lib/markdown/parse-user-markdown";
 import { cn } from "@/lib/utils";
 
 export default function MarkdownHtmlClient({ className }: { className?: string }) {
   const id = useId();
   const [md, setMd] = useState("# Hello\n\nWOX-Bin **markdown** → HTML.");
   const [sanitized, setSanitized] = useState("");
+  const [renderError, setRenderError] = useState<string | null>(null);
+  const [rendering, setRendering] = useState(false);
 
-  const convert = useCallback(() => {
-    setSanitized(parseUserMarkdown(md, { breaks: true }));
+  const convert = useCallback(async () => {
+    setRendering(true);
+    setRenderError(null);
+
+    try {
+      const { parseUserMarkdown } = await import("@/lib/markdown/parse-user-markdown");
+      setSanitized(parseUserMarkdown(md, { breaks: true }));
+    } catch {
+      setSanitized("");
+      setRenderError("Preview could not be rendered.");
+    } finally {
+      setRendering(false);
+    }
   }, [md]);
 
   const downloadHtml = useCallback(() => {
@@ -78,19 +90,29 @@ export default function MarkdownHtmlClient({ className }: { className?: string }
         <div className="glass-panel flex flex-col gap-2 p-3 sm:p-4">
           <span className="text-xs font-medium text-muted-foreground">Preview</span>
           <div
+            aria-busy={rendering}
             className="wox-user-markdown min-h-[min(280px,42dvh)] max-w-none rounded-md border bg-muted/20 p-3 text-sm leading-relaxed text-foreground sm:min-h-[280px] sm:p-4 [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_h1]:mb-2 [&_h1]:text-xl [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-semibold [&_li]:ml-4 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-muted [&_pre]:p-2 [&_ul]:list-disc"
             dangerouslySetInnerHTML={sanitized ? { __html: sanitized } : undefined}
           />
-          {!sanitized ? <p className="text-muted-foreground text-sm">Click Render to preview.</p> : null}
+          {renderError ? <p className="text-sm text-destructive">{renderError}</p> : null}
+          {!renderError && !sanitized ? (
+            <p className="text-muted-foreground text-sm">{rendering ? "Rendering preview..." : "Click Render to preview."}</p>
+          ) : null}
         </div>
       </div>
 
       <div className="flex flex-wrap gap-2 touch-manipulation">
-        <Button className="min-h-10 sm:min-h-9" onClick={convert} type="button">
+        <Button className="min-h-10 sm:min-h-9" disabled={rendering} onClick={() => void convert()} type="button">
           <Code2 className="mr-2 size-4" />
-          Render
+          {rendering ? "Rendering..." : "Render"}
         </Button>
-        <Button className="min-h-10 sm:min-h-9" disabled={!sanitized} onClick={downloadHtml} type="button" variant="secondary">
+        <Button
+          className="min-h-10 sm:min-h-9"
+          disabled={!sanitized || rendering}
+          onClick={downloadHtml}
+          type="button"
+          variant="secondary"
+        >
           <Download className="mr-2 size-4" />
           Download .html
         </Button>
