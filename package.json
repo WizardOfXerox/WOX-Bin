@@ -64,7 +64,7 @@
     "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",
     "idb": "latest",
-    "isomorphic-dompurify": "^3.5.1",
+    "isomorphic-dompurify": "^3.7.1",
     "lucide-react": "latest",
     "marked": "^17.0.5",
     "next": "latest",
