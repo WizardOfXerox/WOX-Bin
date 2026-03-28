@@ -33,6 +33,12 @@ export type EncryptedSecretShareRecord = {
   lastViewedAt: Date | null;
 };
 
+export type EncryptedSecretViewRecord = {
+  viewCount: number;
+  lastViewedAt: Date;
+  status: "active" | "deleted";
+};
+
 export type EncryptedSecretManageSnapshot = {
   slug: string;
   status: "active" | "deleted" | "hidden";
@@ -170,10 +176,7 @@ export async function createEncryptedSecretShare(input: {
   };
 }
 
-export async function getEncryptedSecretShareBySlug(
-  slug: string,
-  options?: { trackView?: boolean }
-): Promise<EncryptedSecretShareRecord | null> {
+export async function getEncryptedSecretShareBySlug(slug: string): Promise<EncryptedSecretShareRecord | null> {
   const row = await getEncryptedSecretRow(slug);
   if (!row) {
     return null;
@@ -182,26 +185,6 @@ export async function getEncryptedSecretShareBySlug(
   if (row.expiresAt && row.expiresAt.getTime() <= Date.now()) {
     await softDeleteEncryptedSecret(row.id);
     return null;
-  }
-
-  let viewCount = row.viewCount;
-  let lastViewedAt = row.encryptedLastViewedAt;
-
-  if (options?.trackView) {
-    viewCount += 1;
-    lastViewedAt = new Date();
-    await db
-      .update(pastes)
-      .set({
-        viewCount,
-        encryptedLastViewedAt: lastViewedAt,
-        updatedAt: lastViewedAt
-      })
-      .where(eq(pastes.id, row.id));
-
-    if (row.burnAfterRead || (row.burnAfterViews > 0 && viewCount >= row.burnAfterViews)) {
-      await softDeleteEncryptedSecret(row.id);
-    }
   }
 
   if (!row.encryptedPayloadCiphertext || !row.encryptedPayloadIv) {
@@ -214,11 +197,48 @@ export async function getEncryptedSecretShareBySlug(
     content: row.content,
     payloadCiphertext: row.encryptedPayloadCiphertext,
     payloadIv: row.encryptedPayloadIv,
-    viewCount,
+    viewCount: row.viewCount,
     burnAfterRead: row.burnAfterRead,
     createdAt: row.createdAt,
     expiresAt: row.expiresAt,
-    lastViewedAt
+    lastViewedAt: row.encryptedLastViewedAt
+  };
+}
+
+export async function recordEncryptedSecretShareView(slug: string): Promise<EncryptedSecretViewRecord | null> {
+  const row = await getEncryptedSecretRow(slug);
+  if (!row) {
+    return null;
+  }
+
+  if (row.expiresAt && row.expiresAt.getTime() <= Date.now()) {
+    await softDeleteEncryptedSecret(row.id);
+    return null;
+  }
+
+  const lastViewedAt = new Date();
+  const viewCount = row.viewCount + 1;
+  const shouldDelete = row.burnAfterRead || (row.burnAfterViews > 0 && viewCount >= row.burnAfterViews);
+
+  await db
+    .update(pastes)
+    .set({
+      viewCount,
+      encryptedLastViewedAt: lastViewedAt,
+      updatedAt: lastViewedAt,
+      ...(shouldDelete
+        ? {
+            status: "deleted" as const,
+            deletedAt: lastViewedAt
+          }
+        : {})
+    })
+    .where(eq(pastes.id, row.id));
+
+  return {
+    viewCount,
+    lastViewedAt,
+    status: shouldDelete ? "deleted" : "active"
   };
 }
 
@@ -294,4 +314,3 @@ export async function manageEncryptedSecretShare(input: {
     targetId: row.slug
   });
 }
-

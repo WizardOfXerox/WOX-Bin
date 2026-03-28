@@ -24,10 +24,10 @@ export default function DocFaqPage() {
         <code>{"{origin}/raw/{slug}"}</code>.
       </p>
 
-      <h2>Is there a Pastebin-compatible API?</h2>
+      <h2>Is there a compatibility API?</h2>
       <p>
-        WOX-Bin uses its own JSON shape, not Pastebin’s <code>api_post.php</code> parameters. To import from Pastebin,
-        use <strong>Settings → Pastebin import</strong> (server configured with <code>PASTEBIN_API_DEV_KEY</code>).
+        WOX-Bin uses its own JSON shape rather than mirroring another service’s post parameters. If you need account
+        migration, use <strong>Settings → Pastebin import</strong> with a server configured for <code>PASTEBIN_API_DEV_KEY</code>.
       </p>
 
       <h2>Why was I rate limited?</h2>

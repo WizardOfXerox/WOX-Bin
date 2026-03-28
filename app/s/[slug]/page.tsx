@@ -23,7 +23,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const encrypted = await getEncryptedSecretShareBySlug(slug, { trackView: false });
+  const encrypted = await getEncryptedSecretShareBySlug(slug);
   if (encrypted) {
     return {
       title: "Encrypted secret link",
@@ -62,7 +62,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function SecretPastePage({ params }: PageProps) {
   const { slug } = await params;
-  const encrypted = await getEncryptedSecretShareBySlug(slug, { trackView: true });
+  const encrypted = await getEncryptedSecretShareBySlug(slug);
   if (encrypted) {
     return (
       <main className="min-h-screen bg-background">

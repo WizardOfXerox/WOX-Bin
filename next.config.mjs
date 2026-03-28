@@ -66,7 +66,7 @@ const nextConfig = {
       }
     ]
   },
-  /** Pastebin-style doc URLs → WOX-Bin documentation hub */
+  /** Legacy doc shortcut URLs → WOX-Bin documentation hub */
   async redirects() {
     return [
       { source: "/doc_api", destination: "/doc/api", permanent: false },

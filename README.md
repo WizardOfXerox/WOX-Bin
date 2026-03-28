@@ -56,7 +56,7 @@ They share auth, deployment, and parts of the UI system, but they should be trea
 - `/s/[slug]` secret-link pages for legacy secret pastes and zero-knowledge encrypted secret shares
 - `/raw/[slug]` raw paste output
 - `/feed` and `/feed.xml` for the public feed (card layout)
-- `/archive` for a Pastebin-style table of recent public pastes (no sign-in)
+- `/archive` for a compact table of recent public pastes (no sign-in)
 - `/quick` — fast publish route for text/code without opening the full workspace
 - `/secret` and `/secret/manage/[slug]` — client-side encrypted secret creation plus sender-side revoke/expiry controls
 - `/clipboard` and `/c/[slug]` — short-lived clipboard buckets with human-friendly keys and optional fragment-key encryption

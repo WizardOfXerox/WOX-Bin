@@ -1,5 +1,5 @@
 /**
- * WOX-Bin â€“ Personal paste & notes (Pastebin-like)
+ * WOX-Bin â€“ Personal paste & notes
  * Constants, storage, API, auth, expiry, data, state, language detection, recent views.
  */
 
@@ -273,4 +273,3 @@ function pushRecentView(id) {
   if (ids.length > RECENT_VIEWED_MAX) ids = ids.slice(0, RECENT_VIEWED_MAX);
   setLocal(RECENT_VIEWED_KEY, JSON.stringify(ids));
 }
-

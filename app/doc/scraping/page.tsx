@@ -11,16 +11,12 @@ export const metadata: Metadata = {
 export default function DocScrapingPage() {
   return (
     <DocShell
-      subtitle="How to read public and unlisted content programmatically. Unlike Pastebin PRO scraping, WOX-Bin does not require a whitelisted IP for these public surfaces—but abuse may still be rate-limited or blocked."
+      subtitle="How to read public and unlisted content programmatically. WOX-Bin exposes normal HTTP routes for these public surfaces, though abuse may still be rate-limited or blocked."
       title="Scraping & public data"
     >
       <p>
-        Pastebin offers a separate{" "}
-        <a href="https://pastebin.com/doc_scraping_api" rel="noopener noreferrer" target="_blank">
-          Scraping API
-        </a>{" "}
-        (PRO + IP whitelist). WOX-Bin instead exposes <strong>normal HTTP routes</strong> for the same general goals:
-        discover recent public pastes and fetch raw text. Always respect robots, caching headers, and applicable law.
+        WOX-Bin exposes <strong>normal HTTP routes</strong> for common discovery and raw-read workflows: discover recent
+        public pastes and fetch raw text. Always respect robots, caching headers, and applicable law.
       </p>
 
       <h2>1. Human-readable discovery</h2>

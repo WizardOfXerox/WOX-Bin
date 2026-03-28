@@ -97,9 +97,9 @@ export function QuickPasteClient() {
             <Badge className="px-3 py-1 text-xs">Quick paste</Badge>
             <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">Publish fast without opening the full workspace.</h1>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
-              This route is for fast plaintext text and code sharing. If you need zero-knowledge secret links, encrypted
-              clipboard handoff, fragment-only shares, or encrypted file vaults, use the dedicated quick-share routes in the
-              hub beside this editor.
+              This route is for fast text and code sharing, including the classic server-readable secret-mode paste. If you
+              need zero-knowledge secret links, encrypted clipboard handoff, fragment-only shares, or encrypted file vaults,
+              use the dedicated quick-share routes in the hub beside this editor.
             </p>
           </div>
 
@@ -130,7 +130,7 @@ export function QuickPasteClient() {
               <Textarea
                 className="min-h-[20rem] font-mono text-[13px]"
                 onChange={(event) => setContent(event.target.value)}
-                placeholder="Paste text, code, notes, or a temporary secret."
+                placeholder="Paste text, code, notes, or a quick handoff."
                 value={content}
               />
             </div>
@@ -175,8 +175,10 @@ export function QuickPasteClient() {
                   type="checkbox"
                 />
                 <span className="leading-snug">
-                  Secret link mode
-                  <span className="mt-1 block text-xs text-muted-foreground">Uses `/s/...` and stays out of archive and feed.</span>
+                  Classic secret-mode paste
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    Uses `/s/...` and stays out of archive and feed, but it is not zero-knowledge encrypted.
+                  </span>
                 </span>
               </label>
               <label className="flex items-start gap-3 rounded-[1.25rem] border border-border bg-muted/35 px-4 py-3 text-sm">
@@ -216,7 +218,11 @@ export function QuickPasteClient() {
 
             <TurnstileField siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY} />
 
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            {error ? (
+              <p aria-live="assertive" className="text-sm text-destructive" role="alert">
+                {error}
+              </p>
+            ) : null}
 
             <div className="flex flex-wrap gap-3">
               <Button disabled={loading || !content.trim()} onClick={() => void handlePublish()} type="button">

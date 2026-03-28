@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { AlertCircle, Flame, KeyRound, ShieldBan, TimerReset } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ const EXPIRY_OPTIONS = [
   { value: "never", label: "Never" }
 ] as const;
 
+const UTC_DATE_OPTIONS = { timeZone: "UTC" } satisfies Intl.DateTimeFormatOptions;
+
 type Snapshot = {
   slug: string;
   status: "active" | "deleted" | "hidden";
@@ -28,26 +30,15 @@ type Snapshot = {
 };
 
 export function EncryptedSecretManageClient({ slug }: { slug: string }) {
-  const initialToken = useMemo(
-    () => (typeof window === "undefined" ? "" : window.location.hash.replace(/^#/, "").trim()),
-    []
-  );
-  const [token, setToken] = useState(initialToken);
+  const [token, setToken] = useState("");
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [expiry, setExpiry] = useState<(typeof EXPIRY_OPTIONS)[number]["value"]>("7-days");
   const [busy, setBusy] = useState(false);
-  const [loading, setLoading] = useState(Boolean(initialToken));
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
 
-  useEffect(() => {
-    if (!initialToken) {
-      return;
-    }
-    void loadSnapshot(initialToken);
-  }, [initialToken]);
-
-  async function loadSnapshot(nextToken = token) {
+  const loadSnapshot = useEffectEvent(async (nextToken = token) => {
     if (!nextToken.trim()) {
       setError("Enter the management token first.");
       return;
@@ -71,7 +62,19 @@ export function EncryptedSecretManageClient({ slug }: { slug: string }) {
     setSnapshot(body);
     setStatus("");
     setLoading(false);
-  }
+  });
+
+  useEffect(() => {
+    const fragmentToken = window.location.hash.replace(/^#/, "").trim();
+    if (!fragmentToken) {
+      return;
+    }
+
+    setToken(fragmentToken);
+    void loadSnapshot(fragmentToken);
+    // Omit `loadSnapshot` from deps: it is from useEffectEvent and must not be listed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function runAction(action: "revoke" | "burn_now" | "update_expiry") {
     if (!token.trim()) {
@@ -180,8 +183,16 @@ export function EncryptedSecretManageClient({ slug }: { slug: string }) {
             </div>
           </div>
 
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
+          {error ? (
+            <p aria-live="assertive" className="text-sm text-destructive" role="alert">
+              {error}
+            </p>
+          ) : null}
+          {status ? (
+            <p aria-live="polite" className="text-sm text-muted-foreground" role="status">
+              {status}
+            </p>
+          ) : null}
 
           {snapshot ? (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -195,15 +206,19 @@ export function EncryptedSecretManageClient({ slug }: { slug: string }) {
               </div>
               <div className="rounded-[1.25rem] border border-border bg-muted/35 p-4">
                 <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Created</p>
-                <p className="mt-2 text-sm text-foreground">{formatDate(snapshot.createdAt)}</p>
+                <p className="mt-2 text-sm text-foreground">{formatDate(snapshot.createdAt, UTC_DATE_OPTIONS)}</p>
               </div>
               <div className="rounded-[1.25rem] border border-border bg-muted/35 p-4">
                 <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Expires</p>
-                <p className="mt-2 text-sm text-foreground">{snapshot.expiresAt ? formatDate(snapshot.expiresAt) : "Never"}</p>
+                <p className="mt-2 text-sm text-foreground">
+                  {snapshot.expiresAt ? formatDate(snapshot.expiresAt, UTC_DATE_OPTIONS) : "Never"}
+                </p>
               </div>
               <div className="rounded-[1.25rem] border border-border bg-muted/35 p-4">
                 <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Last opened</p>
-                <p className="mt-2 text-sm text-foreground">{snapshot.lastViewedAt ? formatDate(snapshot.lastViewedAt) : "Not yet opened"}</p>
+                <p className="mt-2 text-sm text-foreground">
+                  {snapshot.lastViewedAt ? formatDate(snapshot.lastViewedAt, UTC_DATE_OPTIONS) : "Not yet opened"}
+                </p>
               </div>
               <div className="rounded-[1.25rem] border border-border bg-muted/35 p-4">
                 <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Burn rule</p>

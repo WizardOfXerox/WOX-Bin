@@ -90,4 +90,19 @@ describe("POST /api/public/clipboard/[slug]", () => {
       userAgent: "Vitest"
     });
   });
+
+  it("returns a claimable missing state without a noisy 404", async () => {
+    mocks.getClipboardBucket.mockResolvedValueOnce(null);
+
+    const { GET } = await routePromise;
+    const response = await GET(new Request("https://wox-bin.vercel.app/api/public/clipboard/opsdesk"), {
+      params: Promise.resolve({ slug: "opsdesk" })
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      slug: "opsdesk",
+      missing: true
+    });
+  });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { Download, FileLock2, Unlock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -35,15 +35,26 @@ type DecryptedMeta = {
   sizeBytes: number;
 };
 
+const NUMBER_FORMATTER = new Intl.NumberFormat("en-US");
+const UTC_DATE_OPTIONS = { timeZone: "UTC" } satisfies Intl.DateTimeFormatOptions;
+
 export function EncryptedFileVaultViewClient({ slug }: { slug: string }) {
   const [meta, setMeta] = useState<DropMeta | null>(null);
-  const [key, setKey] = useState(() => (typeof window === "undefined" ? "" : window.location.hash.replace(/^#/, "").trim()));
+  const [key, setKey] = useState("");
+  const [pendingAutoUnlockKey, setPendingAutoUnlockKey] = useState("");
   const [decryptedMeta, setDecryptedMeta] = useState<DecryptedMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [status, setStatus] = useState("");
 
   useEffect(() => {
+    const fragmentKey = window.location.hash.replace(/^#/, "").trim();
+    if (fragmentKey) {
+      setKey(fragmentKey);
+      setPendingAutoUnlockKey(fragmentKey);
+    }
+
     void (async () => {
       const response = await fetch(`/api/public/drops/${encodeURIComponent(slug)}`, {
         cache: "no-store"
@@ -59,26 +70,45 @@ export function EncryptedFileVaultViewClient({ slug }: { slug: string }) {
     })();
   }, [slug]);
 
-  async function unlockMeta() {
+  const unlockMeta = useEffectEvent(async (candidate = key) => {
     if (!meta?.metadataCiphertext || !meta.metadataIv) {
       setError("Vault metadata is unavailable.");
       return;
     }
 
+    const trimmedKey = candidate.trim();
+    if (!trimmedKey) {
+      setError("Paste the fragment key first.");
+      return;
+    }
+
     setBusy(true);
     setError("");
+    setStatus("");
     try {
-      const payload = await decryptJsonWithKey<DecryptedMeta>(key.trim(), {
+      const payload = await decryptJsonWithKey<DecryptedMeta>(trimmedKey, {
         ciphertext: meta.metadataCiphertext,
         iv: meta.metadataIv
       });
       setDecryptedMeta(payload);
+      setStatus("Vault metadata unlocked.");
     } catch {
       setError("That key could not unlock this vault.");
     } finally {
       setBusy(false);
     }
-  }
+  });
+
+  useEffect(() => {
+    if (!meta || !pendingAutoUnlockKey || decryptedMeta) {
+      return;
+    }
+
+    void unlockMeta(pendingAutoUnlockKey);
+    setPendingAutoUnlockKey("");
+    // Omit `unlockMeta` from deps: it is from useEffectEvent and must not be listed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [decryptedMeta, meta, pendingAutoUnlockKey]);
 
   async function downloadFile() {
     if (!meta?.payloadIv || !decryptedMeta) {
@@ -121,18 +151,32 @@ export function EncryptedFileVaultViewClient({ slug }: { slug: string }) {
             <FileLock2 className="size-4" />
             Encrypted file vault
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight">{decryptedMeta?.filename || "Encrypted file"}</h1>
+          <h1 className="break-words text-3xl font-semibold tracking-tight">{decryptedMeta?.filename || "Encrypted file"}</h1>
           {meta ? (
             <p className="text-sm leading-7 text-muted-foreground">
-              Created {formatDate(meta.createdAt)} · {meta.viewCount.toLocaleString()} open{meta.viewCount === 1 ? "" : "s"}
-              {meta.expiresAt ? ` · expires ${formatDate(meta.expiresAt)}` : ""}
+              Created {formatDate(meta.createdAt, UTC_DATE_OPTIONS)} · {NUMBER_FORMATTER.format(meta.viewCount)} open
+              {meta.viewCount === 1 ? "" : "s"}
+              {meta.expiresAt ? ` · expires ${formatDate(meta.expiresAt, UTC_DATE_OPTIONS)}` : ""}
             </p>
           ) : null}
         </CardContent>
       </Card>
 
       {loading ? <p className="text-sm text-muted-foreground">Loading vault...</p> : null}
-      {error ? <p className="rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-red-100">{error}</p> : null}
+      {error ? (
+        <p
+          aria-live="assertive"
+          className="rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-red-100"
+          role="alert"
+        >
+          {error}
+        </p>
+      ) : null}
+      {status ? (
+        <p aria-live="polite" className="text-sm text-muted-foreground" role="status">
+          {status}
+        </p>
+      ) : null}
 
       {!loading && meta ? (
         decryptedMeta ? (
@@ -149,7 +193,7 @@ export function EncryptedFileVaultViewClient({ slug }: { slug: string }) {
                 </div>
                 <div className="rounded-[1.25rem] border border-border bg-muted/35 p-4">
                   <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Size</p>
-                  <p className="mt-2 text-sm text-foreground">{decryptedMeta.sizeBytes.toLocaleString()} bytes</p>
+                  <p className="mt-2 text-sm text-foreground">{NUMBER_FORMATTER.format(decryptedMeta.sizeBytes)} bytes</p>
                 </div>
               </div>
               <Button disabled={busy} onClick={() => void downloadFile()} type="button">
@@ -157,7 +201,9 @@ export function EncryptedFileVaultViewClient({ slug }: { slug: string }) {
                 {busy ? "Decrypting..." : "Download decrypted file"}
               </Button>
               {meta.lastViewedAt ? (
-                <p className="text-xs text-muted-foreground">Last vault open recorded {formatDate(meta.lastViewedAt)}.</p>
+                <p className="text-xs text-muted-foreground">
+                  Last vault open recorded {formatDate(meta.lastViewedAt, UTC_DATE_OPTIONS)}.
+                </p>
               ) : null}
             </CardContent>
           </Card>

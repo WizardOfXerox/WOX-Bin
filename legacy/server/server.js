@@ -981,7 +981,7 @@ function serveFeed(req, res) {
 app.get('/feed', serveFeed);
 app.get('/feed.xml', serveFeed);
 
-/** Pastebin-style raw endpoint: /raw/:id. Supports ?password= for password-protected pastes. */
+/** Raw endpoint: /raw/:id. Supports ?password= for password-protected pastes. */
 app.get('/raw/:id', (req, res) => {
   const id = req.params.id;
   if (!id || !PASTE_ID_REGEX.test(id)) return res.status(400).type('text/plain').send('Invalid paste id');

@@ -110,7 +110,7 @@ export function EncryptedFileVaultClient() {
                   onChange={(event) => setFile(event.target.files?.[0] ?? null)}
                   type="file"
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="break-all text-xs text-muted-foreground">
                   Max 4 MB. Selected: {file ? `${file.name} (${file.size.toLocaleString()} bytes)` : "none"}
                 </p>
               </div>
@@ -130,7 +130,11 @@ export function EncryptedFileVaultClient() {
               </div>
             </div>
 
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            {error ? (
+              <p aria-live="assertive" className="text-sm text-destructive" role="alert">
+                {error}
+              </p>
+            ) : null}
 
             <Button disabled={busy || !file} onClick={() => void createVault()} type="button">
               <Upload className="size-4" />

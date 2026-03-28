@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const raw = slug?.join("/") ?? "";
   const r = raw ? resolveConversionPair(raw) : null;
   return {
-    title: r ? `${r.label} | WOX-Bin` : "Convert route | WOX-Bin",
+    title: r ? r.label : "Convert route",
     description: r
       ? `Convert ${r.from} to ${r.to} — browser or worker pipeline (WOX-Bin).`
       : "WOX-Bin conversion routes."

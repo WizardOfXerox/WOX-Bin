@@ -12,7 +12,7 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   return {
-    title: `${slug} — clipboard bucket — WOX-Bin`,
+    title: `${slug} — clipboard bucket`,
     description: "A temporary clipboard bucket for cross-device handoff, with optional client-side encryption."
   };
 }

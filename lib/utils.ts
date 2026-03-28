@@ -25,7 +25,7 @@ export function normalizeOptionalSlug(input: string) {
     .slice(0, 64);
 }
 
-export function formatDate(value: string | Date | null | undefined) {
+export function formatDate(value: string | Date | null | undefined, options: Intl.DateTimeFormatOptions = {}) {
   if (!value) {
     return "Just now";
   }
@@ -33,7 +33,8 @@ export function formatDate(value: string | Date | null | undefined) {
   const date = value instanceof Date ? value : new Date(value);
   return new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
-    timeStyle: "short"
+    timeStyle: "short",
+    ...options
   }).format(date);
 }
 

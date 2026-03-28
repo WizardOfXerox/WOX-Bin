@@ -24,7 +24,7 @@ const PASTEBIN_SKIP = new Set([
   "raw"
 ]);
 
-/** Pastebin-style 8-char keys (legacy; some pastes may differ). */
+/** Legacy 8-char paste keys (some pastes may differ). */
 const PASTEBIN_KEY = /^[a-zA-Z0-9]{8}$/;
 
 function cloneUrl(u: URL): URL {

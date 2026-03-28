@@ -35,7 +35,7 @@ const pasteStatsEl = document.getElementById('paste-stats');
 const themeSelect = document.getElementById('theme-select');
 const importFileInput = document.getElementById('import-file');
 
-// --- Filter: folder or special "Public" list (Pastebin-style)
+// --- Filter: folder or special "Public" list
 const FOLDER_PUBLIC = '__public__'; // show only public pastes (exposure 0)
 const FOLDER_EVERYONE_PUBLIC = '__everyone_public__'; // server feed: all users' public pastes
 let publicFeedPastes = [];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { AlertCircle, KeyRound, ShieldBan, TimerReset } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,9 @@ const EXPIRY_OPTIONS = [
   { value: "168", label: "7 days" },
   { value: "720", label: "30 days" }
 ] as const;
+
+const NUMBER_FORMATTER = new Intl.NumberFormat("en-US");
+const UTC_DATE_OPTIONS = { timeZone: "UTC" } satisfies Intl.DateTimeFormatOptions;
 
 type DropMeta = {
   slug: string;
@@ -35,26 +38,15 @@ type DropMeta = {
 };
 
 export function EncryptedFileVaultManageClient({ slug }: { slug: string }) {
-  const initialToken = useMemo(
-    () => (typeof window === "undefined" ? "" : window.location.hash.replace(/^#/, "").trim()),
-    []
-  );
-  const [token, setToken] = useState(initialToken);
+  const [token, setToken] = useState("");
   const [meta, setMeta] = useState<DropMeta | null>(null);
   const [expiry, setExpiry] = useState<(typeof EXPIRY_OPTIONS)[number]["value"]>("168");
-  const [loading, setLoading] = useState(Boolean(initialToken));
+  const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
 
-  useEffect(() => {
-    if (!initialToken) {
-      return;
-    }
-    void loadMeta(initialToken);
-  }, [initialToken]);
-
-  async function loadMeta(nextToken = token) {
+  const loadMeta = useEffectEvent(async (nextToken = token) => {
     if (!nextToken.trim()) {
       setError("Enter the management token first.");
       return;
@@ -78,7 +70,19 @@ export function EncryptedFileVaultManageClient({ slug }: { slug: string }) {
     setMeta(body);
     setStatus("");
     setLoading(false);
-  }
+  });
+
+  useEffect(() => {
+    const fragmentToken = window.location.hash.replace(/^#/, "").trim();
+    if (!fragmentToken) {
+      return;
+    }
+
+    setToken(fragmentToken);
+    void loadMeta(fragmentToken);
+    // Omit `loadMeta` from deps: it is from useEffectEvent and must not be listed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function runAction(action: "revoke" | "update_expiry") {
     if (!token.trim()) {
@@ -175,8 +179,16 @@ export function EncryptedFileVaultManageClient({ slug }: { slug: string }) {
             </div>
           </div>
 
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
+          {error ? (
+            <p aria-live="assertive" className="text-sm text-destructive" role="alert">
+              {error}
+            </p>
+          ) : null}
+          {status ? (
+            <p aria-live="polite" className="text-sm text-muted-foreground" role="status">
+              {status}
+            </p>
+          ) : null}
 
           {meta ? (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -190,19 +202,23 @@ export function EncryptedFileVaultManageClient({ slug }: { slug: string }) {
               </div>
               <div className="rounded-[1.25rem] border border-border bg-muted/35 p-4">
                 <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Created</p>
-                <p className="mt-2 text-sm text-foreground">{formatDate(meta.createdAt)}</p>
+                <p className="mt-2 text-sm text-foreground">{formatDate(meta.createdAt, UTC_DATE_OPTIONS)}</p>
               </div>
               <div className="rounded-[1.25rem] border border-border bg-muted/35 p-4">
                 <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Expires</p>
-                <p className="mt-2 text-sm text-foreground">{meta.expiresAt ? formatDate(meta.expiresAt) : "Never"}</p>
+                <p className="mt-2 text-sm text-foreground">
+                  {meta.expiresAt ? formatDate(meta.expiresAt, UTC_DATE_OPTIONS) : "Never"}
+                </p>
               </div>
               <div className="rounded-[1.25rem] border border-border bg-muted/35 p-4">
                 <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Encrypted bytes</p>
-                <p className="mt-2 text-sm text-foreground">{meta.sizeBytes.toLocaleString()} bytes</p>
+                <p className="mt-2 text-sm text-foreground">{NUMBER_FORMATTER.format(meta.sizeBytes)} bytes</p>
               </div>
               <div className="rounded-[1.25rem] border border-border bg-muted/35 p-4">
                 <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Last opened</p>
-                <p className="mt-2 text-sm text-foreground">{meta.lastViewedAt ? formatDate(meta.lastViewedAt) : "Not yet opened"}</p>
+                <p className="mt-2 text-sm text-foreground">
+                  {meta.lastViewedAt ? formatDate(meta.lastViewedAt, UTC_DATE_OPTIONS) : "Not yet opened"}
+                </p>
               </div>
             </div>
           ) : null}

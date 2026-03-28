@@ -1,6 +1,6 @@
 # WOX-Bin documentation index
 
-**Public site docs (on your deployed app):** **`/doc`** (overview), **`/doc/api`**, **`/doc/scraping`**, **`/doc/tools`**, **`/doc/faq`**. Pastebin-style shortcuts: **`/doc_api`** → **`/doc/api`**, **`/doc_scraping_api`** → **`/doc/scraping`**.
+**Public site docs (on your deployed app):** **`/doc`** (overview), **`/doc/api`**, **`/doc/scraping`**, **`/doc/tools`**, **`/doc/faq`**. Legacy doc shortcuts: **`/doc_api`** → **`/doc/api`**, **`/doc_scraping_api`** → **`/doc/scraping`**.
 
 These Markdown files live **in the repository**. They are **not** automatically exposed as routes on the Vercel-hosted app (unless you add pages that render them).
 

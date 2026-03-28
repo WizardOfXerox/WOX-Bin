@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { Copy, Lock, Unlock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -29,28 +29,73 @@ type DecryptedSecret = {
   content: string;
 };
 
+const NUMBER_FORMATTER = new Intl.NumberFormat("en-US");
+const UTC_DATE_OPTIONS = { timeZone: "UTC" } satisfies Intl.DateTimeFormatOptions;
+
 export function EncryptedSecretViewClient({ share }: Props) {
-  const [key, setKey] = useState(() => (typeof window === "undefined" ? "" : window.location.hash.replace(/^#/, "").trim()));
+  const [key, setKey] = useState("");
   const [decrypted, setDecrypted] = useState<DecryptedSecret | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [status, setStatus] = useState("");
   const [copied, setCopied] = useState(false);
+  const [viewCount, setViewCount] = useState(share.viewCount);
+  const [lastViewedAt, setLastViewedAt] = useState(share.lastViewedAt);
+  const [recordedView, setRecordedView] = useState(false);
 
-  async function unlock() {
+  const unlockSecret = useEffectEvent(async (candidate = key) => {
+    const trimmedKey = candidate.trim();
+    if (!trimmedKey) {
+      setError("Paste the fragment key first.");
+      return;
+    }
+
     setBusy(true);
     setError("");
+    setStatus("");
+
     try {
-      const payload = await decryptJsonWithKey<DecryptedSecret>(key.trim(), {
+      const payload = await decryptJsonWithKey<DecryptedSecret>(trimmedKey, {
         ciphertext: share.payloadCiphertext,
         iv: share.payloadIv
       });
       setDecrypted(payload);
+
+      if (!recordedView) {
+        const response = await fetch(`/api/public/secrets/${encodeURIComponent(share.slug)}/view`, {
+          method: "POST",
+          cache: "no-store"
+        });
+        const body = (await response.json().catch(() => null)) as
+          | { error?: string; viewCount?: number; lastViewedAt?: string | null }
+          | null;
+
+        if (response.ok && typeof body?.viewCount === "number") {
+          setViewCount(body.viewCount);
+          setLastViewedAt(body.lastViewedAt ?? null);
+          setRecordedView(true);
+        } else {
+          setStatus("Secret unlocked, but the open counter could not be synced.");
+        }
+      }
     } catch {
       setError("That key could not unlock this secret.");
     } finally {
       setBusy(false);
     }
-  }
+  });
+
+  useEffect(() => {
+    const fragmentKey = window.location.hash.replace(/^#/, "").trim();
+    if (!fragmentKey) {
+      return;
+    }
+
+    setKey(fragmentKey);
+    void unlockSecret(fragmentKey);
+    // Omit `unlockSecret` from deps: it is from useEffectEvent and must not be listed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function copyContent() {
     if (!decrypted?.content) {
@@ -69,14 +114,15 @@ export function EncryptedSecretViewClient({ share }: Props) {
             <Lock className="size-4" />
             Encrypted secret link
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight">{decrypted?.title || share.title}</h1>
+          <h1 className="break-words text-3xl font-semibold tracking-tight">{decrypted?.title || share.title}</h1>
           <p className="text-sm leading-7 text-muted-foreground">
-            Created {formatDate(share.createdAt)} · {share.viewCount.toLocaleString()} open{share.viewCount === 1 ? "" : "s"}
-            {share.expiresAt ? ` · expires ${formatDate(share.expiresAt)}` : ""}
+            Created {formatDate(share.createdAt, UTC_DATE_OPTIONS)} · {NUMBER_FORMATTER.format(viewCount)} open
+            {viewCount === 1 ? "" : "s"}
+            {share.expiresAt ? ` · expires ${formatDate(share.expiresAt, UTC_DATE_OPTIONS)}` : ""}
             {share.burnAfterRead ? " · burns after first read" : ""}
           </p>
-          {share.lastViewedAt ? (
-            <p className="text-xs text-muted-foreground">Last opened {formatDate(share.lastViewedAt)}.</p>
+          {lastViewedAt ? (
+            <p className="text-xs text-muted-foreground">Last opened {formatDate(lastViewedAt, UTC_DATE_OPTIONS)}.</p>
           ) : null}
         </CardContent>
       </Card>
@@ -107,14 +153,27 @@ export function EncryptedSecretViewClient({ share }: Props) {
                 value={key}
               />
             </div>
-            <Button disabled={!key.trim() || busy} onClick={() => void unlock()} type="button">
+            <Button disabled={!key.trim() || busy} onClick={() => void unlockSecret()} type="button">
               <Unlock className="size-4" />
               Unlock secret
             </Button>
-            {error ? <p className="rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-red-100">{error}</p> : null}
+            {error ? (
+              <p
+                aria-live="assertive"
+                className="rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-red-100"
+                role="alert"
+              >
+                {error}
+              </p>
+            ) : null}
           </CardContent>
         </Card>
       )}
+      {status ? (
+        <p aria-live="polite" className="text-sm text-muted-foreground" role="status">
+          {status}
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Public pastes archive",
   description:
-    "Recently created public pastes on WOX-Bin. Browse titles, syntax, and age—similar to a classic paste archive. No sign-in required."
+    "Recently created public pastes on WOX-Bin. Browse titles, syntax, and age in a compact archive table. No sign-in required."
 };
 
 function syntaxLabel(language: string) {
@@ -77,16 +77,7 @@ export default async function ArchivePage() {
         <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">{copy.eyebrow}</p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">{copy.title}</h1>
         <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground">
-          {copy.description.replace("{limit}", String(RECENT_PUBLIC_PASTES_LIMIT))}{" "}
-          <a
-            className="text-primary underline-offset-4 hover:underline"
-            href="https://pastebin.com/archive"
-            rel="noreferrer"
-            target="_blank"
-          >
-            Pastebin&apos;s archive
-          </a>
-          .
+          {copy.description.replace("{limit}", String(RECENT_PUBLIC_PASTES_LIMIT))}
         </p>
       </header>
 

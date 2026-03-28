@@ -17,15 +17,7 @@ export default function DocIndexPage() {
     >
       <p>
         WOX-Bin exposes a REST-style JSON API for pastes, optional conversion jobs, and settings. Public pastes can
-        also be read via HTML pages, Atom, and raw text URLs—similar in spirit to{" "}
-        <a href="https://pastebin.com/doc_api" rel="noopener noreferrer" target="_blank">
-          Pastebin’s Developers API
-        </a>{" "}
-        and{" "}
-        <a href="https://pastebin.com/doc_scraping_api" rel="noopener noreferrer" target="_blank">
-          Scraping API
-        </a>{" "}
-        docs (we are not affiliated with Pastebin).
+        also be read via HTML pages, Atom, and raw text URLs for public and unlisted sharing workflows.
       </p>
 
       <p>
@@ -81,9 +73,9 @@ export default function DocIndexPage() {
         </li>
       </ul>
 
-      <h2>Pastebin-style shortcuts</h2>
+      <h2>Legacy shortcuts</h2>
       <p>
-        For bookmarks that mirror Pastebin URL patterns, these redirect to the sections above:
+        These older shortcut routes still redirect to the sections above:
       </p>
       <ul>
         <li>

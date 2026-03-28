@@ -25,7 +25,10 @@ export async function GET(request: Request, { params }: Params) {
   try {
     const bucket = await getClipboardBucket(slug, request.headers.get("x-manage-token"));
     if (!bucket) {
-      return jsonError("Clipboard bucket not found.", 404);
+      return NextResponse.json({
+        slug,
+        missing: true
+      });
     }
 
     return NextResponse.json(bucket);

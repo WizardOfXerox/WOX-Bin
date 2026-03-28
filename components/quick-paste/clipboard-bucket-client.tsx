@@ -21,7 +21,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { createShareKey, decryptJsonWithKey, encryptJsonWithKey } from "@/lib/privacy-crypto";
-import { normalizeOptionalSlug } from "@/lib/utils";
+import { formatDate, normalizeOptionalSlug } from "@/lib/utils";
 
 type ClipboardBucketResponse = {
   slug: string;
@@ -36,12 +36,19 @@ type ClipboardBucketResponse = {
   lastViewedAt: string | null;
 };
 
+type ClipboardBucketMissingResponse = {
+  slug: string;
+  missing: true;
+};
+
 const EXPIRY_PRESETS = [
   { value: "1", label: "1 hour" },
   { value: "24", label: "24 hours" },
   { value: "72", label: "3 days" },
   { value: "168", label: "7 days" }
 ] as const;
+
+const UTC_DATE_OPTIONS = { timeZone: "UTC" } satisfies Intl.DateTimeFormatOptions;
 
 function tokenStorageKey(slug: string) {
   return `woxbin:clipboard-token:${slug}`;
@@ -61,6 +68,18 @@ function selectExpiryPreset(expiresAt: string | null) {
   }, EXPIRY_PRESETS[1]);
 
   return preset.value;
+}
+
+function isMissingBucketResponse(
+  value: ClipboardBucketResponse | ClipboardBucketMissingResponse | { error?: string } | null
+): value is ClipboardBucketMissingResponse {
+  return Boolean(value && "missing" in value && value.missing);
+}
+
+function isClipboardBucketResponse(
+  value: ClipboardBucketResponse | ClipboardBucketMissingResponse | { error?: string } | null
+): value is ClipboardBucketResponse {
+  return Boolean(value && "canManage" in value);
 }
 
 export function ClipboardBucketClient({ slug }: { slug: string }) {
@@ -117,13 +136,21 @@ export function ClipboardBucketClient({ slug }: { slug: string }) {
   async function loadBucket(token = "", fragmentKey = shareKey || keyInput) {
     setLoading(true);
     setError(null);
+    setStatus(null);
 
     const response = await fetch(`/api/public/clipboard/${encodeURIComponent(normalizedSlug)}`, {
       headers: token ? { "x-manage-token": token } : undefined,
       cache: "no-store"
     });
 
-    if (response.status === 404) {
+    const body = (await response.json().catch(() => null)) as
+      | { error?: string }
+      | ClipboardBucketResponse
+      | ClipboardBucketMissingResponse
+      | null;
+
+    if (response.ok && isMissingBucketResponse(body)) {
+      window.localStorage.removeItem(tokenStorageKey(normalizedSlug));
       setBucket(null);
       setMissing(true);
       setManageToken("");
@@ -131,12 +158,12 @@ export function ClipboardBucketClient({ slug }: { slug: string }) {
       setBurnAfterRead(false);
       setExpiresHours("24");
       setEncryptedMode(false);
+      setStatus(`"${normalizedSlug}" is free to claim.`);
       setLoading(false);
       return null;
     }
 
-    const body = (await response.json().catch(() => null)) as { error?: string } | ClipboardBucketResponse | null;
-    if (!response.ok || !body || !("slug" in body)) {
+    if (!response.ok || !isClipboardBucketResponse(body)) {
       setError(body && "error" in body ? body.error ?? "Could not load the clipboard bucket." : "Could not load the clipboard bucket.");
       setLoading(false);
       return null;
@@ -353,7 +380,7 @@ export function ClipboardBucketClient({ slug }: { slug: string }) {
         <CardContent className="space-y-6 p-0">
           <div className="border-b border-border/70 bg-gradient-to-br from-emerald-500/12 via-transparent to-cyan-500/12 px-6 py-6">
             <Badge className="px-3 py-1 text-xs">{missing ? "Available key" : bucket?.canManage ? "Manage mode" : "Read-only"}</Badge>
-            <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">{normalizedSlug}</h1>
+            <h1 className="mt-4 break-all text-3xl font-semibold tracking-tight sm:text-4xl">{normalizedSlug}</h1>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
               Use this short key for temporary cross-device handoff. The creator gets a local manage token for edits and
               deletion, and you can optionally keep the content client-side encrypted with a fragment key.
@@ -396,7 +423,7 @@ export function ClipboardBucketClient({ slug }: { slug: string }) {
               <div className="rounded-[1.25rem] border border-border bg-muted/35 p-4">
                 <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Expires</p>
                 <p className="mt-2 text-sm text-foreground">
-                  {bucket?.expiresAt ? new Date(bucket.expiresAt).toLocaleString() : missing ? "When you create it" : "No expiry"}
+                  {bucket?.expiresAt ? formatDate(bucket.expiresAt, UTC_DATE_OPTIONS) : missing ? "When you create it" : "No expiry"}
                 </p>
               </div>
             </div>
@@ -497,8 +524,16 @@ export function ClipboardBucketClient({ slug }: { slug: string }) {
               </div>
             ) : null}
 
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
-            {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
+            {error ? (
+              <p aria-live="assertive" className="text-sm text-destructive" role="alert">
+                {error}
+              </p>
+            ) : null}
+            {status ? (
+              <p aria-live="polite" className="text-sm text-muted-foreground" role="status">
+                {status}
+              </p>
+            ) : null}
 
             <div className="flex flex-wrap gap-3">
               <Button disabled={!normalizedSlug || saving || !content.trim() || !isManageable} onClick={() => void saveBucket()} type="button">
