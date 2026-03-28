@@ -5,7 +5,7 @@ import { SiteHeader } from "@/components/site/site-header";
 
 export const metadata: Metadata = {
   title: "Clipboard buckets",
-  description: "Short-lived text buckets with human-friendly keys, management tokens, and simple cross-device handoff."
+  description: "Short-lived text buckets with human-friendly keys, management tokens, and optional client-side encryption."
 };
 
 export default function ClipboardPage() {

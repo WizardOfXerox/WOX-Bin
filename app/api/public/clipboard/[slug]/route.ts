@@ -46,11 +46,14 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   const body = (await request.json().catch(() => null)) as
-    | {
+      | {
         content?: string;
         expires?: string | null;
         burnAfterRead?: boolean;
         token?: string | null;
+        encrypted?: boolean;
+        payloadCiphertext?: string | null;
+        payloadIv?: string | null;
       }
     | null;
 
@@ -61,6 +64,9 @@ export async function POST(request: Request, { params }: Params) {
       expires: typeof body?.expires === "string" ? body.expires : null,
       burnAfterRead: Boolean(body?.burnAfterRead),
       token: typeof body?.token === "string" ? body.token : request.headers.get("x-manage-token"),
+      encrypted: Boolean(body?.encrypted),
+      payloadCiphertext: typeof body?.payloadCiphertext === "string" ? body.payloadCiphertext : null,
+      payloadIv: typeof body?.payloadIv === "string" ? body.payloadIv : null,
       ip,
       userAgent: request.headers.get("user-agent")
     });

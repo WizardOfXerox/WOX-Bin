@@ -15,11 +15,15 @@ Already implemented or partially implemented in the current codebase:
 
 - privacy redirect (`noref`-style)
 - privacy suite routes for `snapshot`, `scrub`, `proof`, `poll`, and `chat`
-- secret links
+- legacy secret links
+- zero-knowledge encrypted secret links
 - burn after read / expiration / password-protected viewing
 - custom paste URLs
 - termbin-style text uploads over HTTP
 - 0x0-style small file uploads with management token
+- clipboard buckets with optional client-side encryption
+- fragment-only sharing
+- encrypted file vaults with sender-side manage controls
 - clickable shared-paste links, raw routes, comments, stars, archive/feed
 
 Relevant docs:
@@ -38,15 +42,15 @@ These ideas fit the existing architecture and can be implemented inside the curr
 |---|---|---|---|
 | Privacy redirect | `noref.to` | High | Internal `/out` redirect is the right model. Do not depend on a third-party redirect service. |
 | Privacy suite helpers | Privsen | High | `snapshot`, `scrub`, `proof`, `poll`, and `chat` fit cleanly when they stay privacy-oriented and browser-first. |
-| Secret links | OneTimeSecret, TempVault, `paste.sh` | High | Already partly present. Next step is stronger client-side encryption and bucket-style UX. |
+| Secret links | OneTimeSecret, TempVault, `paste.sh` | High | Shipped in both workspace-protected and zero-knowledge encrypted forms. |
 | Custom URLs | CloakBin | High | Safe because WOX-Bin uses `/p/[slug]` and `/s/[slug]`, not site-root slugs. |
 | Termbin-style CLI text upload | `termbin.com` | High | HTTP form is Vercel-safe. Raw TCP `nc` protocol is not. |
 | 0x0-style small uploads | `0x0.st` | Medium | Safe only with strict limits on current stack. Larger file-host behavior should move to object storage. |
-| Clipboard buckets | `cl1p.net` | High | Strong fit as a separate text-first mode under a dedicated route family. |
-| Temp buckets | TempVault | High | Fits as a short-TTL, text-first, no-login mode. Do not claim E2E until the crypto path exists. |
-| Client-side encrypted links | `paste.sh` | High | Best applied to secret links and clipboard buckets. |
-| Fragment-only sharing | `nopaste` | High | Pure client-side route. No server storage required. |
-| Quick-paste surface | basedbin | High | Mostly a UX layer on top of the existing paste/share backend. |
+| Clipboard buckets | `cl1p.net` | High | Shipped as a dedicated text-first surface with optional encryption. |
+| Temp buckets | TempVault | High | Shipped as clipboard buckets plus encrypted vault flows. |
+| Client-side encrypted links | `paste.sh` | High | Shipped for secret links, clipboard buckets, snapshots, chat, and vault metadata. |
+| Fragment-only sharing | `nopaste` | High | Shipped as a pure client-side route. |
+| Quick-paste surface | basedbin | High | Shipped and now acts as the share-mode chooser. |
 | Fork list and diff UX | boxlabss/PASTE | High | WOX-Bin already has lineage metadata. This is a clean product addition. |
 
 ## Track B: viable on Vercel, but requires object storage
@@ -56,9 +60,9 @@ These ideas still fit the main app, but should not use the current Postgres-back
 | Feature | Source inspiration | Why object storage is needed |
 |---|---|---|
 | Large anonymous file hosting | `0x0.st` | Binary payloads should live in Blob/R2/S3, not in Postgres rows. |
-| Encrypted file sharing | Privsen | Store ciphertext blobs in object storage; keep metadata in Postgres. |
-| Stored file transfer | Send Anywhere (stored flavor) | Large files require direct client uploads and durable object storage. |
-| Temp file vaults | TempVault-like file mode | Same reason: binary uploads and TTL cleanup are better in object storage. |
+| Encrypted file sharing | Privsen | Now shipped for short-lived vaults; larger payload tiers still want more direct object-storage plumbing. |
+| Stored file transfer | Send Anywhere (stored flavor) | Large files still require direct client uploads and durable object storage. |
+| Temp file vaults | TempVault-like file mode | Shipped for current size limits; future work is scale, bundle UX, and larger upload tiers. |
 
 Recommended storage pattern:
 
@@ -85,33 +89,29 @@ These ideas do not belong inside the current Vercel app runtime.
 
 ## Recommended execution order
 
-### Phase 1: low-risk additions on current stack
+### Phase 1: shipped on current stack
 
 1. Clipboard buckets (`cl1p` / TempVault text-first mode)
 2. Fragment-only sharing (`nopaste`-style)
 3. Client-side encrypted secret links (`paste.sh`-style)
 4. Quick-paste surface (basedbin-style)
+5. Sender-side revoke / expiry controls
+6. Encrypted file vaults
 
-Reason:
+### Phase 2: deepen the secure-share path
 
-- all four fit the current app
-- they expand the product in useful directions
-- none require a storage migration to object storage
-
-### Phase 2: harden the secure-share path
-
-1. client-side encryption for secret links
-2. optional password on clipboard buckets
-3. short TTL presets
-4. management token / revoke-now controls
-5. clearer “secret / clipboard / normal paste” product split
+1. passphrase-first secret and clipboard links
+2. recipient email / delivery workflows
+3. richer owner dashboards and event history
+4. mobile-first quick-share chooser polish
+5. optional webhooks for open / burn / expire events
 
 ### Phase 3: move binary payloads to object storage
 
-1. add Blob/R2/S3 abstraction
-2. move large file-drop payloads out of Postgres
-3. add encrypted file sharing
-4. add larger anonymous uploads
+1. expand Blob/R2/S3-backed uploads for larger vault payloads
+2. add multi-file encrypted vault bundles
+3. add larger anonymous uploads
+4. add more durable direct-upload paths
 
 ### Phase 4: separate-service features
 
@@ -137,11 +137,11 @@ That separation is important. It avoids one overloaded product surface trying to
 
 If the goal is maximum value without changing infrastructure, the best next feature is:
 
-1. **Clipboard buckets**
+1. **Passphrase-first secret and clipboard sharing**
 
 After that:
 
-2. **Client-side encrypted secret links**
-3. **Fragment-only sharing**
+2. **Recipient delivery flow for secrets and vaults**
+3. **Vault bundle / larger encrypted upload work**
 
-That sequence gives WOX-Bin a strong privacy/transfer toolbox while staying inside the current Vercel deployment model.
+That sequence deepens the privacy/transfer toolbox that now already exists in the current Vercel deployment model.

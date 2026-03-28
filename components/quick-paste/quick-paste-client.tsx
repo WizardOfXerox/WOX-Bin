@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Clipboard, Copy, ExternalLink, Flame, Link2, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Clipboard, Copy, ExternalLink, FileLock2, Flame, Link2, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
 
 import { readTurnstileToken, resetTurnstileFields, TurnstileField } from "@/components/turnstile-field";
 import { Badge } from "@/components/ui/badge";
@@ -97,8 +97,9 @@ export function QuickPasteClient() {
             <Badge className="px-3 py-1 text-xs">Quick paste</Badge>
             <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">Publish fast without opening the full workspace.</h1>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
-              This route is for fast text and code sharing. Choose a language, switch to secret mode, and require a human
-              challenge before viewing. Custom URLs stay in the full workspace for paid accounts.
+              This route is for fast plaintext text and code sharing. If you need zero-knowledge secret links, encrypted
+              clipboard handoff, fragment-only shares, or encrypted file vaults, use the dedicated quick-share routes in the
+              hub beside this editor.
             </p>
           </div>
 
@@ -252,6 +253,13 @@ export function QuickPasteClient() {
               </div>
             </div>
             <div className="space-y-2 text-sm">
+              <Link className="flex items-center justify-between rounded-xl border border-border px-3 py-3 hover:bg-muted/50" href="/secret">
+                <span className="flex items-center gap-2">
+                  <LockKeyhole className="h-4 w-4 text-primary" />
+                  Encrypted secret link
+                </span>
+                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
               <Link className="flex items-center justify-between rounded-xl border border-border px-3 py-3 hover:bg-muted/50" href="/fragment">
                 <span className="flex items-center gap-2">
                   <Link2 className="h-4 w-4 text-primary" />
@@ -263,6 +271,13 @@ export function QuickPasteClient() {
                 <span className="flex items-center gap-2">
                   <Clipboard className="h-4 w-4 text-primary" />
                   Clipboard buckets
+                </span>
+                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
+              <Link className="flex items-center justify-between rounded-xl border border-border px-3 py-3 hover:bg-muted/50" href="/vault">
+                <span className="flex items-center gap-2">
+                  <FileLock2 className="h-4 w-4 text-primary" />
+                  Encrypted file vault
                 </span>
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
               </Link>
@@ -283,15 +298,15 @@ export function QuickPasteClient() {
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li className="flex gap-2">
                 <Flame className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                Quick snippets or incident notes that do not need a full workspace session.
+                Plain quick snippets or incident notes that do not need a full workspace session.
               </li>
               <li className="flex gap-2">
-                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                Protected or secret shares that still need syntax highlighting and raw URLs.
+                <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                Zero-knowledge handoff belongs in the encrypted secret link or file vault flows.
               </li>
               <li className="flex gap-2">
                 <Copy className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                Simple browser-to-browser text handoff without opening the whole editor.
+                Clipboard buckets and fragment shares cover the lightweight browser-to-browser cases.
               </li>
             </ul>
           </CardContent>

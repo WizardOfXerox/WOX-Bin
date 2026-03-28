@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { createShareKey, decryptJsonWithKey, encryptJsonWithKey } from "@/lib/privacy-crypto";
 import { normalizeOptionalSlug } from "@/lib/utils";
 
 type ClipboardBucketResponse = {
@@ -29,6 +30,10 @@ type ClipboardBucketResponse = {
   burnAfterRead: boolean;
   viewCount: number;
   canManage: boolean;
+  encrypted: boolean;
+  payloadCiphertext: string | null;
+  payloadIv: string | null;
+  lastViewedAt: string | null;
 };
 
 const EXPIRY_PRESETS = [
@@ -66,6 +71,9 @@ export function ClipboardBucketClient({ slug }: { slug: string }) {
   const [expiresHours, setExpiresHours] = useState<(typeof EXPIRY_PRESETS)[number]["value"]>("24");
   const [manageToken, setManageToken] = useState("");
   const [tokenInput, setTokenInput] = useState("");
+  const [encryptedMode, setEncryptedMode] = useState(false);
+  const [shareKey, setShareKey] = useState("");
+  const [keyInput, setKeyInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -80,12 +88,33 @@ export function ClipboardBucketClient({ slug }: { slug: string }) {
       return;
     }
 
+    const fragmentKey = window.location.hash.replace(/^#/, "").trim();
+    if (fragmentKey) {
+      setShareKey(fragmentKey);
+      setKeyInput(fragmentKey);
+    }
+
     const storedToken = window.localStorage.getItem(tokenStorageKey(normalizedSlug)) ?? "";
-    void loadBucket(storedToken);
+    void loadBucket(storedToken, fragmentKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [normalizedSlug]);
 
-  async function loadBucket(token = "") {
+  async function decryptClipboardPayload(
+    response: ClipboardBucketResponse,
+    secretKey: string
+  ) {
+    if (!response.payloadCiphertext || !response.payloadIv) {
+      throw new Error("Encrypted bucket payload is unavailable.");
+    }
+
+    const payload = await decryptJsonWithKey<{ content: string }>(secretKey, {
+      ciphertext: response.payloadCiphertext,
+      iv: response.payloadIv
+    });
+    return payload.content;
+  }
+
+  async function loadBucket(token = "", fragmentKey = shareKey || keyInput) {
     setLoading(true);
     setError(null);
 
@@ -101,6 +130,7 @@ export function ClipboardBucketClient({ slug }: { slug: string }) {
       setContent("");
       setBurnAfterRead(false);
       setExpiresHours("24");
+      setEncryptedMode(false);
       setLoading(false);
       return null;
     }
@@ -123,9 +153,33 @@ export function ClipboardBucketClient({ slug }: { slug: string }) {
 
     setBucket(body);
     setMissing(false);
-    setContent(body.content);
+    setEncryptedMode(body.encrypted);
     setBurnAfterRead(body.burnAfterRead);
     setExpiresHours(selectExpiryPreset(body.expiresAt));
+
+    if (body.encrypted) {
+      if (fragmentKey.trim()) {
+        try {
+          const decrypted = await decryptClipboardPayload(body, fragmentKey.trim());
+          setContent(decrypted);
+          setShareKey(fragmentKey.trim());
+          setKeyInput(fragmentKey.trim());
+          setStatus("Unlocked clipboard bucket with the fragment key.");
+        } catch {
+          setContent("");
+          setStatus("Clipboard bucket is encrypted. Paste the fragment key to read or edit it.");
+        }
+      } else {
+        setContent("");
+        setStatus("Clipboard bucket is encrypted. Paste the fragment key to read or edit it.");
+      }
+    } else {
+      setContent(body.content);
+      if (!body.canManage) {
+        setStatus(null);
+      }
+    }
+
     setLoading(false);
     return body;
   }
@@ -134,6 +188,26 @@ export function ClipboardBucketClient({ slug }: { slug: string }) {
     setSaving(true);
     setError(null);
     setStatus(null);
+
+    let payloadCiphertext: string | null = null;
+    let payloadIv: string | null = null;
+    let nextKey = shareKey || keyInput;
+
+    if (encryptedMode) {
+      if (!content.trim()) {
+        setError("Encrypted clipboard buckets still need content.");
+        setSaving(false);
+        return;
+      }
+      if (!nextKey.trim()) {
+        nextKey = createShareKey();
+      }
+      const encrypted = await encryptJsonWithKey(nextKey, {
+        content
+      });
+      payloadCiphertext = encrypted.ciphertext;
+      payloadIv = encrypted.iv;
+    }
 
     const response = await fetch(`/api/public/clipboard/${encodeURIComponent(normalizedSlug)}`, {
       method: "POST",
@@ -144,7 +218,10 @@ export function ClipboardBucketClient({ slug }: { slug: string }) {
         content,
         burnAfterRead,
         expires: expiresHours,
-        token: manageToken || undefined
+        token: manageToken || undefined,
+        encrypted: encryptedMode,
+        payloadCiphertext,
+        payloadIv
       })
     });
 
@@ -171,8 +248,18 @@ export function ClipboardBucketClient({ slug }: { slug: string }) {
       window.localStorage.setItem(tokenStorageKey(normalizedSlug), nextToken);
     }
 
+    if (encryptedMode && nextKey.trim() && typeof window !== "undefined") {
+      setShareKey(nextKey.trim());
+      setKeyInput(nextKey.trim());
+      window.history.replaceState(null, "", `/c/${normalizedSlug}#${nextKey.trim()}`);
+    } else if (!encryptedMode && typeof window !== "undefined") {
+      setShareKey("");
+      setKeyInput("");
+      window.history.replaceState(null, "", `/c/${normalizedSlug}`);
+    }
+
     setStatus(body.created ? "Clipboard bucket created." : "Clipboard bucket updated.");
-    await loadBucket(nextToken);
+    await loadBucket(nextToken, nextKey.trim());
     setSaving(false);
   }
 
@@ -218,67 +305,66 @@ export function ClipboardBucketClient({ slug }: { slug: string }) {
       return;
     }
 
-    const nextBucket = await loadBucket(token);
-    if (nextBucket?.canManage) {
-      setStatus("Manage token accepted.");
+    await loadBucket(token);
+  }
+
+  async function unlockEncryptedContent() {
+    const nextKey = keyInput.trim();
+    if (!bucket?.encrypted || !nextKey) {
+      setError("Enter the fragment key first.");
       return;
     }
 
-    setError("That token does not unlock this bucket.");
+    try {
+      const decrypted = await decryptClipboardPayload(bucket, nextKey);
+      setContent(decrypted);
+      setShareKey(nextKey);
+      if (typeof window !== "undefined") {
+        window.history.replaceState(null, "", `/c/${normalizedSlug}#${nextKey}`);
+      }
+      setError(null);
+      setStatus("Unlocked clipboard bucket.");
+    } catch {
+      setError("That fragment key could not unlock this clipboard bucket.");
+    }
   }
 
   async function copyBucketUrl() {
-    await navigator.clipboard.writeText(`${window.location.origin}/c/${normalizedSlug}`);
-    setStatus("Bucket URL copied.");
+    const suffix = encryptedMode && shareKey ? `#${shareKey}` : "";
+    await navigator.clipboard.writeText(`${window.location.origin}/c/${normalizedSlug}${suffix}`);
+    setStatus("Copied clipboard bucket URL.");
   }
 
   async function copyBucketContent() {
     await navigator.clipboard.writeText(content);
-    setStatus("Bucket content copied.");
+    setStatus("Copied clipboard bucket content.");
   }
 
   async function copyManageToken() {
-    if (!manageToken) {
-      return;
-    }
     await navigator.clipboard.writeText(manageToken);
-    setStatus("Manage token copied.");
+    setStatus("Copied the manage token.");
   }
 
-  const isManageable = missing || Boolean(bucket?.canManage);
-  const infoBadge = missing ? "Available key" : bucket?.canManage ? "Manage mode" : "Read-only";
+  const isManageable = missing || bucket?.canManage;
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(20rem,0.7fr)]">
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
       <Card className="overflow-hidden">
         <CardContent className="space-y-6 p-0">
           <div className="border-b border-border/70 bg-gradient-to-br from-emerald-500/12 via-transparent to-cyan-500/12 px-6 py-6">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge className="px-3 py-1 text-xs">Clipboard bucket</Badge>
-              <Badge className="border-border bg-transparent px-3 py-1 text-xs text-muted-foreground">{infoBadge}</Badge>
-            </div>
-            <h1 className="mt-4 break-all text-3xl font-semibold tracking-tight sm:text-4xl">{normalizedSlug}</h1>
+            <Badge className="px-3 py-1 text-xs">{missing ? "Available key" : bucket?.canManage ? "Manage mode" : "Read-only"}</Badge>
+            <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">{normalizedSlug}</h1>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
               Use this short key for temporary cross-device handoff. The creator gets a local manage token for edits and
-              deletion. Readers only need the bucket URL.
+              deletion, and you can optionally keep the content client-side encrypted with a fragment key.
             </p>
           </div>
 
           <div className="space-y-5 px-6 pb-6">
-            {loading ? <p className="text-sm text-muted-foreground">Loading bucket...</p> : null}
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
-            {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
-
-            {!normalizedSlug ? (
-              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-                This bucket key is invalid. Use letters, numbers, dashes, or underscores.
-              </div>
-            ) : null}
-
-            {bucket && !bucket.canManage ? (
-              <div className="rounded-[1.25rem] border border-border bg-muted/35 p-4">
-                <p className="text-sm font-medium text-foreground">This bucket already exists.</p>
-                <p className="mt-2 text-sm text-muted-foreground">
+            {!missing && !bucket?.canManage ? (
+              <div className="rounded-[1.25rem] border border-border bg-muted/20 px-4 py-4">
+                <p className="text-sm font-medium text-foreground">Read-only view</p>
+                <p className="mt-1 text-sm text-muted-foreground">
                   You can read and copy the content below. To edit or delete it, unlock manage mode with the original token.
                 </p>
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row">
@@ -300,7 +386,7 @@ export function ClipboardBucketClient({ slug }: { slug: string }) {
               <div className="rounded-[1.25rem] border border-border bg-muted/35 p-4">
                 <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Status</p>
                 <p className="mt-2 text-sm text-foreground">
-                  {missing ? "Free to claim" : bucket?.burnAfterRead ? "One-time or self-destructing" : "Active"}
+                  {missing ? "Free to claim" : bucket?.burnAfterRead ? "One-time or self-destructing" : bucket?.encrypted ? "Encrypted" : "Active"}
                 </p>
               </div>
               <div className="rounded-[1.25rem] border border-border bg-muted/35 p-4">
@@ -315,13 +401,48 @@ export function ClipboardBucketClient({ slug }: { slug: string }) {
               </div>
             </div>
 
+            <label className="flex items-start gap-3 rounded-[1.25rem] border border-border bg-muted/35 px-4 py-3 text-sm">
+              <input
+                checked={encryptedMode}
+                className="mt-1 size-4 accent-primary"
+                disabled={!isManageable}
+                onChange={(event) => setEncryptedMode(event.target.checked)}
+                type="checkbox"
+              />
+              <span className="leading-snug">
+                Encrypt this bucket in the browser
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  Keeps the bucket content as ciphertext on the server and puts the decrypting key in the URL fragment.
+                </span>
+              </span>
+            </label>
+
+            {encryptedMode ? (
+              <div className="space-y-3 rounded-[1.25rem] border border-border bg-muted/20 px-4 py-4">
+                <div className="space-y-2">
+                  <label className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Fragment key</label>
+                  <Input
+                    onChange={(event) => setKeyInput(event.target.value)}
+                    placeholder="Paste the fragment key or leave blank to generate one"
+                    value={keyInput}
+                  />
+                </div>
+                {bucket?.encrypted && !content ? (
+                  <Button onClick={() => void unlockEncryptedContent()} type="button" variant="outline">
+                    <KeyRound className="h-4 w-4" />
+                    Unlock encrypted bucket
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+
             <div className="space-y-2">
               <label className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Content</label>
               <Textarea
                 className="min-h-[22rem] font-mono text-[13px]"
                 onChange={(event) => setContent(event.target.value)}
                 placeholder="Paste text, commands, notes, or a temporary handoff message."
-                readOnly={!missing && !bucket?.canManage}
+                readOnly={!isManageable}
                 value={content}
               />
             </div>
@@ -376,8 +497,11 @@ export function ClipboardBucketClient({ slug }: { slug: string }) {
               </div>
             ) : null}
 
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
+
             <div className="flex flex-wrap gap-3">
-              <Button disabled={!normalizedSlug || saving || !content.trim() || (!missing && !bucket?.canManage)} onClick={() => void saveBucket()} type="button">
+              <Button disabled={!normalizedSlug || saving || !content.trim() || !isManageable} onClick={() => void saveBucket()} type="button">
                 {saving ? "Saving..." : missing ? "Create bucket" : "Save bucket"}
                 <ArrowRight className="h-4 w-4" />
               </Button>
@@ -424,7 +548,7 @@ export function ClipboardBucketClient({ slug }: { slug: string }) {
               </li>
               <li className="flex gap-2">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                If you enable burn-after-read, the first normal read deletes the bucket after serving the content once.
+                Encrypted buckets keep the plaintext out of server storage, but recipients still need the fragment key.
               </li>
               <li className="flex gap-2">
                 <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
@@ -442,7 +566,7 @@ export function ClipboardBucketClient({ slug }: { slug: string }) {
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
             </Link>
             <Link className="flex items-center justify-between rounded-xl border border-border px-3 py-3 hover:bg-muted/50" href="/quick">
-              <span>Quick paste</span>
+              <span>Quick share hub</span>
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
             </Link>
             <Link className="flex items-center justify-between rounded-xl border border-border px-3 py-3 hover:bg-muted/50" href="/fragment">

@@ -374,6 +374,8 @@ async function hydratePaste(
     tags: row.tags ?? [],
     visibility: row.visibility,
     secretMode: row.secretMode,
+    encryptedShare: row.encryptedShare,
+    encryptedLastViewedAt: row.encryptedLastViewedAt ? row.encryptedLastViewedAt.toISOString() : null,
     burnAfterRead: row.burnAfterRead,
     burnAfterViews: row.burnAfterViews,
     captchaRequired: row.captchaRequired,

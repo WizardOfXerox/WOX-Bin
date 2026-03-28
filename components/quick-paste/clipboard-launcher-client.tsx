@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Clipboard, KeyRound, TimerReset } from "lucide-react";
+import { ArrowRight, Clipboard, KeyRound, ShieldCheck, TimerReset } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ export function ClipboardLauncherClient() {
             <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">Claim a short key, paste text, and hand it off.</h1>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
               Clipboard buckets are text-first, temporary, and easy to remember. Open a bucket key on another device to read
-              or update it.
+              or update it, and switch on client-side encryption inside the bucket when plain server storage is not enough.
             </p>
           </div>
 
@@ -81,6 +81,10 @@ export function ClipboardLauncherClient() {
               <li className="flex gap-2">
                 <Clipboard className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                 The first device that creates the bucket receives a local manage token for edits and deletion.
+              </li>
+              <li className="flex gap-2">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                Buckets can stay plain for speed or switch to fragment-key encryption for zero-knowledge text handoff.
               </li>
             </ul>
           </CardContent>

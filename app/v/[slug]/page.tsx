@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { ClipboardBucketClient } from "@/components/quick-paste/clipboard-bucket-client";
+import { EncryptedFileVaultViewClient } from "@/components/quick-paste/encrypted-file-vault-view-client";
 import { SiteHeader } from "@/components/site/site-header";
 
 type Props = {
@@ -12,12 +12,12 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   return {
-    title: `${slug} — clipboard bucket — WOX-Bin`,
-    description: "A temporary clipboard bucket for cross-device handoff, with optional client-side encryption."
+    title: `Encrypted vault ${slug}`,
+    description: "Unlock and download a client-side encrypted WOX-Bin file vault."
   };
 }
 
-export default async function ClipboardBucketPage({ params }: Props) {
+export default async function VaultViewPage({ params }: Props) {
   const { slug } = await params;
 
   return (
@@ -25,7 +25,7 @@ export default async function ClipboardBucketPage({ params }: Props) {
       <div className="absolute inset-0 bg-hero-mesh opacity-30" aria-hidden />
       <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 md:py-14">
         <SiteHeader className="mb-8" />
-        <ClipboardBucketClient slug={slug} />
+        <EncryptedFileVaultViewClient slug={slug} />
       </div>
     </main>
   );

@@ -3,6 +3,11 @@ export type EncryptedPayload = {
   iv: string;
 };
 
+export type EncryptedBinaryPayload = {
+  ciphertext: Uint8Array;
+  iv: string;
+};
+
 function encodeBytes(bytes: Uint8Array) {
   let binary = "";
   bytes.forEach((value) => {
@@ -45,6 +50,30 @@ export async function encryptJsonWithKey<T>(key: string, value: T): Promise<Encr
   };
 }
 
+export async function encryptBytesWithKey(
+  key: string,
+  value: ArrayBuffer | Uint8Array
+): Promise<EncryptedBinaryPayload> {
+  const imported = await importKey(key);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const source = value instanceof Uint8Array ? value : new Uint8Array(value);
+  const plainBytes = new Uint8Array(source.byteLength);
+  plainBytes.set(source);
+  const ciphertext = await crypto.subtle.encrypt(
+    {
+      name: "AES-GCM",
+      iv
+    },
+    imported,
+    plainBytes
+  );
+
+  return {
+    ciphertext: new Uint8Array(ciphertext),
+    iv: encodeBytes(iv)
+  };
+}
+
 export async function decryptJsonWithKey<T>(key: string, payload: EncryptedPayload): Promise<T> {
   const imported = await importKey(key);
   const plain = await crypto.subtle.decrypt(
@@ -57,6 +86,25 @@ export async function decryptJsonWithKey<T>(key: string, payload: EncryptedPaylo
   );
 
   return JSON.parse(new TextDecoder().decode(plain)) as T;
+}
+
+export async function decryptBytesWithKey(
+  key: string,
+  payload: EncryptedBinaryPayload
+): Promise<Uint8Array> {
+  const imported = await importKey(key);
+  const cipherBytes = new Uint8Array(payload.ciphertext.byteLength);
+  cipherBytes.set(payload.ciphertext);
+  const plain = await crypto.subtle.decrypt(
+    {
+      name: "AES-GCM",
+      iv: decodeBytes(payload.iv)
+    },
+    imported,
+    cipherBytes
+  );
+
+  return new Uint8Array(plain);
 }
 
 export async function sha256Hex(buffer: BufferSource) {

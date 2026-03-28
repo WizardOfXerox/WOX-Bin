@@ -24,19 +24,22 @@ Main share targets:
 
 ## Secret links
 
-Route:
+Routes:
 
+- `/secret`
 - `/s/[slug]`
 
 Use this when the share should not behave like a normal public/community paste.
 
 Behavior:
 
+- `/secret` creates zero-knowledge encrypted links by default
 - dedicated `/s/` URL
 - stays out of feed/archive style discovery
 - hides community-oriented public features
-- works with password and burn rules
-- still stores the payload on WOX-Bin servers like a normal paste
+- supports sender-side revoke / burn-now / expiry controls
+- encrypted secret links store ciphertext on WOX-Bin and keep the decrypt key in the URL fragment
+- legacy secret-mode pastes still exist for workspace-authored protected shares
 
 Best for:
 
@@ -44,7 +47,7 @@ Best for:
 - temporary sensitive notes
 - one-off secure handoff
 
-If you need no server-side payload storage at all, use **`/fragment`** instead.
+If you need no server-side payload storage at all, use **`/fragment`** instead. If you need encrypted file transfer instead of text, use **`/vault`**.
 
 ## Quick paste
 
@@ -59,9 +62,10 @@ Behavior:
 - simpler publish form
 - language selection
 - Pro/Team custom URL support
-- optional secret mode
+- plaintext-first publishing flow
 - optional Turnstile-before-view
 - optional password and burn-after-read
+- explicit links out to `/secret`, `/clipboard`, `/fragment`, and `/vault`
 
 Best for:
 
@@ -83,12 +87,14 @@ Behavior:
 - human-friendly key
 - temporary bucket flow
 - management token support
+- optional client-side encryption with a fragment key
 - minimal text-first interface
 
 Best for:
 
 - moving text between devices
 - easy-to-type temporary buckets
+- short-lived encrypted text handoff without opening the full workspace
 
 ## Fragment share
 
@@ -108,6 +114,28 @@ Best for:
 
 - no-storage text sharing
 - local/private handoff
+
+## Encrypted file vault
+
+Routes:
+
+- `/vault`
+- `/v/[slug]`
+
+Use this when you want object-style file sharing, but the server should only see ciphertext.
+
+Behavior:
+
+- encrypts the file in the browser before upload
+- stores ciphertext and encrypted metadata on WOX-Bin
+- uses a fragment key for decryption
+- exposes sender-side revoke / expiry controls at `/v/manage/[slug]`
+
+Best for:
+
+- short-lived secure file handoff
+- encrypted attachments
+- one-off operational bundles
 
 ## Privacy redirect
 
@@ -141,8 +169,9 @@ More detail:
 ## Choosing the right mode
 
 - Use `/app` when you want the full WOX-Bin workflow.
-- Use `/quick` when you want fast publish with minimal setup.
-- Use `/s/[slug]` when the share should not behave like a normal public paste.
-- Use `/clipboard` when the key needs to be short and easy to type.
+- Use `/quick` when you want fast plaintext publish with minimal setup.
+- Use `/secret` and `/s/[slug]` when you want encrypted sensitive text with sender controls.
+- Use `/clipboard` when the key needs to be short and easy to type, with optional encryption.
 - Use `/fragment` when you do not want WOX-Bin to store the payload.
+- Use `/vault` when you need encrypted file transfer instead of text.
 - Use CLI drops when the producer is a shell or automation script.

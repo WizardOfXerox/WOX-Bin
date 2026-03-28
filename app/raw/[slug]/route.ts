@@ -72,6 +72,16 @@ export async function GET(request: Request, { params }: Params) {
     );
   }
 
+  if (result.paste.encryptedShare) {
+    return new NextResponse("Encrypted secret links do not expose a raw server-side body. Open the secret link with its fragment key instead.", {
+      status: 423,
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        ...rateMeta
+      }
+    });
+  }
+
   if (format === "html" || format === "htm") {
     const { grammar, html } = highlightToHtmlFragment(result.paste.content, result.paste.language);
     const langClass = grammar === "plain" ? "" : `language-${grammar}`;

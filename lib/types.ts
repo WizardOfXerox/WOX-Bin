@@ -71,6 +71,8 @@ export type PublicPasteRecord = Omit<PasteDraft, "password"> & {
     username: string | null;
     displayName: string | null;
   };
+  encryptedShare: boolean;
+  encryptedLastViewedAt: string | null;
   commentsCount: number;
   stars: number;
   starredByViewer: boolean;

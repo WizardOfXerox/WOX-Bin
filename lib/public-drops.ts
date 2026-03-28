@@ -26,6 +26,7 @@ export const CLIPBOARD_DEFAULT_HOURS = 24;
 export const CLIPBOARD_MAX_TEXT_BYTES = 256 * 1024;
 export const CLIPBOARD_MIN_SLUG = 3;
 export const CLIPBOARD_MAX_SLUG = 48;
+const MAX_ENCRYPTED_DROP_FIELD_LENGTH = 3_000_000;
 const PUBLIC_DROP_STORAGE_POINTER_PREFIX = "s3:";
 const PUBLIC_DROP_STORAGE_PREFIX =
   process.env.PUBLIC_DROP_STORAGE_PREFIX?.trim().replace(/^\/+|\/+$/g, "") || "public-drops";
@@ -39,6 +40,17 @@ export class PublicDropError extends Error {
     super(message);
     this.status = status;
   }
+}
+
+function assertEncryptedField(value: string | null | undefined, label: string) {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    throw new PublicDropError(`${label} is required.`, 400);
+  }
+  if (trimmed.length > MAX_ENCRYPTED_DROP_FIELD_LENGTH) {
+    throw new PublicDropError(`${label} is too large.`, 413);
+  }
+  return trimmed;
 }
 
 export function buildTermbinPath(slug: string) {
@@ -293,6 +305,10 @@ export async function createFileDrop(input: {
   userAgent?: string | null;
   secret?: boolean;
   expires?: string | null;
+  encrypted?: boolean;
+  payloadIv?: string | null;
+  metadataCiphertext?: string | null;
+  metadataIv?: string | null;
 }) {
   if (!input.contentBase64.trim() || input.sizeBytes <= 0) {
     throw new PublicDropError("Missing uploaded file.", 400);
@@ -302,10 +318,16 @@ export async function createFileDrop(input: {
   }
 
   const slug = await ensureUniqueDropSlug(Boolean(input.secret));
-  const filename = safeDownloadBasename(input.filename || "file.bin", "file.bin");
+  const encrypted = Boolean(input.encrypted);
+  const filename = encrypted
+    ? "encrypted.bin"
+    : safeDownloadBasename(input.filename || "file.bin", "file.bin");
   const deleteToken = randomToken("drop");
   const expiresAt = parseDropExpires(input.expires ?? null, FILE_DROP_DEFAULT_HOURS);
-  const mimeType = normalizeMime(input.mimeType, "application/octet-stream");
+  const mimeType = encrypted ? "application/octet-stream" : normalizeMime(input.mimeType, "application/octet-stream");
+  const payloadIv = encrypted ? assertEncryptedField(input.payloadIv, "Encrypted file IV") : null;
+  const metadataCiphertext = encrypted ? assertEncryptedField(input.metadataCiphertext, "Encrypted file metadata") : null;
+  const metadataIv = encrypted ? assertEncryptedField(input.metadataIv, "Encrypted file metadata IV") : null;
   let contentBase64 = input.contentBase64;
 
   if ((await publicDropObjectStorageFlag()) && getConvertS3Client()) {
@@ -323,6 +345,11 @@ export async function createFileDrop(input: {
     kind: "file",
     filename,
     mimeType,
+    encrypted,
+    payloadCiphertext: null,
+    payloadIv,
+    metadataCiphertext,
+    metadataIv,
     contentText: null,
     contentBase64,
     sizeBytes: input.sizeBytes,
@@ -342,6 +369,7 @@ export async function createFileDrop(input: {
     metadata: {
       kind: "file",
       filename,
+      encrypted,
       sizeBytes: input.sizeBytes,
       userAgent: input.userAgent ?? null
     }
@@ -379,6 +407,35 @@ function tokenMatches(row: PublicDropRow, token: string | null | undefined) {
   return Boolean(row.deleteTokenHash && token && hashToken(token) === row.deleteTokenHash);
 }
 
+export async function getPublicDropMeta(slug: string, token?: string | null) {
+  const row = await getDropForServe(slug);
+  if (!row) {
+    return null;
+  }
+
+  const canManage = tokenMatches(row, token ?? null);
+
+  return {
+    slug: row.slug,
+    kind: row.kind,
+    filename: row.filename,
+    mimeType: row.mimeType,
+    sizeBytes: row.sizeBytes,
+    encrypted: row.encrypted,
+    payloadCiphertext: row.payloadCiphertext ?? null,
+    payloadIv: row.payloadIv ?? null,
+    metadataCiphertext: row.metadataCiphertext ?? null,
+    metadataIv: row.metadataIv ?? null,
+    burnAfterRead: row.burnAfterRead,
+    viewCount: row.viewCount,
+    expiresAt: row.expiresAt?.toISOString() ?? null,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+    lastViewedAt: row.lastViewedAt?.toISOString() ?? null,
+    canManage
+  };
+}
+
 export async function getClipboardBucket(slug: string, token?: string | null) {
   const row = await getDropForServe(normalizeClipboardSlug(slug));
   if (!row) {
@@ -395,25 +452,39 @@ export async function getClipboardBucket(slug: string, token?: string | null) {
 
   return {
     slug: row.slug,
-    content: row.contentText ?? "",
+    content: row.encrypted ? "" : row.contentText ?? "",
     expiresAt: row.expiresAt?.toISOString() ?? null,
     burnAfterRead: row.burnAfterRead,
     viewCount: row.viewCount + (canManage ? 0 : 1),
-    canManage
+    canManage,
+    encrypted: row.encrypted,
+    payloadCiphertext: row.payloadCiphertext ?? null,
+    payloadIv: row.payloadIv ?? null,
+    lastViewedAt: row.lastViewedAt?.toISOString() ?? null
   };
 }
 
 export async function saveClipboardBucket(input: {
   slug: string;
-  content: string;
+  content?: string;
   burnAfterRead?: boolean;
   expires?: string | null;
   token?: string | null;
   ip?: string | null;
   userAgent?: string | null;
+  encrypted?: boolean;
+  payloadCiphertext?: string | null;
+  payloadIv?: string | null;
 }) {
   const slug = normalizeClipboardSlug(input.slug);
-  const bytes = Buffer.byteLength(input.content, "utf8");
+  const encrypted = Boolean(input.encrypted);
+  const content = encrypted ? "" : input.content ?? "";
+  const contentText = encrypted ? null : content;
+  const encryptedPayloadCiphertext = encrypted ? assertEncryptedField(input.payloadCiphertext, "Encrypted clipboard payload") : "";
+  const encryptedPayloadIv = encrypted ? assertEncryptedField(input.payloadIv, "Encrypted clipboard IV") : "";
+  const payloadCiphertext = encrypted ? encryptedPayloadCiphertext : null;
+  const payloadIv = encrypted ? encryptedPayloadIv : null;
+  const bytes = encrypted ? encryptedPayloadCiphertext.length : Buffer.byteLength(content, "utf8");
   if (bytes === 0) {
     throw new PublicDropError("Clipboard bucket content cannot be empty.", 400);
   }
@@ -443,7 +514,10 @@ export async function saveClipboardBucket(input: {
     await db
       .update(publicDrops)
       .set({
-        contentText: input.content,
+        encrypted,
+        payloadCiphertext,
+        payloadIv,
+        contentText,
         sizeBytes: bytes,
         burnAfterRead: Boolean(input.burnAfterRead),
         expiresAt,
@@ -458,6 +532,7 @@ export async function saveClipboardBucket(input: {
       ip: input.ip ?? null,
       metadata: {
         sizeBytes: bytes,
+        encrypted,
         userAgent: input.userAgent ?? null
       }
     });
@@ -476,8 +551,13 @@ export async function saveClipboardBucket(input: {
     slug,
     kind: "text",
     filename: `${slug}.txt`,
-    mimeType: "text/plain; charset=utf-8",
-    contentText: input.content,
+    mimeType: encrypted ? "application/octet-stream" : "text/plain; charset=utf-8",
+    encrypted,
+    payloadCiphertext,
+    payloadIv,
+    metadataCiphertext: null,
+    metadataIv: null,
+    contentText,
     contentBase64: null,
     sizeBytes: bytes,
     deleteTokenHash: hashToken(manageToken),
@@ -495,6 +575,7 @@ export async function saveClipboardBucket(input: {
     ip: input.ip ?? null,
     metadata: {
       sizeBytes: bytes,
+      encrypted,
       userAgent: input.userAgent ?? null
     }
   });
@@ -514,15 +595,17 @@ export async function deleteClipboardBucket(slug: string, token: string) {
 
 export async function incrementDropView(row: PublicDropRow) {
   const nextViews = row.viewCount + 1;
+  const now = new Date();
   await db
     .update(publicDrops)
     .set({
       viewCount: nextViews,
-      updatedAt: new Date(),
+      lastViewedAt: now,
+      updatedAt: now,
       ...(row.burnAfterRead
         ? {
             status: "deleted" as const,
-            deletedAt: new Date()
+            deletedAt: now
           }
         : {})
     })
