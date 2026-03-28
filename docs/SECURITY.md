@@ -30,6 +30,9 @@ When **`WOX_ENFORCE_CSP=1`**, `next.config.mjs` adds a **baseline** `Content-Sec
 - If Redis is **not** configured, or the Redis limiter is temporarily unavailable, the app falls back to **in-memory** fixed windows for the current limit buckets.
 - Memory limits are **per server instance** only — under serverless, attackers can spread load across instances. **Treat Redis as required for production** if you face abuse.
 - App-level limits reduce how many abusive requests succeed. They do **not** stop attackers from sending large volumes of traffic to the edge. Use platform-level protection as well for real flood resistance.
+- Sensitive routes now also support **Vercel Firewall** SDK checks. If your Vercel plan allows multiple `@vercel/firewall` rate-limit rules, create dedicated IDs such as `settings-account`, `public-drop-upload`, and `public-drop-manage` so edge throttling can happen before the request reaches your function.
+- If your plan only allows a single `@vercel/firewall` rate-limit rule, point that live rule at a shared ID and set `VERCEL_FIREWALL_SHARED_RULE_ID`, or keep the default shared fallback on `settings-account`. When a route-specific rule ID is missing, the app retries the shared rule instead of silently no-oping.
+- For preview verification of firewall rules, enable **Protection Bypass for Automation** and ensure system environment variables are exposed so Vercel-managed checks can still reach the deployment.
 
 ## Authentication
 

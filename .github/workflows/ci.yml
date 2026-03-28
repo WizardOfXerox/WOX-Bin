@@ -5,6 +5,20 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Deployment base URL to verify"
+        required: false
+        type: string
+      profile_username:
+        description: "Optional public profile username to probe"
+        required: false
+        type: string
+      expected_environment:
+        description: "Optional health deployment.environment expectation"
+        required: false
+        type: string
 
 jobs:
   lint-typecheck-test:
@@ -19,3 +33,48 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       # Full `npm run lint` includes legacy/generated paths that may fail; lint touched TS/TSX before PRs.
+
+  verify-deployment:
+    needs: lint-typecheck-test
+    runs-on: windows-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.STAGING_VERIFY_BASE_URL != '' || vars.PRODUCTION_VERIFY_BASE_URL != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: target
+        shell: pwsh
+        run: |
+          $baseUrl = ""
+          $profileUsername = "${{ inputs.profile_username }}"
+          $expectedEnvironment = "${{ inputs.expected_environment }}"
+
+          if ("${{ github.event_name }}" -eq "workflow_dispatch" -and -not [string]::IsNullOrWhiteSpace("${{ inputs.base_url }}")) {
+            $baseUrl = "${{ inputs.base_url }}"
+          } elseif ("${{ github.event_name }}" -eq "pull_request" -and -not [string]::IsNullOrWhiteSpace("${{ vars.STAGING_VERIFY_BASE_URL }}")) {
+            $baseUrl = "${{ vars.STAGING_VERIFY_BASE_URL }}"
+            if ([string]::IsNullOrWhiteSpace($expectedEnvironment)) {
+              $expectedEnvironment = "preview"
+            }
+          } elseif ("${{ github.ref }}" -match "^refs/heads/(main|master)$" -and -not [string]::IsNullOrWhiteSpace("${{ vars.PRODUCTION_VERIFY_BASE_URL }}")) {
+            $baseUrl = "${{ vars.PRODUCTION_VERIFY_BASE_URL }}"
+            if ([string]::IsNullOrWhiteSpace($expectedEnvironment)) {
+              $expectedEnvironment = "production"
+            }
+          }
+
+          if ([string]::IsNullOrWhiteSpace($profileUsername)) {
+            $profileUsername = "${{ vars.VERIFY_PROFILE_USERNAME }}"
+          }
+
+          "base_url=$baseUrl" >> $env:GITHUB_OUTPUT
+          "profile_username=$profileUsername" >> $env:GITHUB_OUTPUT
+          "expected_environment=$expectedEnvironment" >> $env:GITHUB_OUTPUT
+      - if: ${{ steps.target.outputs.base_url != '' }}
+        shell: pwsh
+        run: >
+          powershell -File scripts/verify-deployment.ps1
+          -BaseUrl '${{ steps.target.outputs.base_url }}'
+          -ProfileUsername '${{ steps.target.outputs.profile_username }}'
+          -ExpectedEnvironment '${{ steps.target.outputs.expected_environment }}'
+      - if: ${{ steps.target.outputs.base_url == '' }}
+        shell: pwsh
+        run: Write-Host "No deployment verification URL configured; skipping smoke test."

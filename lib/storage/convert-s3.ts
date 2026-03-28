@@ -1,5 +1,6 @@
 import {
   CreateBucketCommand,
+  DeleteObjectCommand,
   GetObjectCommand,
   HeadBucketCommand,
   HeadObjectCommand,
@@ -36,6 +37,14 @@ export function getConvertS3Client(): { client: S3Client; cfg: ConvertS3Config }
     });
   }
   return { client: cachedClient, cfg };
+}
+
+async function readObjectBody(body: AsyncIterable<Uint8Array>) {
+  const chunks: Buffer[] = [];
+  for await (const chunk of body) {
+    chunks.push(Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
 }
 
 /** Call once per process before presigning (idempotent). */
@@ -101,6 +110,70 @@ export async function presignGetOutput(jobId: string, outputKey: string): Promis
   return getSignedUrl(pair.client, cmd, { expiresIn: CONVERT_PRESIGN_TTL_SECONDS });
 }
 
+export async function putObjectBuffer(
+  key: string,
+  body: Buffer,
+  contentType: string,
+  options?: { contentDisposition?: string }
+) {
+  const pair = getConvertS3Client();
+  if (!pair) {
+    throw new Error("S3 not configured");
+  }
+
+  await pair.client.send(
+    new PutObjectCommand({
+      Bucket: pair.cfg.bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType || "application/octet-stream",
+      ...(options?.contentDisposition ? { ContentDisposition: options.contentDisposition } : {})
+    })
+  );
+}
+
+export async function getObjectBuffer(key: string): Promise<Buffer | null> {
+  const pair = getConvertS3Client();
+  if (!pair) {
+    return null;
+  }
+
+  try {
+    const response = await pair.client.send(
+      new GetObjectCommand({
+        Bucket: pair.cfg.bucket,
+        Key: key
+      })
+    );
+
+    if (!response.Body) {
+      return null;
+    }
+
+    return readObjectBody(response.Body as AsyncIterable<Uint8Array>);
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteObjectIfExists(key: string) {
+  const pair = getConvertS3Client();
+  if (!pair) {
+    return;
+  }
+
+  try {
+    await pair.client.send(
+      new DeleteObjectCommand({
+        Bucket: pair.cfg.bucket,
+        Key: key
+      })
+    );
+  } catch {
+    // Ignore storage cleanup failures during best-effort deletion.
+  }
+}
+
 export async function headInputObject(jobId: string): Promise<{ contentLength: number } | null> {
   const pair = getConvertS3Client();
   if (!pair) {
@@ -135,11 +208,8 @@ export async function downloadInputToFile(jobId: string, destPath: string): Prom
     throw new Error("Empty S3 object body");
   }
   const fs = await import("node:fs/promises");
-  const chunks: Buffer[] = [];
-  for await (const chunk of res.Body as AsyncIterable<Uint8Array>) {
-    chunks.push(Buffer.from(chunk));
-  }
-  await fs.writeFile(destPath, Buffer.concat(chunks));
+  const body = await readObjectBody(res.Body as AsyncIterable<Uint8Array>);
+  await fs.writeFile(destPath, body);
 }
 
 export async function uploadFileToOutputKey(
@@ -156,13 +226,7 @@ export async function uploadFileToOutputKey(
   const body = await fs.readFile(localPath);
   const safeName = opts?.downloadFileName?.replace(/[^\w.\-()+@ ]+/g, "_").slice(0, 180);
   const ContentDisposition = safeName ? `attachment; filename="${safeName}"` : undefined;
-  await pair.client.send(
-    new PutObjectCommand({
-      Bucket: pair.cfg.bucket,
-      Key: outputKey,
-      Body: body,
-      ContentType: contentType,
-      ...(ContentDisposition ? { ContentDisposition } : {})
-    })
-  );
+  await putObjectBuffer(outputKey, body, contentType, {
+    contentDisposition: ContentDisposition
+  });
 }

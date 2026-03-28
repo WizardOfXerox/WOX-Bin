@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { checkEdgeRateLimit } from "@/lib/firewall";
 import {
   buildDropResponse,
   deleteDropByToken,
@@ -35,16 +36,28 @@ export async function GET(request: Request, { params }: Params) {
   }
 
   const url = new URL(request.url);
-  const response = buildDropResponse(row, {
-    download: url.searchParams.get("download") === "1",
-    filenameOverride: filename?.[filename.length - 1] ?? null
-  });
-  await incrementDropView(row);
-  return response;
+  try {
+    const response = await buildDropResponse(row, {
+      download: url.searchParams.get("download") === "1",
+      filenameOverride: filename?.[filename.length - 1] ?? null
+    });
+    await incrementDropView(row);
+    return response;
+  } catch (error) {
+    if (error instanceof PublicDropError) {
+      return textError(error.message, error.status);
+    }
+    throw error;
+  }
 }
 
 export async function POST(request: Request, { params }: Params) {
   const ip = getRequestIp(request) ?? "anonymous";
+  const edgeLimit = await checkEdgeRateLimit("public-drop-manage", request, ip);
+  if (edgeLimit.rateLimited) {
+    return textError("Rate limit exceeded. Try again later.", 429);
+  }
+
   const limit = await rateLimit("file-drop-manage", ip);
   if (!limit.success) {
     return textError("Rate limit exceeded. Try again later.", 429);

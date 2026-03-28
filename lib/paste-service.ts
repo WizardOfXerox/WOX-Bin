@@ -31,6 +31,7 @@ import { dispatchUserWebhook } from "@/lib/webhooks";
 import { buildStarterAccountPasteSeed } from "@/lib/example-data";
 import { isPublicFeedEligible } from "@/lib/public-feed-view";
 import { invalidatePublicFeedCache } from "@/lib/public-feed-cache-tags";
+import { invalidatePublicProfileCacheByUserId } from "@/lib/profile-service";
 
 type Viewer = {
   id?: string | null;
@@ -783,6 +784,7 @@ export async function savePasteForUser(userId: string, input: SavePasteInput) {
     updatedAt: hydratedPaste.updatedAt
   });
   invalidatePublicFeedCache();
+  await invalidatePublicProfileCacheByUserId(userId);
 
   return hydratedPaste;
 }
@@ -813,6 +815,7 @@ export async function deletePasteForUser(userId: string, slug: string) {
     visibility: row.visibility
   });
   invalidatePublicFeedCache();
+  await invalidatePublicProfileCacheByUserId(userId);
   return true;
 }
 
@@ -1704,6 +1707,7 @@ export async function moderatePaste(options: {
       : undefined
   });
   invalidatePublicFeedCache();
+  await invalidatePublicProfileCacheByUserId(row.userId);
 
   return row;
 }

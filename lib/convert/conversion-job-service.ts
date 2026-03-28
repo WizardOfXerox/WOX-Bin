@@ -14,8 +14,18 @@ import {
   presignPutInput
 } from "@/lib/storage/convert-s3";
 
+const CONVERT_JOB_TTL_HOURS = Math.min(Math.max(Number(process.env.CONVERT_JOB_TTL_HOURS) || 72, 1), 24 * 30);
+
 export function newPublicToken(): string {
   return randomBytes(24).toString("base64url");
+}
+
+function getJobExpiresAt() {
+  return new Date(Date.now() + CONVERT_JOB_TTL_HOURS * 60 * 60 * 1000);
+}
+
+function isExpired(expiresAt: Date | null) {
+  return Boolean(expiresAt && expiresAt.getTime() <= Date.now());
 }
 
 export type CreateFfmpegJobInput = {
@@ -51,7 +61,8 @@ export async function createFfmpegConversionJob(input: CreateFfmpegJobInput) {
       outputMime: input.plan.outputMime,
       inputStorageKey: null,
       outputStorageKey: null,
-      status: "pending"
+      status: "pending",
+      expiresAt: getJobExpiresAt()
     })
     .returning();
 
@@ -90,6 +101,9 @@ export async function commitFfmpegJobUpload(jobId: string, publicToken: string) 
   if (!job) {
     return { ok: false as const, error: "NOT_FOUND" };
   }
+  if (isExpired(job.expiresAt ?? null)) {
+    return { ok: false as const, error: "NOT_FOUND" };
+  }
   if (job.handler !== "ffmpeg") {
     return { ok: false as const, error: "BAD_HANDLER" };
   }
@@ -118,6 +132,9 @@ export async function getFfmpegJobForClient(jobId: string, publicToken: string) 
     .limit(1);
 
   if (!job) {
+    return null;
+  }
+  if (isExpired(job.expiresAt ?? null)) {
     return null;
   }
 
@@ -170,6 +187,9 @@ export async function getPresignedDownloadUrl(jobId: string, publicToken: string
     .limit(1);
 
   if (!job || job.status !== "done" || !job.outputStorageKey) {
+    return null;
+  }
+  if (isExpired(job.expiresAt ?? null)) {
     return null;
   }
 

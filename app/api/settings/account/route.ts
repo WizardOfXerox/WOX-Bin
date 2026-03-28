@@ -2,11 +2,15 @@ import { and, eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import { resolveUserImageForClient } from "@/lib/avatar";
 import { verifyPassword } from "@/lib/crypto";
 import { db } from "@/lib/db";
 import { accounts, teamMembers, teams, users } from "@/lib/db/schema";
+import { checkEdgeRateLimit } from "@/lib/firewall";
 import { jsonError } from "@/lib/http";
 import { logAudit } from "@/lib/audit";
+import { logInfo } from "@/lib/logging";
+import { invalidatePublicProfileCaches } from "@/lib/profile-service";
 import { getRequestIp } from "@/lib/request";
 import { getTotpStatus } from "@/lib/totp-mfa";
 import { accountDeleteSchema, accountSettingsPatchSchema } from "@/lib/validators";
@@ -55,7 +59,7 @@ export async function GET() {
     displayName: row.displayName,
     email: row.email,
     name: row.name,
-    image: row.image,
+    image: resolveUserImageForClient(row.image, session.user.id),
     emailVerified: row.emailVerified ? row.emailVerified.toISOString() : null,
     hasPassword: Boolean(row.passwordHash),
     googleConnected: Boolean(googleAccount),
@@ -120,6 +124,11 @@ export async function DELETE(request: Request) {
     return jsonError("Not signed in.", 401);
   }
 
+  const edgeLimit = await checkEdgeRateLimit("settings-account", request, session.user.id);
+  if (edgeLimit.rateLimited) {
+    return jsonError("Too many account changes. Try again later.", 429);
+  }
+
   const body = await request.json().catch(() => null);
   const parsed = accountDeleteSchema.safeParse(body);
   if (!parsed.success) {
@@ -129,7 +138,7 @@ export async function DELETE(request: Request) {
   const userId = session.user.id;
   const row = await db.query.users.findFirst({
     where: eq(users.id, userId),
-    columns: { passwordHash: true, email: true }
+    columns: { passwordHash: true, email: true, username: true }
   });
 
   if (!row) {
@@ -163,6 +172,11 @@ export async function DELETE(request: Request) {
   });
 
   await db.delete(users).where(eq(users.id, userId));
+  invalidatePublicProfileCaches([row.username]);
+  logInfo("settings.account.deleted", {
+    userId,
+    username: row.username ?? null
+  });
 
   return NextResponse.json({ ok: true });
 }
@@ -171,6 +185,11 @@ export async function PATCH(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return jsonError("Not signed in.", 401);
+  }
+
+  const edgeLimit = await checkEdgeRateLimit("settings-account", request, session.user.id);
+  if (edgeLimit.rateLimited) {
+    return jsonError("Too many account changes. Try again later.", 429);
   }
 
   const body = await request.json().catch(() => null);
@@ -247,12 +266,21 @@ export async function PATCH(request: Request) {
       imageChanged: parsed.data.image !== undefined
     }
   });
+  invalidatePublicProfileCaches([current.username, nextUsername]);
+  logInfo("settings.account.updated", {
+    userId,
+    previousUsername: current.username ?? null,
+    username: nextUsername ?? null,
+    usernameChanged: parsed.data.username !== undefined && nextUsername !== current.username,
+    displayNameChanged: parsed.data.displayName !== undefined,
+    imageChanged: parsed.data.image !== undefined
+  });
 
   return NextResponse.json({
     username: nextUsername,
     displayName: nextDisplayName,
     email: current.email,
     name: nextName,
-    image: nextImage
+    image: resolveUserImageForClient(nextImage, userId)
   });
 }

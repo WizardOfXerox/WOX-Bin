@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { checkEdgeRateLimit } from "@/lib/firewall";
+import { logError, logInfo } from "@/lib/logging";
 import { safeDownloadBasename } from "@/lib/paste-download";
 import { createFileDrop, assertSafeRemoteSource, FILE_DROP_MAX_BYTES, PublicDropError } from "@/lib/public-drops";
 import { getAppOrigin, getRequestIp } from "@/lib/request";
@@ -21,6 +23,11 @@ function filenameFromUrl(url: URL) {
 
 export async function POST(request: Request) {
   const ip = getRequestIp(request) ?? "anonymous";
+  const edgeLimit = await checkEdgeRateLimit("public-drop-upload", request, ip);
+  if (edgeLimit.rateLimited) {
+    return textError("Rate limit exceeded. Try again later.", 429);
+  }
+
   const limit = await rateLimit("file-drop-upload", ip);
   if (!limit.success) {
     return textError("Rate limit exceeded. Try again later.", 429);
@@ -97,6 +104,11 @@ export async function POST(request: Request) {
       ip,
       userAgent: request.headers.get("user-agent")
     });
+    logInfo("public_drop.file_created", {
+      ip,
+      slug: drop.slug,
+      filename: drop.filename
+    });
 
     const origin = getAppOrigin(request);
     return new NextResponse(`${origin}${drop.urlPath}\n`, {
@@ -108,8 +120,14 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     if (error instanceof PublicDropError) {
+      logInfo("public_drop.file_rejected", {
+        ip,
+        message: error.message,
+        status: error.status
+      });
       return textError(error.message, error.status);
     }
+    logError("public_drop.file_failed", error, { ip });
     throw error;
   }
 }

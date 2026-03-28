@@ -3,11 +3,18 @@ import { isIP } from "node:net";
 
 import { and, eq, isNull, ne } from "drizzle-orm";
 
+import { publicDropObjectStorageFlag } from "@/flags";
 import { logAudit } from "@/lib/audit";
 import { randomToken, hashToken } from "@/lib/crypto";
 import { db } from "@/lib/db";
 import { publicDrops } from "@/lib/db/schema";
 import { asciiContentDispositionFilename, safeDownloadBasename } from "@/lib/paste-download";
+import {
+  deleteObjectIfExists,
+  getConvertS3Client,
+  getObjectBuffer,
+  putObjectBuffer
+} from "@/lib/storage/convert-s3";
 import { normalizeOptionalSlug } from "@/lib/utils";
 
 export const TERMBIN_MAX_TEXT_BYTES = 512 * 1024;
@@ -19,6 +26,9 @@ export const CLIPBOARD_DEFAULT_HOURS = 24;
 export const CLIPBOARD_MAX_TEXT_BYTES = 256 * 1024;
 export const CLIPBOARD_MIN_SLUG = 3;
 export const CLIPBOARD_MAX_SLUG = 48;
+const PUBLIC_DROP_STORAGE_POINTER_PREFIX = "s3:";
+const PUBLIC_DROP_STORAGE_PREFIX =
+  process.env.PUBLIC_DROP_STORAGE_PREFIX?.trim().replace(/^\/+|\/+$/g, "") || "public-drops";
 
 type PublicDropRow = typeof publicDrops.$inferSelect;
 
@@ -66,6 +76,34 @@ async function ensureUniqueDropSlug(secret = false) {
 function normalizeMime(mime: string | null | undefined, fallback: string) {
   const trimmed = mime?.trim().toLowerCase();
   return trimmed ? trimmed.slice(0, 160) : fallback;
+}
+
+function buildPublicDropObjectKey(slug: string, filename: string) {
+  return `${PUBLIC_DROP_STORAGE_PREFIX}/${slug}/${safeDownloadBasename(filename, "file.bin")}`;
+}
+
+function encodePublicDropObjectPointer(key: string) {
+  return `${PUBLIC_DROP_STORAGE_POINTER_PREFIX}${key}`;
+}
+
+function decodePublicDropObjectPointer(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed?.toLowerCase().startsWith(PUBLIC_DROP_STORAGE_POINTER_PREFIX)) {
+    return null;
+  }
+
+  const key = trimmed.slice(PUBLIC_DROP_STORAGE_POINTER_PREFIX.length).trim();
+  return key || null;
+}
+
+async function deleteStoredPublicDropObject(row: PublicDropRow) {
+  const key = decodePublicDropObjectPointer(row.contentBase64);
+  if (!key) {
+    return false;
+  }
+
+  await deleteObjectIfExists(key);
+  return true;
 }
 
 function isPrivateIpv4(address: string) {
@@ -173,6 +211,8 @@ async function expireIfNeeded(row: PublicDropRow) {
     return false;
   }
 
+  await deleteStoredPublicDropObject(row);
+
   await db
     .update(publicDrops)
     .set({
@@ -265,14 +305,26 @@ export async function createFileDrop(input: {
   const filename = safeDownloadBasename(input.filename || "file.bin", "file.bin");
   const deleteToken = randomToken("drop");
   const expiresAt = parseDropExpires(input.expires ?? null, FILE_DROP_DEFAULT_HOURS);
+  const mimeType = normalizeMime(input.mimeType, "application/octet-stream");
+  let contentBase64 = input.contentBase64;
+
+  if ((await publicDropObjectStorageFlag()) && getConvertS3Client()) {
+    const objectKey = buildPublicDropObjectKey(slug, filename);
+    try {
+      await putObjectBuffer(objectKey, Buffer.from(input.contentBase64, "base64"), mimeType);
+    } catch {
+      throw new PublicDropError("Could not store the uploaded file.", 502);
+    }
+    contentBase64 = encodePublicDropObjectPointer(objectKey);
+  }
 
   await db.insert(publicDrops).values({
     slug,
     kind: "file",
     filename,
-    mimeType: normalizeMime(input.mimeType, "application/octet-stream"),
+    mimeType,
     contentText: null,
-    contentBase64: input.contentBase64,
+    contentBase64,
     sizeBytes: input.sizeBytes,
     deleteTokenHash: hashToken(deleteToken),
     burnAfterRead: false,
@@ -493,6 +545,7 @@ async function requireManageableDrop(slug: string, token: string) {
 
 export async function deleteDropByToken(slug: string, token: string) {
   const row = await requireManageableDrop(slug, token);
+  await deleteStoredPublicDropObject(row);
 
   await db
     .update(publicDrops)
@@ -534,7 +587,10 @@ export async function updateDropExpiryByToken(slug: string, token: string, expir
   return expiresAt;
 }
 
-export function buildDropResponse(row: PublicDropRow, options?: { download?: boolean; filenameOverride?: string | null }) {
+export async function buildDropResponse(
+  row: PublicDropRow,
+  options?: { download?: boolean; filenameOverride?: string | null }
+) {
   const filename = safeDownloadBasename(options?.filenameOverride || row.filename || row.slug, row.slug);
   const headers = new Headers({
     "Cache-Control": "private, no-store",
@@ -554,6 +610,14 @@ export function buildDropResponse(row: PublicDropRow, options?: { download?: boo
     return new Response(row.contentText ?? "", { headers });
   }
 
-  const bytes = Buffer.from(row.contentBase64 ?? "", "base64");
-  return new Response(bytes, { headers });
+  const objectKey = decodePublicDropObjectPointer(row.contentBase64);
+  const bytes = objectKey
+    ? await getObjectBuffer(objectKey)
+    : Buffer.from(row.contentBase64 ?? "", "base64");
+
+  if (!bytes?.length) {
+    throw new PublicDropError("File contents unavailable.", 404);
+  }
+
+  return new Response(new Uint8Array(bytes), { headers });
 }

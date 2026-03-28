@@ -7,6 +7,7 @@ import { createFfmpegConversionJob } from "@/lib/convert/conversion-job-service"
 import { getFfmpegWorkerPlan } from "@/lib/convert/ffmpeg-plan";
 import { parseConversionPath } from "@/lib/convert/parse-path";
 import { ensureDatabaseUrl } from "@/lib/db";
+import { logError } from "@/lib/logging";
 import { rateLimit } from "@/lib/rate-limit";
 import { toolsDisabledResponse } from "@/lib/tools/disabled-response";
 import { TOOLS_ENABLED } from "@/lib/tools/availability";
@@ -94,7 +95,7 @@ export async function POST(req: Request) {
     if (msg === "INVALID_SIZE") {
       return NextResponse.json({ error: "Declared file size is invalid or too large" }, { status: 400 });
     }
-    console.error("[convert/jobs] create failed", e);
+    logError("convert.job.create_failed", e);
     return NextResponse.json({ error: "Could not create conversion job" }, { status: 500 });
   }
 }

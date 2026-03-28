@@ -7,6 +7,7 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { eq, or } from "drizzle-orm";
 import type { Adapter } from "next-auth/adapters";
 
+import { resolveUserImageForClient } from "@/lib/avatar";
 import { db } from "@/lib/db";
 import {
   accounts,
@@ -69,7 +70,7 @@ const providers: NonNullable<NextAuthOptions["providers"]> = [
             id: user.id,
             email: user.email,
             name: user.name ?? user.displayName ?? user.username,
-            image: user.image,
+            image: resolveUserImageForClient(user.image, user.id),
             username: user.username,
             role: user.role,
             plan: user.plan ?? "free",
@@ -116,7 +117,7 @@ const providers: NonNullable<NextAuthOptions["providers"]> = [
           id: user.id,
           email: user.email,
           name: user.name ?? user.displayName ?? user.username,
-          image: user.image,
+          image: resolveUserImageForClient(user.image, user.id),
           username: user.username,
           role: user.role,
           plan: user.plan ?? "free",
@@ -261,7 +262,7 @@ export const authOptions: NextAuthOptions = {
           token.planStatus = row.planStatus;
           token.onboardingComplete = row.onboardingComplete;
           token.displayName = row.displayName ?? null;
-          token.picture = row.image ?? null;
+          token.picture = resolveUserImageForClient(row.image, row.id);
         }
       }
 
@@ -348,7 +349,7 @@ export const authOptions: NextAuthOptions = {
           token.planStatus = row.planStatus;
           token.onboardingComplete = row.onboardingComplete;
           token.displayName = row.displayName ?? null;
-          token.picture = row.image ?? null;
+          token.picture = resolveUserImageForClient(row.image, row.id);
         } else {
           token.id = user.id;
           token.username = user.username ?? null;
@@ -357,7 +358,7 @@ export const authOptions: NextAuthOptions = {
           token.planStatus = user.planStatus ?? "active";
           token.onboardingComplete = user.onboardingComplete ?? false;
           token.displayName = user.displayName ?? null;
-          token.picture = user.image ?? null;
+          token.picture = resolveUserImageForClient(user.image ?? null, user.id);
         }
       } else if (token.sub) {
         const ok = await ensureBrowserSession(token.sub);

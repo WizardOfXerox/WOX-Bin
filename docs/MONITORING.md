@@ -15,6 +15,7 @@ Configure your host (Vercel does not expose a native TCP health probe for server
 
 - **Vercel:** Project → Logs (function + edge). Filter by route (`/api/webhooks/stripe`, `/api/auth/*`, etc.).
 - **Self-hosted:** capture **stdout/stderr** from `next start` or your process manager.
+- The app now emits structured JSON logs for health checks, account mutations, cron cleanup, and public upload failures so route-level filtering is easier in Vercel Observability or downstream drains.
 
 ## What to alert on
 
@@ -32,11 +33,20 @@ Configure your host (Vercel does not expose a native TCP health probe for server
 4. Open Vercel logs filtered to the failing route or `/api/health`.
 5. If DB pings fail, verify provider status, connection limits, and current `DATABASE_URL`.
 6. If a public-abuse issue is active, inspect `/admin/reports` before deciding whether to hide content or tighten route-level controls.
+7. If cron cleanup fails, confirm `CRON_SECRET` is set in Vercel and that `/api/cron/cleanup` is returning `200`.
 
 ## Optional integrations
 
-- **Sentry / OpenTelemetry** — not wired by default; add a Next.js observability package if you need traces and error grouping.
+- **OpenTelemetry** — wired through `instrumentation.ts` with `@vercel/otel`; add a provider or drain if you want external trace export.
+- **Vercel Speed Insights** — enabled on Vercel deployments from `app/layout.tsx`.
 - **Stripe Dashboard** — monitor failed webhooks and retry deliveries.
+
+## CI verification
+
+- GitHub Actions can run `scripts/verify-deployment.ps1` against staging or production when repository variables are configured:
+- `STAGING_VERIFY_BASE_URL` for preview/staging smoke tests on pull requests.
+- `PRODUCTION_VERIFY_BASE_URL` for post-merge verification on `main` / `master`.
+- `VERIFY_PROFILE_USERNAME` to include a public profile route in the smoke test.
 
 ## Related
 

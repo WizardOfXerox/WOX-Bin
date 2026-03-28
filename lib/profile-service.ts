@@ -1,5 +1,8 @@
 import { and, count, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
+import { revalidateTag, unstable_cache } from "next/cache";
 
+import { publicProfileCacheFlag } from "@/flags";
+import { resolveUserImageForClient } from "@/lib/avatar";
 import { db } from "@/lib/db";
 import { comments, pastes, stars, users } from "@/lib/db/schema";
 
@@ -8,6 +11,16 @@ type ProfileViewer = {
 } | null;
 
 const PROFILE_PASTE_LIMIT = 200;
+const PUBLIC_PROFILE_CACHE_TAG_PREFIX = "public-profile";
+const PUBLIC_PROFILE_REVALIDATE_SECONDS = 60;
+
+type ProfileUserRow = {
+  id: string;
+  username: string;
+  displayName: string | null;
+  image: string | null;
+  createdAt: Date;
+};
 
 export type UserProfilePasteRow = {
   id: string;
@@ -63,32 +76,46 @@ function activePasteWindow(userId: string, now: Date) {
   ] as const;
 }
 
-export async function getUserProfileByUsername(
-  username: string,
-  viewer: ProfileViewer
-): Promise<UserProfileSnapshot | null> {
-  const normalized = username.trim().toLowerCase();
+function getPublicProfileCacheTag(username: string) {
+  return `${PUBLIC_PROFILE_CACHE_TAG_PREFIX}:${username.trim().toLowerCase()}`;
+}
+
+export function invalidatePublicProfileCache(username: string | null | undefined) {
+  const normalized = username?.trim().toLowerCase();
   if (!normalized) {
-    return null;
+    return;
   }
 
-  const user = await db.query.users.findFirst({
-    where: eq(users.username, normalized),
+  try {
+    revalidateTag(getPublicProfileCacheTag(normalized), "max");
+  } catch {
+    // Ignore invalidation outside request/render contexts.
+  }
+}
+
+export function invalidatePublicProfileCaches(usernames: Array<string | null | undefined>) {
+  for (const username of usernames) {
+    invalidatePublicProfileCache(username);
+  }
+}
+
+export async function invalidatePublicProfileCacheByUserId(userId: string | null | undefined) {
+  if (!userId) {
+    return;
+  }
+
+  const row = await db.query.users.findFirst({
+    where: eq(users.id, userId),
     columns: {
-      id: true,
-      username: true,
-      displayName: true,
-      image: true,
-      createdAt: true
+      username: true
     }
   });
 
-  if (!user?.username) {
-    return null;
-  }
+  invalidatePublicProfileCache(row?.username ?? null);
+}
 
+async function buildUserProfileSnapshot(user: ProfileUserRow, isOwnerViewer: boolean): Promise<UserProfileSnapshot> {
   const now = new Date();
-  const isOwnerViewer = Boolean(viewer?.id && viewer.id === user.id);
   const baseConditions = activePasteWindow(user.id, now);
   const publicConditions = [
     ...baseConditions,
@@ -96,9 +123,7 @@ export async function getUserProfileByUsername(
     eq(pastes.visibility, "public"),
     eq(pastes.secretMode, false)
   ] as const;
-  const listConditions = isOwnerViewer
-    ? [...baseConditions]
-    : [...publicConditions];
+  const listConditions = isOwnerViewer ? [...baseConditions] : [...publicConditions];
 
   const [profilePasteRows, publicStatsRow, latestPublicRow, ownerStatsRows] = await Promise.all([
     db
@@ -199,7 +224,7 @@ export async function getUserProfileByUsername(
       id: user.id,
       username: user.username,
       displayName: user.displayName ?? null,
-      image: user.image ?? null,
+      image: resolveUserImageForClient(user.image, user.id),
       createdAt: user.createdAt.toISOString(),
       isOwnerViewer
     },
@@ -239,4 +264,53 @@ export async function getUserProfileByUsername(
       updatedAt: row.updatedAt.toISOString()
     }))
   };
+}
+
+async function getCachedPublicUserProfileSnapshot(user: ProfileUserRow) {
+  const cached = unstable_cache(() => buildUserProfileSnapshot(user, false), ["public-profile", user.username], {
+    revalidate: PUBLIC_PROFILE_REVALIDATE_SECONDS,
+    tags: [getPublicProfileCacheTag(user.username)]
+  });
+
+  return cached();
+}
+
+export async function getUserProfileByUsername(
+  username: string,
+  viewer: ProfileViewer
+): Promise<UserProfileSnapshot | null> {
+  const normalized = username.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  const user = await db.query.users.findFirst({
+    where: eq(users.username, normalized),
+    columns: {
+      id: true,
+      username: true,
+      displayName: true,
+      image: true,
+      createdAt: true
+    }
+  });
+
+  if (!user?.username) {
+    return null;
+  }
+
+  const profileUser: ProfileUserRow = {
+    id: user.id,
+    username: user.username,
+    displayName: user.displayName ?? null,
+    image: user.image ?? null,
+    createdAt: user.createdAt
+  };
+
+  const isOwnerViewer = Boolean(viewer?.id && viewer.id === user.id);
+  if (!isOwnerViewer && (await publicProfileCacheFlag())) {
+    return getCachedPublicUserProfileSnapshot(profileUser);
+  }
+
+  return buildUserProfileSnapshot(profileUser, isOwnerViewer);
 }

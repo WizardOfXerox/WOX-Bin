@@ -3,9 +3,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
+import { profileAvatarUploadFlag } from "@/flags";
 import { AccountSettingsClient } from "@/components/settings/account-settings-client";
 import { SettingsNav } from "@/components/settings/settings-nav";
 import { Button } from "@/components/ui/button";
+import { resolveUserImageForClient } from "@/lib/avatar";
 import { db } from "@/lib/db";
 import { accounts, users } from "@/lib/db/schema";
 import { env } from "@/lib/env";
@@ -24,7 +26,7 @@ export default async function AccountSettingsPage() {
     redirect("/account/onboarding");
   }
 
-  const [row, googleAccount, discordAccount, totpStatus] = await Promise.all([
+  const [row, googleAccount, discordAccount, totpStatus, avatarUploadEnabled] = await Promise.all([
     db.query.users.findFirst({
       where: eq(users.id, session.user.id),
       columns: {
@@ -46,7 +48,8 @@ export default async function AccountSettingsPage() {
       .from(accounts)
       .where(and(eq(accounts.userId, session.user.id), eq(accounts.provider, "discord")))
       .limit(1),
-    getTotpStatus(session.user.id)
+    getTotpStatus(session.user.id),
+    profileAvatarUploadFlag()
   ]);
 
   if (!row) {
@@ -57,7 +60,7 @@ export default async function AccountSettingsPage() {
     email: row.email,
     username: row.username,
     displayName: row.displayName,
-    image: row.image,
+    image: resolveUserImageForClient(row.image, session.user.id),
     hasPassword: Boolean(row.passwordHash),
     emailVerified: Boolean(row.emailVerified),
     smtpConfigured: isSmtpConfigured(),
@@ -68,7 +71,8 @@ export default async function AccountSettingsPage() {
     totpAvailable: totpStatus.available,
     totpEnabled: totpStatus.enabled,
     totpEnabledAt: totpStatus.enabledAt?.toISOString() ?? null,
-    totpLastUsedAt: totpStatus.lastUsedAt?.toISOString() ?? null
+    totpLastUsedAt: totpStatus.lastUsedAt?.toISOString() ?? null,
+    avatarUploadEnabled
   };
 
   return (

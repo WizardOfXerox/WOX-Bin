@@ -1,7 +1,7 @@
 "use client";
 
 import { signIn, signOut, useSession } from "next-auth/react";
-import { useState, type FormEvent } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,6 +26,7 @@ export type AccountProfileInitial = {
   totpEnabled: boolean;
   totpEnabledAt: string | null;
   totpLastUsedAt: string | null;
+  avatarUploadEnabled: boolean;
 };
 
 type Props = {
@@ -38,6 +39,7 @@ export function AccountSettingsClient({ initial }: Props) {
   const [username, setUsername] = useState(initial.username ?? "");
   const [displayName, setDisplayName] = useState(initial.displayName ?? "");
   const [image, setImage] = useState(initial.image ?? "");
+  const [avatarUploadMessage, setAvatarUploadMessage] = useState<string | null>(null);
   const [hasPassword, setHasPassword] = useState(initial.hasPassword);
   const [googleConnected, setGoogleConnected] = useState(initial.googleConnected);
   const [discordConnected, setDiscordConnected] = useState(initial.discordConnected);
@@ -93,6 +95,58 @@ export function AccountSettingsClient({ initial }: Props) {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  async function readAvatarAsDataUrl(file: File) {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          resolve(reader.result);
+          return;
+        }
+        reject(new Error("Could not read that image."));
+      };
+      reader.onerror = () => reject(reader.error ?? new Error("Could not read that image."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleAvatarFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    const normalizedType = file.type.trim().toLowerCase();
+    if (!["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"].includes(normalizedType)) {
+      setAvatarUploadMessage("Use PNG, JPG, WebP, GIF, or AVIF.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setAvatarUploadMessage("Profile image must be 5 MB or smaller.");
+      return;
+    }
+
+    try {
+      const dataUrl = await readAvatarAsDataUrl(file);
+      setImage(dataUrl);
+      setAvatarUploadMessage(`${file.name} selected. Save profile to publish it.`);
+      setError(null);
+      setStatus(null);
+    } catch (uploadError) {
+      setAvatarUploadMessage(uploadError instanceof Error ? uploadError.message : "Could not read that image.");
+    }
+  }
+
+  function handleRemoveAvatar() {
+    setImage("");
+    setAvatarUploadMessage("Avatar will be removed when you save.");
+    setError(null);
+    setStatus(null);
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
@@ -147,6 +201,7 @@ export function AccountSettingsClient({ initial }: Props) {
     if (body.image !== undefined) {
       setImage(body.image ?? "");
     }
+    setAvatarUploadMessage(null);
     setSavedProfile({
       username: typeof body.username === "string" ? body.username : trimmedUser,
       displayName: body.displayName !== undefined ? body.displayName ?? "" : trimmedDisplay,
@@ -626,20 +681,31 @@ export function AccountSettingsClient({ initial }: Props) {
                   username={username}
                 />
                 <div className="min-w-0 flex-1 space-y-2">
-                  <label className="text-sm font-medium text-foreground" htmlFor="account-image">
-                    Profile image URL
+                  <label className="text-sm font-medium text-foreground" htmlFor="account-image-upload">
+                    Profile image
                   </label>
-                  <Input
-                    autoComplete="url"
-                    id="account-image"
-                    onChange={(e) => setImage(e.target.value)}
-                    placeholder="https://example.com/avatar.png"
-                    type="url"
-                    value={image}
-                  />
                   <p className="text-xs text-muted-foreground">
-                    Paste an http:// or https:// image URL. Leave this blank to remove your custom avatar.
+                    Upload PNG, JPG, WebP, GIF, or AVIF up to 5 MB. Uploaded avatars are stored on your account and
+                    served back through a short image URL so sessions stay small.
                   </p>
+                  {initial.avatarUploadEnabled ? (
+                    <Input
+                      accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
+                      id="account-image-upload"
+                      onChange={(event) => void handleAvatarFileChange(event)}
+                      type="file"
+                    />
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Avatar uploads are disabled on this deployment right now.
+                    </p>
+                  )}
+                  <div className="flex flex-wrap gap-3">
+                    <Button disabled={!image} type="button" variant="outline" onClick={handleRemoveAvatar}>
+                      Remove avatar
+                    </Button>
+                  </div>
+                  {avatarUploadMessage ? <p className="text-xs text-muted-foreground">{avatarUploadMessage}</p> : null}
                 </div>
               </div>
             </div>

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { ACCOUNT_AVATAR_MAX_BYTES, ACCOUNT_AVATAR_MAX_DATA_URL_LENGTH, parseStoredAvatarDataUrl } from "@/lib/avatar";
 import { BURN_VIEW_OPTIONS, CATEGORIES, LANGUAGES } from "@/lib/constants";
 import { PLAN_IDS } from "@/lib/plans";
 import { isAllowedPasteMediaMime, normalizeAttachmentMimeType } from "@/lib/paste-file-media";
@@ -258,8 +259,34 @@ export const accountSettingsPatchSchema = z
         z
           .string()
           .trim()
-          .max(2048)
-          .refine((value) => /^https?:\/\//i.test(value), "Profile image URL must start with http:// or https://."),
+          .max(ACCOUNT_AVATAR_MAX_DATA_URL_LENGTH)
+          .superRefine((value, ctx) => {
+            if (/^https?:\/\//i.test(value)) {
+              if (value.length > 2048) {
+                ctx.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  message: "Profile image URL is too long."
+                });
+              }
+              return;
+            }
+
+            const parsed = parseStoredAvatarDataUrl(value);
+            if (!parsed) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Profile image must be an http(s) URL or an uploaded PNG, JPG, WebP, GIF, or AVIF image."
+              });
+              return;
+            }
+
+            if (parsed.bytes > ACCOUNT_AVATAR_MAX_BYTES) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Profile image must be 5 MB or smaller."
+              });
+            }
+          }),
         z.literal("")
       ])
       .optional(),

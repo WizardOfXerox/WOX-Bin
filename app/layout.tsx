@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { cookies } from "next/headers";
 
 import { AuthSessionProvider } from "@/components/providers/session-provider";
@@ -48,7 +49,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const showVercelAnalytics = process.env.VERCEL === "1";
+  const showVercelTelemetry = process.env.VERCEL === "1";
   const cookieStore = await cookies();
   const initialLanguage = resolveUiLanguage(cookieStore.get(UI_LANGUAGE_COOKIE)?.value);
 
@@ -70,7 +71,8 @@ export default async function RootLayout({
             </ThemeRootProvider>
           </PwaProvider>
         </UiLanguageProvider>
-        {showVercelAnalytics ? <Analytics /> : null}
+        {showVercelTelemetry ? <Analytics /> : null}
+        {showVercelTelemetry ? <SpeedInsights /> : null}
       </body>
     </html>
   );

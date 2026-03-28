@@ -6,6 +6,7 @@ import { CONVERT_JOB_MAX_INPUT_BYTES, isConvertStorageConfigured } from "@/lib/c
 import { db, ensureDatabaseUrl } from "@/lib/db";
 import { conversionJobs } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
+import { logError } from "@/lib/logging";
 import { getConvertS3Client, inputObjectKey } from "@/lib/storage/convert-s3";
 import { toolsDisabledResponse } from "@/lib/tools/disabled-response";
 import { TOOLS_ENABLED } from "@/lib/tools/availability";
@@ -75,6 +76,9 @@ export async function POST(req: Request, ctx: RouteCtx) {
   if (!job) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+  if (job.expiresAt && job.expiresAt.getTime() <= Date.now()) {
+    return NextResponse.json({ error: "Job has expired" }, { status: 410 });
+  }
   if (job.handler !== "ffmpeg" || job.status !== "pending") {
     return NextResponse.json({ error: "Job cannot accept upload" }, { status: 400 });
   }
@@ -100,7 +104,7 @@ export async function POST(req: Request, ctx: RouteCtx) {
       })
     );
   } catch (e) {
-    console.error("[convert/jobs/upload] PutObject failed", e);
+    logError("convert.job.upload_failed", e, { jobId });
     return NextResponse.json({ error: "Could not store file" }, { status: 502 });
   }
 

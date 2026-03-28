@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
+import { logError } from "@/lib/logging";
 import { getRateLimitHealthStatus } from "@/lib/rate-limit";
 
 /**
@@ -25,7 +26,7 @@ export async function GET() {
       deployment
     });
   } catch (err) {
-    console.error("[health]", err);
+    logError("health.check.failed", err);
     return NextResponse.json(
       {
         ok: false,
