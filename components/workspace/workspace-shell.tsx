@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
-import DOMPurify from "isomorphic-dompurify";
 import DiffMatchPatch from "diff-match-patch";
 import {
   useCallback,
@@ -2196,7 +2195,8 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
     const dmp = new DiffMatchPatch();
     const diff = dmp.diff_main(diffVersion.content, selectedPaste.content);
     dmp.diff_cleanupSemantic(diff);
-    return DOMPurify.sanitize(dmp.diff_prettyHtml(diff));
+    // diff_prettyHtml already escapes user content before wrapping insert/delete spans.
+    return dmp.diff_prettyHtml(diff);
   }, [diffVersion, selectedPaste]);
 
   /** Prefer quota tier so admins/moderators see “Admin” limits on the badge, not only the DB plan row. */
