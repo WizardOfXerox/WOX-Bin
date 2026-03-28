@@ -4110,8 +4110,8 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                               <div className="space-y-1.5">
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <p className="truncate font-medium text-foreground">{paste.title}</p>
+                                    <div className="flex items-start gap-2">
+                                      <p className="line-clamp-2 break-words font-medium leading-snug text-foreground">{paste.title}</p>
                                       {paste.favorite ? (
                                         <Badge className="h-5 gap-0.5 border-amber-500/35 bg-amber-500/15 px-1.5 text-[10px] text-amber-950 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
                                           <Star className="h-3 w-3" />
@@ -4138,8 +4138,8 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                               </div>
                             ) : (
                               <>
-                                <div className="flex items-center justify-between gap-3">
-                                  <p className="truncate font-medium text-foreground">{paste.title}</p>
+                                <div className="flex items-start justify-between gap-3">
+                                  <p className="line-clamp-2 break-words font-medium leading-snug text-foreground">{paste.title}</p>
                                   <div className="flex shrink-0 flex-wrap items-center gap-1">
                                     {paste.favorite ? (
                                       <Badge className="gap-0.5 border-amber-500/35 bg-amber-500/15 px-1.5 text-amber-950 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
@@ -4378,8 +4378,8 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                         <PrismThemeLink theme={syntaxTheme} />
                       </div>
                     ) : null}
-                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3 md:gap-4">
-                      <div className="min-w-0 w-full flex-1 sm:w-auto">
+                    <div className="flex flex-col gap-2 xl:flex-row xl:flex-wrap xl:items-start xl:justify-between xl:gap-3 2xl:gap-4">
+                      <div className="min-w-0 w-full flex-1 xl:w-auto">
                         {phoneViewport ? (
                           <Textarea
                             className={cn(
@@ -4459,7 +4459,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                       </div>
                       <div
                         className={cn(
-                          "flex w-full print:hidden sm:w-auto sm:justify-end",
+                          "flex w-full print:hidden xl:w-auto xl:justify-end",
                           phoneViewport
                             ? "-mx-1 flex-nowrap gap-2 overflow-x-auto px-1 pb-1"
                             : "flex-wrap",
@@ -6636,43 +6636,178 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
           </div>
         ) : null}
 
-        <div className="mt-2 hidden flex-col gap-2 md:mt-0 md:flex md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-x-3 md:gap-y-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 sm:gap-x-3">
-            <Link
-              className="shrink-0 text-sm font-semibold tracking-tight text-foreground"
-              href="/app"
-              title={
-                mode === "account"
-                  ? "Account sync, public sharing, and launch-ready controls."
-                  : "Local-first drafting, fast capture, and portable exports."
-              }
-            >
-              WOX-Bin
-              <span className="font-normal text-muted-foreground"> workspace</span>
-            </Link>
-            {sessionUser ? (
-              <>
-                <Badge
-                  className={cn(
-                    "shrink-0 px-2 py-0 text-[10px] font-medium normal-case tracking-normal",
-                    displayedPlan === "free"
-                      ? "border-border bg-transparent"
-                      : "border-amber-500/35 bg-amber-500/15 text-amber-950 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100"
-                  )}
-                >
-                  {formatPlanName(displayedPlan)} plan
-                </Badge>
-                {displayedPlanStatus !== "active" ? (
-                  <Badge className="shrink-0 border-border bg-transparent px-2 py-0 text-[10px] capitalize text-muted-foreground">
-                    {formatPlanStatus(displayedPlanStatus)}
+        <div className="mt-2 hidden md:grid md:gap-3">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 sm:gap-x-3">
+              <Link
+                className="shrink-0 text-sm font-semibold tracking-tight text-foreground"
+                href="/app"
+                title={
+                  mode === "account"
+                    ? "Account sync, public sharing, and launch-ready controls."
+                    : "Local-first drafting, fast capture, and portable exports."
+                }
+              >
+                WOX-Bin
+                <span className="font-normal text-muted-foreground"> workspace</span>
+              </Link>
+              {sessionUser ? (
+                <>
+                  <Badge
+                    className={cn(
+                      "shrink-0 px-2 py-0 text-[10px] font-medium normal-case tracking-normal",
+                      displayedPlan === "free"
+                        ? "border-border bg-transparent"
+                        : "border-amber-500/35 bg-amber-500/15 text-amber-950 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100"
+                    )}
+                  >
+                    {formatPlanName(displayedPlan)} plan
                   </Badge>
-                ) : null}
-              </>
-            ) : null}
+                  {displayedPlanStatus !== "active" ? (
+                    <Badge className="shrink-0 border-border bg-transparent px-2 py-0 text-[10px] capitalize text-muted-foreground">
+                      {formatPlanStatus(displayedPlanStatus)}
+                    </Badge>
+                  ) : null}
+                </>
+              ) : null}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+              {sessionUser ? (
+                <>
+                  <div className="rounded-full border border-border bg-muted/50 p-0.5">
+                    <Button
+                      className="h-8 rounded-full px-2.5 text-xs sm:px-3 sm:text-sm"
+                      onClick={() => void switchMode("account")}
+                      size="sm"
+                      title="Account sync (hosted)"
+                      type="button"
+                      variant={mode === "account" ? "default" : "ghost"}
+                    >
+                      <Cloud className="h-3.5 w-3.5 sm:mr-1 sm:h-4 sm:w-4" />
+                      <span className="hidden sm:inline">Account</span>
+                    </Button>
+                    <Button
+                      className="h-8 rounded-full px-2.5 text-xs sm:px-3 sm:text-sm"
+                      onClick={() => void switchMode("local")}
+                      size="sm"
+                      title="Local drafts (device)"
+                      type="button"
+                      variant={mode === "local" ? "default" : "ghost"}
+                    >
+                      <FolderTree className="h-3.5 w-3.5 sm:mr-1 sm:h-4 sm:w-4" />
+                      <span className="hidden sm:inline">Local</span>
+                    </Button>
+                  </div>
+                  <Button className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm" onClick={() => openTutorial(0)} type="button" variant="outline">
+                    <WandSparkles className="h-3.5 w-3.5 sm:mr-1 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">{t("workspace.tutorial")}</span>
+                  </Button>
+                  <div className="flex items-center gap-1 rounded-full border border-border bg-muted/40 p-0.5">
+                    <Button
+                      className="h-8 w-8 rounded-full px-0"
+                      disabled={pageZoom <= MIN_WORKSPACE_ZOOM}
+                      onClick={() => changePageZoom(-WORKSPACE_ZOOM_STEP)}
+                      size="icon"
+                      title="Zoom out"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <ZoomOut className="h-3.5 w-3.5" />
+                    </Button>
+                    <button
+                      className="min-w-[3.35rem] rounded-full px-2 py-1 text-center text-xs font-medium tabular-nums text-foreground"
+                      onClick={() => setPageZoom(defaultWorkspaceZoom(phoneViewport))}
+                      title="Reset zoom"
+                      type="button"
+                    >
+                      {pageZoom}%
+                    </button>
+                    <Button
+                      className="h-8 w-8 rounded-full px-0"
+                      disabled={pageZoom >= MAX_WORKSPACE_ZOOM}
+                      onClick={() => changePageZoom(WORKSPACE_ZOOM_STEP)}
+                      size="icon"
+                      title="Zoom in"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <ZoomIn className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  {sessionUser.role === "admin" ? (
+                    <Button asChild className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm" type="button" variant="outline">
+                      <Link className="inline-flex items-center gap-1.5" href="/admin">
+                        <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        Admin
+                      </Link>
+                    </Button>
+                  ) : null}
+                  <Button
+                    className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm"
+                    onClick={() => signOut({ callbackUrl: "/" })}
+                    type="button"
+                    variant="outline"
+                  >
+                    <LogOut className="h-3.5 w-3.5 sm:mr-1 sm:h-4 sm:w-4" />
+                    Sign out
+                  </Button>
+                </>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  <div className="flex items-center gap-1 rounded-full border border-border bg-muted/40 p-0.5">
+                    <Button
+                      className="h-8 w-8 rounded-full px-0"
+                      disabled={pageZoom <= MIN_WORKSPACE_ZOOM}
+                      onClick={() => changePageZoom(-WORKSPACE_ZOOM_STEP)}
+                      size="icon"
+                      title="Zoom out"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <ZoomOut className="h-3.5 w-3.5" />
+                    </Button>
+                    <button
+                      className="min-w-[3.35rem] rounded-full px-2 py-1 text-center text-xs font-medium tabular-nums text-foreground"
+                      onClick={() => setPageZoom(defaultWorkspaceZoom(phoneViewport))}
+                      title="Reset zoom"
+                      type="button"
+                    >
+                      {pageZoom}%
+                    </button>
+                    <Button
+                      className="h-8 w-8 rounded-full px-0"
+                      disabled={pageZoom >= MAX_WORKSPACE_ZOOM}
+                      onClick={() => changePageZoom(WORKSPACE_ZOOM_STEP)}
+                      size="icon"
+                      title="Zoom in"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <ZoomIn className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  <Button className="h-8 text-xs sm:h-9 sm:text-sm" onClick={() => openTutorial(0)} size="sm" type="button" variant="outline">
+                    <WandSparkles className="h-3.5 w-3.5 sm:mr-1 sm:h-4 sm:w-4" />
+                    Tutorial
+                  </Button>
+                  <Button asChild className="h-8 text-xs sm:h-9 sm:text-sm" size="sm" variant="outline">
+                    <Link href="/sign-in">Sign in</Link>
+                  </Button>
+                  <Button asChild className="h-8 text-xs sm:h-9 sm:text-sm" size="sm">
+                    <Link href="/sign-up">Sign up</Link>
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-2">
-            <nav aria-label="Site" className="flex flex-wrap items-center gap-0.5 sm:gap-1" data-tutorial="workspace-nav">
+          <div className="flex min-w-0 flex-wrap items-start gap-2 2xl:items-center">
+            <nav
+              aria-label="Site"
+              className="flex min-w-0 flex-wrap items-center gap-0.5 sm:gap-1"
+              data-tutorial="workspace-nav"
+            >
               <Link className={workspaceHeaderNavClass(pathname === "/")} href="/">
                 Home
               </Link>
@@ -6706,147 +6841,23 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 </Link>
               ) : null}
             </nav>
-            <WorkspaceHeaderAppearance
-              appHighContrast={appHighContrast}
-              onSyntaxThemeChange={setSyntaxTheme}
-              onToggleHighContrast={() => setAppHighContrast((v) => !v)}
-              onUiThemeChange={setUiTheme}
-              onWorkspaceToneChange={setWorkspaceTone}
-              syntaxTheme={syntaxTheme}
-              uiTheme={uiTheme}
-              workspaceTone={workspaceTone}
-            />
-            <LanguageSwitcher className="py-1.5" compact />
-            <PwaInstallButton compact />
-          </div>
 
-          <div className="flex flex-wrap items-center gap-2 sm:ml-auto sm:justify-end">
-            {sessionUser ? (
-              <>
-                <div className="rounded-full border border-border bg-muted/50 p-0.5">
-                  <Button
-                    className="h-8 rounded-full px-2.5 text-xs sm:px-3 sm:text-sm"
-                    onClick={() => void switchMode("account")}
-                    size="sm"
-                    title="Account sync (hosted)"
-                    type="button"
-                    variant={mode === "account" ? "default" : "ghost"}
-                  >
-                    <Cloud className="h-3.5 w-3.5 sm:mr-1 sm:h-4 sm:w-4" />
-                    <span className="hidden sm:inline">Account</span>
-                  </Button>
-                  <Button
-                    className="h-8 rounded-full px-2.5 text-xs sm:px-3 sm:text-sm"
-                    onClick={() => void switchMode("local")}
-                    size="sm"
-                    title="Local drafts (device)"
-                    type="button"
-                    variant={mode === "local" ? "default" : "ghost"}
-                  >
-                    <FolderTree className="h-3.5 w-3.5 sm:mr-1 sm:h-4 sm:w-4" />
-                    <span className="hidden sm:inline">Local</span>
-                  </Button>
-                </div>
-                <Button className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm" onClick={() => openTutorial(0)} type="button" variant="outline">
-                  <WandSparkles className="h-3.5 w-3.5 sm:mr-1 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">{t("workspace.tutorial")}</span>
-                </Button>
-                <div className="flex items-center gap-1 rounded-full border border-border bg-muted/40 p-0.5">
-                  <Button
-                    className="h-8 w-8 rounded-full px-0"
-                    disabled={pageZoom <= MIN_WORKSPACE_ZOOM}
-                    onClick={() => changePageZoom(-WORKSPACE_ZOOM_STEP)}
-                    size="icon"
-                    title="Zoom out"
-                    type="button"
-                    variant="ghost"
-                  >
-                    <ZoomOut className="h-3.5 w-3.5" />
-                  </Button>
-                  <button
-                    className="min-w-[3.35rem] rounded-full px-2 py-1 text-center text-xs font-medium tabular-nums text-foreground"
-                    onClick={() => setPageZoom(defaultWorkspaceZoom(phoneViewport))}
-                    title="Reset zoom"
-                    type="button"
-                  >
-                    {pageZoom}%
-                  </button>
-                  <Button
-                    className="h-8 w-8 rounded-full px-0"
-                    disabled={pageZoom >= MAX_WORKSPACE_ZOOM}
-                    onClick={() => changePageZoom(WORKSPACE_ZOOM_STEP)}
-                    size="icon"
-                    title="Zoom in"
-                    type="button"
-                    variant="ghost"
-                  >
-                    <ZoomIn className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                {sessionUser.role === "admin" ? (
-                  <Button asChild className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm" type="button" variant="outline">
-                    <Link className="inline-flex items-center gap-1.5" href="/admin">
-                      <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      Admin
-                    </Link>
-                  </Button>
-                ) : null}
-                <Button
-                  className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm"
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                  type="button"
-                  variant="outline"
-                >
-                  <LogOut className="h-3.5 w-3.5 sm:mr-1 sm:h-4 sm:w-4" />
-                  Sign out
-                </Button>
-              </>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                <div className="flex items-center gap-1 rounded-full border border-border bg-muted/40 p-0.5">
-                  <Button
-                    className="h-8 w-8 rounded-full px-0"
-                    disabled={pageZoom <= MIN_WORKSPACE_ZOOM}
-                    onClick={() => changePageZoom(-WORKSPACE_ZOOM_STEP)}
-                    size="icon"
-                    title="Zoom out"
-                    type="button"
-                    variant="ghost"
-                  >
-                    <ZoomOut className="h-3.5 w-3.5" />
-                  </Button>
-                  <button
-                    className="min-w-[3.35rem] rounded-full px-2 py-1 text-center text-xs font-medium tabular-nums text-foreground"
-                    onClick={() => setPageZoom(defaultWorkspaceZoom(phoneViewport))}
-                    title="Reset zoom"
-                    type="button"
-                  >
-                    {pageZoom}%
-                  </button>
-                  <Button
-                    className="h-8 w-8 rounded-full px-0"
-                    disabled={pageZoom >= MAX_WORKSPACE_ZOOM}
-                    onClick={() => changePageZoom(WORKSPACE_ZOOM_STEP)}
-                    size="icon"
-                    title="Zoom in"
-                    type="button"
-                    variant="ghost"
-                  >
-                    <ZoomIn className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                <Button className="h-8 text-xs sm:h-9 sm:text-sm" onClick={() => openTutorial(0)} size="sm" type="button" variant="outline">
-                  <WandSparkles className="h-3.5 w-3.5 sm:mr-1 sm:h-4 sm:w-4" />
-                  Tutorial
-                </Button>
-                <Button asChild className="h-8 text-xs sm:h-9 sm:text-sm" size="sm" variant="outline">
-                  <Link href="/sign-in">Sign in</Link>
-                </Button>
-                <Button asChild className="h-8 text-xs sm:h-9 sm:text-sm" size="sm">
-                  <Link href="/sign-up">Sign up</Link>
-                </Button>
-              </div>
-            )}
+            <div className="flex min-w-0 basis-full flex-wrap items-center gap-2 rounded-[1.15rem] border border-border/70 bg-muted/25 px-2.5 py-2 2xl:ml-auto 2xl:basis-auto 2xl:border-0 2xl:bg-transparent 2xl:px-0 2xl:py-0">
+              <WorkspaceHeaderAppearance
+                appHighContrast={appHighContrast}
+                className="sm:border-0 sm:pl-0"
+                onSyntaxThemeChange={setSyntaxTheme}
+                onToggleHighContrast={() => setAppHighContrast((v) => !v)}
+                onUiThemeChange={setUiTheme}
+                onWorkspaceToneChange={setWorkspaceTone}
+                syntaxTheme={syntaxTheme}
+                uiTheme={uiTheme}
+                workspaceTone={workspaceTone}
+              />
+              <div className="hidden h-6 w-px bg-border/60 2xl:block" />
+              <LanguageSwitcher className="py-1.5" compact />
+              <PwaInstallButton compact />
+            </div>
           </div>
         </div>
       </header>
@@ -6996,7 +7007,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
             </Button>
           </div>
         ) : (
-          <div className="min-h-0 min-w-0 max-h-[min(40dvh,20rem)] shrink-0 overflow-hidden print:hidden lg:max-h-none lg:w-[min(100%,340px)] lg:max-w-[380px] lg:shrink-0">
+          <div className="min-h-0 min-w-0 max-h-[min(40dvh,20rem)] shrink-0 overflow-hidden print:hidden lg:max-h-none lg:w-[min(100%,272px)] lg:max-w-[300px] lg:shrink-0 xl:w-[min(100%,300px)] xl:max-w-[330px] 2xl:w-[min(100%,340px)] 2xl:max-w-[380px]">
             {renderSidebar()}
           </div>
         )}
@@ -7022,7 +7033,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
             </Button>
           </div>
         ) : (
-          <div className="min-h-0 min-w-0 max-h-[min(36dvh,18rem)] shrink-0 overflow-y-auto overflow-x-hidden print:hidden lg:max-h-none lg:w-[min(100%,360px)] lg:max-w-[420px] lg:shrink-0">
+          <div className="min-h-0 min-w-0 max-h-[min(36dvh,18rem)] shrink-0 overflow-y-auto overflow-x-hidden print:hidden lg:max-h-none lg:w-[min(100%,290px)] lg:max-w-[320px] lg:shrink-0 xl:w-[min(100%,320px)] xl:max-w-[360px] 2xl:w-[min(100%,360px)] 2xl:max-w-[420px]">
             {renderDetails()}
           </div>
         )}

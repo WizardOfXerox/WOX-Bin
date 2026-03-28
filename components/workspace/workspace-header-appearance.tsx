@@ -49,7 +49,7 @@ export function WorkspaceHeaderAppearance({
       <span
         className={cn(
           "whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-muted-foreground",
-          stacked ? "inline" : "hidden lg:inline"
+          stacked ? "inline" : "hidden 2xl:inline"
         )}
       >
         Theme
