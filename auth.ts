@@ -1,5 +1,6 @@
 import NextAuth, { getServerSession, type NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Discord from "next-auth/providers/discord";
 import Email from "next-auth/providers/email";
 import Google from "next-auth/providers/google";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
@@ -162,6 +163,21 @@ if (env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET) {
       clientId: env.AUTH_GOOGLE_ID,
       clientSecret: env.AUTH_GOOGLE_SECRET,
       allowDangerousEmailAccountLinking: true
+    })
+  );
+}
+
+if (env.AUTH_DISCORD_ID && env.AUTH_DISCORD_SECRET) {
+  providers.push(
+    Discord({
+      clientId: env.AUTH_DISCORD_ID,
+      clientSecret: env.AUTH_DISCORD_SECRET,
+      allowDangerousEmailAccountLinking: true,
+      authorization: {
+        params: {
+          scope: "identify email role_connections.write"
+        }
+      }
     })
   );
 }
@@ -437,7 +453,7 @@ export const authOptions: NextAuthOptions = {
         return `/sign-in/mfa?ticket=${encodeURIComponent(ticket.id)}`;
       }
 
-      if (account?.provider === "google" || account?.provider === "email") {
+      if (account?.provider === "google" || account?.provider === "discord" || account?.provider === "email") {
         const patch: Partial<typeof users.$inferInsert> = {
           updatedAt: new Date()
         };

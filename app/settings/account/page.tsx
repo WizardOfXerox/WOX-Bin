@@ -24,7 +24,7 @@ export default async function AccountSettingsPage() {
     redirect("/account/onboarding");
   }
 
-  const [row, googleAccount, totpStatus] = await Promise.all([
+  const [row, googleAccount, discordAccount, totpStatus] = await Promise.all([
     db.query.users.findFirst({
       where: eq(users.id, session.user.id),
       columns: {
@@ -40,6 +40,11 @@ export default async function AccountSettingsPage() {
       .select({ provider: accounts.provider })
       .from(accounts)
       .where(and(eq(accounts.userId, session.user.id), eq(accounts.provider, "google")))
+      .limit(1),
+    db
+      .select({ provider: accounts.provider })
+      .from(accounts)
+      .where(and(eq(accounts.userId, session.user.id), eq(accounts.provider, "discord")))
       .limit(1),
     getTotpStatus(session.user.id)
   ]);
@@ -58,6 +63,8 @@ export default async function AccountSettingsPage() {
     smtpConfigured: isSmtpConfigured(),
     googleConnected: Boolean(googleAccount[0]),
     googleOAuthAvailable: Boolean(env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET),
+    discordConnected: Boolean(discordAccount[0]),
+    discordOAuthAvailable: Boolean(env.AUTH_DISCORD_ID && env.AUTH_DISCORD_SECRET),
     totpAvailable: totpStatus.available,
     totpEnabled: totpStatus.enabled,
     totpEnabledAt: totpStatus.enabledAt?.toISOString() ?? null,

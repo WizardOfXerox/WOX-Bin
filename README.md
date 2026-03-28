@@ -4,7 +4,7 @@ WOX-Bin is now being rebuilt as a single **Next.js App Router** app for **Vercel
 
 - **Neon Postgres** for durable data
 - **Drizzle ORM** for schema and migrations
-- **Auth.js** for credentials + Google sign-in
+- **Auth.js** for credentials + Google/Discord sign-in
 - **Upstash Redis** for rate limits
 - **Cloudflare Turnstile** for registration and anonymous publishing — see **[docs/TURNSTILE.md](docs/TURNSTILE.md)**
 - **Security headers + rate limits** — see **[docs/SECURITY.md](docs/SECURITY.md)** (use **Upstash Redis** in production for distributed limits)
@@ -86,10 +86,12 @@ They share auth, deployment, and parts of the UI system, but they should be trea
 - `/admin` with overview, deployment readiness, user management, paste moderation, audit export, and SMTP test hooks
 - `/admin/discord` with Discord bot invite readiness, guild linkage, webhook coverage, setup/site-ops actions, bot quickpaste, and announcement publishing
 - `/discord/linked-roles` as a ready-made Linked Roles Verification URL for the Discord Developer Portal
+- `/settings/account` can now connect Discord for Linked Roles sync and account-linking workflows
 - `DISCORD_BOT_SITE_API_KEY` is now a site-owned bot secret for Discord quickpaste, not a user account API key
 - `DISCORD_PUBLIC_KEY` lets the hosted interactions endpoint verify Discord request signatures before running commands
 - `/api/discord/events` is available as a signed Discord webhook-events endpoint, separate from `/api/discord/interactions`
 - The Discord bot now includes extra `/wox` subcommands for tools, fun, light games, and music discovery helpers
+- `/admin/discord` now includes a guild picker, recent operator activity, webhook delivery feedback, quickpaste presets, and Linked Roles readiness
 
 ## Stack
 
@@ -124,7 +126,8 @@ FFmpeg conversion **workers** are not run by Vercel serverless — use **[docs/V
    - `TURNSTILE_SECRET_KEY` and `NEXT_PUBLIC_TURNSTILE_SITE_KEY` — required for production sign-up / anonymous publish; see **[docs/TURNSTILE.md](docs/TURNSTILE.md)**
    - `UPSTASH_REDIS_REST_URL`
    - `UPSTASH_REDIS_REST_TOKEN`
-   - `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` if using Google sign-in — see **[docs/GOOGLE-OAUTH.md](docs/GOOGLE-OAUTH.md)**
+  - `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` if using Google sign-in — see **[docs/GOOGLE-OAUTH.md](docs/GOOGLE-OAUTH.md)**
+  - `AUTH_DISCORD_ID` and `AUTH_DISCORD_SECRET` if using Discord account linking / Linked Roles sync
 4. Install dependencies:
 
 ```bash

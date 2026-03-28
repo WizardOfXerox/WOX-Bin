@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { isAdminSession } from "@/lib/admin-auth";
 import { db } from "@/lib/db";
-import { pastes, users } from "@/lib/db/schema";
+import { pastes, reports, users } from "@/lib/db/schema";
 import { getDeploymentReadinessSnapshot } from "@/lib/deployment-readiness";
 
 export default async function AdminOverviewPage() {
@@ -27,6 +27,7 @@ export default async function AdminOverviewPage() {
     [{ activePastes }],
     [{ hiddenPastes }],
     [{ deletedPastes }],
+    [{ openReports }],
     readiness
   ] = await Promise.all([
     db.select({ totalUsers: sql<number>`count(*)::int` }).from(users),
@@ -35,6 +36,7 @@ export default async function AdminOverviewPage() {
     db.select({ activePastes: sql<number>`count(*)::int` }).from(pastes).where(eq(pastes.status, "active")),
     db.select({ hiddenPastes: sql<number>`count(*)::int` }).from(pastes).where(eq(pastes.status, "hidden")),
     db.select({ deletedPastes: sql<number>`count(*)::int` }).from(pastes).where(eq(pastes.status, "deleted")),
+    db.select({ openReports: sql<number>`count(*)::int` }).from(reports).where(eq(reports.status, "open")),
     getDeploymentReadinessSnapshot()
   ]);
 
@@ -45,6 +47,7 @@ export default async function AdminOverviewPage() {
     { label: "Active pastes", value: activePastes, href: "/admin/pastes?status=active" },
     { label: "Hidden pastes", value: hiddenPastes, href: "/admin/pastes?status=hidden" },
     { label: "Deleted pastes", value: deletedPastes, href: "/admin/pastes?status=deleted" },
+    { label: "Open reports", value: openReports, href: "/admin/reports?status=open" },
     { label: "Deployment warnings", value: readiness.counts.warn + readiness.counts.fail, href: "/admin/deployment" }
   ];
 

@@ -20,6 +20,8 @@ export type AccountProfileInitial = {
   smtpConfigured: boolean;
   googleConnected: boolean;
   googleOAuthAvailable: boolean;
+  discordConnected: boolean;
+  discordOAuthAvailable: boolean;
   totpAvailable: boolean;
   totpEnabled: boolean;
   totpEnabledAt: string | null;
@@ -38,6 +40,7 @@ export function AccountSettingsClient({ initial }: Props) {
   const [image, setImage] = useState(initial.image ?? "");
   const [hasPassword, setHasPassword] = useState(initial.hasPassword);
   const [googleConnected, setGoogleConnected] = useState(initial.googleConnected);
+  const [discordConnected, setDiscordConnected] = useState(initial.discordConnected);
   const [totpEnabled, setTotpEnabled] = useState(initial.totpEnabled);
   const [totpEnabledAt, setTotpEnabledAt] = useState(initial.totpEnabledAt);
   const [totpLastUsedAt, setTotpLastUsedAt] = useState(initial.totpLastUsedAt);
@@ -65,6 +68,9 @@ export function AccountSettingsClient({ initial }: Props) {
   const [providerLoading, setProviderLoading] = useState(false);
   const [providerError, setProviderError] = useState<string | null>(null);
   const [providerStatus, setProviderStatus] = useState<string | null>(null);
+  const [discordProviderLoading, setDiscordProviderLoading] = useState(false);
+  const [discordProviderError, setDiscordProviderError] = useState<string | null>(null);
+  const [discordProviderStatus, setDiscordProviderStatus] = useState<string | null>(null);
 
   const [totpSetup, setTotpSetup] = useState<{
     setupId: string;
@@ -256,6 +262,8 @@ export function AccountSettingsClient({ initial }: Props) {
     setPasswordConfirm("");
     setProviderError(null);
     setProviderStatus(null);
+    setDiscordProviderError(null);
+    setDiscordProviderStatus(null);
     setPasswordStatus(
       body?.revokedOtherSessions
         ? creatingPassword
@@ -302,6 +310,42 @@ export function AccountSettingsClient({ initial }: Props) {
         : "Google disconnected."
     );
     setProviderLoading(false);
+  }
+
+  async function handleDisconnectDiscord() {
+    if (!hasPassword) {
+      setDiscordProviderError("Create a password before disconnecting Discord.");
+      setDiscordProviderStatus(null);
+      return;
+    }
+
+    setDiscordProviderLoading(true);
+    setDiscordProviderError(null);
+    setDiscordProviderStatus(null);
+
+    const response = await fetch("/api/settings/account/providers/discord", {
+      method: "DELETE"
+    });
+
+    const body = (await response.json().catch(() => null)) as {
+      error?: string;
+      discordConnected?: boolean;
+      revokedOtherSessions?: boolean;
+    } | null;
+
+    if (!response.ok) {
+      setDiscordProviderError(body?.error ?? "Could not disconnect Discord.");
+      setDiscordProviderLoading(false);
+      return;
+    }
+
+    setDiscordConnected(body?.discordConnected ?? false);
+    setDiscordProviderStatus(
+      body?.revokedOtherSessions
+        ? "Discord disconnected. Other sessions were signed out."
+        : "Discord disconnected."
+    );
+    setDiscordProviderLoading(false);
   }
 
   async function handleDeleteAccount(event: FormEvent<HTMLFormElement>) {
@@ -781,6 +825,76 @@ export function AccountSettingsClient({ initial }: Props) {
 
                 {providerError ? <p className="text-sm text-destructive">{providerError}</p> : null}
                 {providerStatus ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{providerStatus}</p> : null}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-muted/20 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Discord</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {discordConnected
+                      ? "Connected to this WOX-Bin account."
+                      : initial.discordOAuthAvailable && initial.email
+                        ? "Not connected yet."
+                        : initial.discordOAuthAvailable
+                          ? "Add an email to this account before linking Discord."
+                          : "Discord account linking is not enabled on this deployment."}
+                  </p>
+                </div>
+                <span className="rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground">
+                  {discordConnected ? "Connected" : "Not connected"}
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-3 text-sm text-muted-foreground">
+                {discordConnected ? (
+                  <p>
+                    This linked Discord account powers WOX-Bin linked-role verification. Keep a password on this account
+                    so you can disconnect Discord safely later if needed.
+                  </p>
+                ) : initial.discordOAuthAvailable && initial.email ? (
+                  <p>
+                    Connect Discord using the same email on your WOX-Bin account, then open the linked-roles page to sync
+                    your plan, verification state, and account age metadata back to Discord.
+                  </p>
+                ) : initial.discordOAuthAvailable ? (
+                  <p>Discord linking needs an account email first. This deployment cannot attach Discord to an email-less user.</p>
+                ) : (
+                  <p>Ask the site operator to configure Discord OAuth if you want linked-role verification on this deployment.</p>
+                )}
+
+                <div className="flex flex-wrap gap-3">
+                  {!discordConnected && initial.discordOAuthAvailable && initial.email ? (
+                    <Button type="button" variant="outline" onClick={() => signIn("discord", { callbackUrl: "/settings/account" })}>
+                      Connect Discord
+                    </Button>
+                  ) : null}
+
+                  {discordConnected ? (
+                    <Button
+                      disabled={discordProviderLoading || !hasPassword}
+                      type="button"
+                      variant="outline"
+                      onClick={() => void handleDisconnectDiscord()}
+                    >
+                      {discordProviderLoading ? "Disconnecting…" : "Disconnect Discord"}
+                    </Button>
+                  ) : null}
+
+                  <Button type="button" variant="ghost" onClick={() => (window.location.href = "/discord/linked-roles")}>
+                    Open linked roles
+                  </Button>
+                </div>
+
+                {!hasPassword && discordConnected ? (
+                  <p className="text-xs text-amber-500/90">
+                    Create a password in the left panel before Discord can be disconnected.
+                  </p>
+                ) : null}
+
+                {discordProviderError ? <p className="text-sm text-destructive">{discordProviderError}</p> : null}
+                {discordProviderStatus ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{discordProviderStatus}</p> : null}
               </div>
             </div>
           </div>

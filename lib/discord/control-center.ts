@@ -1,4 +1,4 @@
-import { listDiscordGuildIntegrations, type DiscordGuildIntegrationRecord } from "@/lib/discord/guilds";
+import { listDiscordGuildIntegrations } from "@/lib/discord/guilds";
 import {
   buildDiscordInteractionEndpointUrl,
   buildDiscordLandingUrl,
@@ -11,6 +11,13 @@ import {
   type DiscordGuildSummary
 } from "@/lib/discord/control-center-shared";
 import { hasDiscordBotSiteApiKey } from "@/lib/discord/bot-site-key";
+import { getDiscordLinkedRolesAdminSummary, type DiscordLinkedRolesAdminSummary } from "@/lib/discord/linked-roles";
+import {
+  buildDiscordGuildOperatorStatuses,
+  listRecentDiscordOperatorActivity,
+  type DiscordGuildOperatorStatus,
+  type DiscordOperatorActivity
+} from "@/lib/discord/operator-activity";
 import { resolveDiscordBotSiteBaseUrl } from "@/lib/discord/site-client";
 
 export type DiscordControlSnapshot = {
@@ -30,8 +37,14 @@ export type DiscordControlSnapshot = {
     operatorCount: number;
     hasSiteApiKey: boolean;
   };
+  runtime: {
+    commandTransport: "interactions-endpoint";
+    gatewayCompanion: "optional";
+  };
   summary: DiscordGuildSummary;
-  integrations: DiscordGuildIntegrationRecord[];
+  linkedRoles: DiscordLinkedRolesAdminSummary;
+  recentActivity: DiscordOperatorActivity[];
+  integrations: DiscordGuildOperatorStatus[];
 };
 
 export async function getDiscordControlSnapshot(): Promise<DiscordControlSnapshot> {
@@ -41,6 +54,8 @@ export async function getDiscordControlSnapshot(): Promise<DiscordControlSnapsho
     .map((value) => value.trim())
     .filter(Boolean);
   const integrations = await listDiscordGuildIntegrations();
+  const recentActivity = await listRecentDiscordOperatorActivity(40);
+  const linkedRoles = await getDiscordLinkedRolesAdminSummary();
   const siteBaseUrl = resolveDiscordBotSiteBaseUrl();
 
   return {
@@ -60,7 +75,13 @@ export async function getDiscordControlSnapshot(): Promise<DiscordControlSnapsho
       operatorCount: operatorIds.length,
       hasSiteApiKey: hasDiscordBotSiteApiKey()
     },
+    runtime: {
+      commandTransport: "interactions-endpoint",
+      gatewayCompanion: "optional"
+    },
     summary: summarizeDiscordGuildIntegrations(integrations),
-    integrations
+    linkedRoles,
+    recentActivity,
+    integrations: buildDiscordGuildOperatorStatuses(integrations, recentActivity)
   };
 }

@@ -241,6 +241,8 @@ export const reportInputSchema = z.object({
   commentId: z.number().int().positive().optional(),
   reason: z.string().trim().min(3).max(120),
   notes: z.string().trim().max(1000).optional()
+}).refine((data) => Boolean(data.pasteSlug || data.commentId), {
+  message: "Choose a paste or comment to report."
 });
 
 export const apiKeyCreateSchema = z.object({

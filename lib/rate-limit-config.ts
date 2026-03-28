@@ -11,6 +11,7 @@ export const RATE_LIMIT_CONFIG = {
   "file-drop-upload": { max: 20, window: "1 h", windowMs: 60 * 60_000, prefix: "wox:file:upload" },
   "file-drop-manage": { max: 30, window: "1 h", windowMs: 60 * 60_000, prefix: "wox:file:manage" },
   comment: { max: 25, window: "10 m", windowMs: 10 * 60_000, prefix: "wox:comment" },
+  report: { max: 12, window: "1 h", windowMs: 60 * 60_000, prefix: "wox:report" },
   star: { max: 40, window: "10 m", windowMs: 10 * 60_000, prefix: "wox:star" },
   "api-key-create": { max: 10, window: "1 h", windowMs: 60 * 60_000, prefix: "wox:key:create" },
   "api-key-paste": { max: 200, window: "1 h", windowMs: 60 * 60_000, prefix: "wox:key:paste" },

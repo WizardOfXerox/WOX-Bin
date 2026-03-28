@@ -18,8 +18,10 @@ import {
   Vote
 } from "lucide-react";
 
+import { getServerUiLanguage } from "@/lib/server-i18n";
 import { CONVERT_TOOLS } from "@/lib/tools/convert-registry";
 import { TOOLS_PAGE_MAIN } from "@/lib/tools/tools-layout";
+import { TOOLS_PAGE_COPY } from "@/lib/tools-page-copy";
 
 export const metadata: Metadata = {
   title: "Tools",
@@ -107,40 +109,38 @@ const featured = [
   }
 ];
 
-export default function ToolsIndexPage() {
+export default async function ToolsIndexPage() {
   const liveCount = CONVERT_TOOLS.filter((t) => t.status === "live").length;
+  const language = await getServerUiLanguage();
+  const copy = TOOLS_PAGE_COPY[language];
+  const liveDescription = copy.description
+    .replace("{liveCount}", String(liveCount))
+    .replace("{suffix}", liveCount === 1 ? "" : "s");
 
   return (
     <main className={TOOLS_PAGE_MAIN}>
       <nav className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground sm:text-sm">
-        <span className="font-medium text-foreground">Overview</span>
+        <span className="font-medium text-foreground">{copy.overview}</span>
         <span aria-hidden className="text-border">
           ·
         </span>
         <Link className="touch-manipulation hover:underline" href="/archive">
-          Archive
+          {copy.archive}
         </Link>
       </nav>
 
       <header className="glass-panel px-4 py-4 sm:px-6 sm:py-6">
         <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-muted-foreground sm:text-xs sm:tracking-[0.3em]">
-          Separate surface
+          {copy.eyebrow}
         </p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:mt-3 sm:text-3xl md:text-4xl">Tools</h1>
-        <p className="mt-3 max-w-2xl text-xs leading-6 text-muted-foreground sm:mt-4 sm:text-sm sm:leading-7">
-          WOX Tools is intentionally separate from the paste workspace at <span className="font-mono text-xs">/app</span>. Most tools are
-          browser-only and do not touch your paste library unless you explicitly import or export data. Heavy image pairs (TIFF/RAW→WebP,
-          etc.) use a <span className="font-medium text-foreground">server sharp</span> endpoint (
-          <span className="font-mono text-xs">POST /api/convert/image</span>) — files are processed in memory for that request only.{" "}
-          <span className="font-medium text-foreground">{liveCount}</span> conversion-related tool{liveCount === 1 ? "" : "s"} marked{" "}
-          <span className="font-medium text-foreground">live</span> in the registry — see{" "}
-          <span className="font-mono text-xs">docs/CONVERSION-PLATFORM.md</span>.
-        </p>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:mt-3 sm:text-3xl md:text-4xl">{copy.title}</h1>
+        <p className="mt-3 max-w-2xl text-xs leading-6 text-muted-foreground sm:mt-4 sm:text-sm sm:leading-7">{liveDescription}</p>
       </header>
 
       <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
         {featured.map((item) => {
           const Icon = item.icon;
+          const card = copy.featured[item.href] ?? item;
           return (
             <Link
               className="glass-panel group flex flex-col gap-2.5 p-4 transition hover:border-primary/30 active:bg-muted/20 sm:gap-3 sm:p-6"
@@ -152,11 +152,11 @@ export default function ToolsIndexPage() {
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50 sm:size-10">
                     <Icon className="size-[1.1rem] text-primary sm:size-5" />
                   </span>
-                  <h2 className="text-base font-semibold leading-snug tracking-tight sm:text-lg">{item.title}</h2>
+                  <h2 className="text-base font-semibold leading-snug tracking-tight sm:text-lg">{card.title}</h2>
                 </div>
                 <ArrowRight className="size-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-foreground sm:size-5" />
               </div>
-              <p className="text-xs leading-relaxed text-muted-foreground sm:text-sm">{item.description}</p>
+              <p className="text-xs leading-relaxed text-muted-foreground sm:text-sm">{card.description}</p>
             </Link>
           );
         })}

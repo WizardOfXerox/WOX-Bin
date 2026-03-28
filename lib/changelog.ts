@@ -8,6 +8,42 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    slug: "2026-03-28-v2-scale-and-platform-hardening-complete",
+    date: "2026-03-28",
+    title: "v2 finishes with report moderation workflows, public-feed caching, and explicit platform hardening",
+    summary:
+      "The scale-hardening roadmap phase is now complete in the local repo: admins have a real abuse-report queue, the high-traffic public feed surfaces use a tagged cache instead of raw request-time queries, and the storage/worker/operator split is documented as a deliberate platform strategy.",
+    bullets: [
+      "Added a real `/admin/reports` moderation queue plus admin report APIs, status transitions, audit logging, and rate-limited public reporting so abuse workflows are no longer just raw table rows.",
+      "Added a tagged cache for `/feed`, `/archive`, and `/feed.xml`, along with mutation-driven invalidation on paste create/update/delete and moderation changes, so the high-traffic human-facing public surfaces are cheaper to serve without weakening the scrape API boundaries.",
+      "Documented the v2 platform-hardening decisions for public-surface abuse handling, object-storage boundaries, worker/runtime split, and operator incident habits so growth no longer depends on improvised infra decisions."
+    ]
+  },
+  {
+    slug: "2026-03-28-v1-3-product-polish-and-language-depth-complete",
+    date: "2026-03-28",
+    title: "v1.3 finishes with broader language depth, polished support flows, and a cleaner public paste shell",
+    summary:
+      "The product-polish roadmap phase is now complete in the local repo: more of WOX-Bin’s end-user surfaces honor the selected language, the support flow stays consistent across user and staff views, and public paste pages feel more cohesive instead of half-translated or uneven.",
+    bullets: [
+      "Localized the Help, Tools, Privacy hub, Support center, and public paste shell surfaces so the selected UI language reaches more real user-facing routes instead of stopping at the shell.",
+      "Extended support localization into the staff dashboard, including queue labels, ticket controls, attachment errors, and thread rendering, so operators and end users no longer get split-language support flows.",
+      "Cleaned up the public paste shell with localized badges, comment and moderation panels, attachment labels, and risk messaging, which also fixed the unfinished prop wiring from the earlier pass."
+    ]
+  },
+  {
+    slug: "2026-03-28-v1-2-discord-operator-depth-complete",
+    date: "2026-03-28",
+    title: "v1.2 Discord depth finishes with linked roles, guild activity history, and richer operator controls",
+    summary:
+      "The Discord roadmap phase is now completed in the repo: `/admin/discord` has become a guild-focused operator console, Discord account linking can sync Linked Roles metadata from the web app, and webhook or announcement delivery history now feeds per-guild status instead of guesswork.",
+    bullets: [
+      "Expanded `/admin/discord` with a searchable guild picker, richer per-guild readiness cards, recent operator activity, webhook-delivery feedback, quickpaste presets, and a clearer interactions-vs-gateway runtime summary.",
+      "Added Discord account linking through Auth.js plus a real `/discord/linked-roles` sync flow so WOX-Bin can push plan tier, staff level, verification state, onboarding readiness, and account age into Discord Linked Roles metadata.",
+      "Added audit-backed Discord operator activity and delivery tracking so setup re-runs, site-ops toggles, webhook tests, and announcement mirroring all leave useful status history for operators."
+    ]
+  },
+  {
     slug: "2026-03-27-v1-1-browser-coverage-and-runbooks-complete",
     date: "2026-03-27",
     title: "v1.1 stability finishes with browser smoke coverage, runtime recovery UI, and runbook depth",

@@ -49,8 +49,10 @@ import {
   type PublicPasteHtmlView,
   type PublicPasteMdView
 } from "@/lib/public-paste-view-prefs";
+import type { UiLanguage } from "@/lib/i18n";
 import { dataUrlFromPasteFile, isPasteFileMedia } from "@/lib/paste-file-media";
 import { pasteBodyDownloadFilename, safeDownloadBasename } from "@/lib/paste-download";
+import { PUBLIC_PASTE_COPY } from "@/lib/public-paste-copy";
 import type { PasteFileDraft, PublicPasteRecord } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
 
@@ -83,7 +85,19 @@ const RISKY_HTML_PREVIEW_SANDBOX =
     "allow-top-navigation-by-user-activation"
   ].join(" ");
 
-function SandboxedHtmlPreviewFrame({ html, className }: { html: string; className?: string }) {
+function SandboxedHtmlPreviewFrame({
+  html,
+  className,
+  title,
+  body,
+  footer
+}: {
+  html: string;
+  className?: string;
+  title: string;
+  body: string;
+  footer: string;
+}) {
   return (
     <div
       className={cn(
@@ -92,8 +106,7 @@ function SandboxedHtmlPreviewFrame({ html, className }: { html: string; classNam
       )}
     >
       <div className="border-b border-amber-500/35 bg-amber-500/10 px-3 py-2 text-[11px] leading-snug text-amber-950 dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-50">
-        <strong className="font-semibold">Untrusted HTML risk.</strong> This preview allows scripts, forms, popups, and
-        same-origin access — malicious pastes could phish or use your session. Use only for content you trust.
+        <strong className="font-semibold">{title}</strong> {body}
       </div>
       <iframe
         className="h-[min(70vh,900px)] w-full border-0 bg-white dark:bg-zinc-950"
@@ -102,10 +115,7 @@ function SandboxedHtmlPreviewFrame({ html, className }: { html: string; classNam
         referrerPolicy="no-referrer"
         srcDoc={html}
       />
-      <p className="border-t border-border/80 px-3 py-2 text-[11px] leading-snug text-muted-foreground">
-        Top-level navigation is limited to user gestures; other sandbox escapes may still be possible — treat every paste
-        as code you are executing.
-      </p>
+      <p className="border-t border-border/80 px-3 py-2 text-[11px] leading-snug text-muted-foreground">{footer}</p>
     </div>
   );
 }
@@ -114,12 +124,22 @@ function MarkupAttachmentViewer({
   file,
   showLineNumbers,
   showLineSeparators,
-  wrapLongLines
+  wrapLongLines,
+  sourceLabel,
+  previewLabel,
+  riskTitle,
+  riskBody,
+  riskFooter
 }: {
   file: PasteFileDraft;
   showLineNumbers: boolean;
   showLineSeparators: boolean;
   wrapLongLines: boolean;
+  sourceLabel: string;
+  previewLabel: string;
+  riskTitle: string;
+  riskBody: string;
+  riskFooter: string;
 }) {
   const [view, setView] = useState<PublicPasteHtmlView>("source");
   return (
@@ -137,7 +157,7 @@ function MarkupAttachmentViewer({
           onClick={() => setView("source")}
         >
           <Code2 className="h-3.5 w-3.5" />
-          Source
+          {sourceLabel}
         </Button>
         <Button
           type="button"
@@ -147,11 +167,16 @@ function MarkupAttachmentViewer({
           onClick={() => setView("preview")}
         >
           <AppWindow className="h-3.5 w-3.5" />
-          Preview
+          {previewLabel}
         </Button>
       </div>
       {view === "preview" ? (
-        <SandboxedHtmlPreviewFrame html={file.content} />
+        <SandboxedHtmlPreviewFrame
+          body={riskBody}
+          footer={riskFooter}
+          html={file.content}
+          title={riskTitle}
+        />
       ) : (
         <PrismLineMap
           content={file.content}
@@ -172,6 +197,7 @@ type Props = {
   initialLocked: boolean;
   initialAccessRequirement: "password" | "captcha" | null;
   signedIn: boolean;
+  language: UiLanguage;
 };
 
 async function readJson<T>(response: Response) {
@@ -183,8 +209,10 @@ export function PublicPasteShell({
   initialComments,
   initialLocked,
   initialAccessRequirement,
-  signedIn
+  signedIn,
+  language
 }: Props) {
+  const copy = PUBLIC_PASTE_COPY[language];
   const [paste, setPaste] = useState(initialPaste);
   const [comments, setComments] = useState(initialComments);
   const [locked, setLocked] = useState(initialLocked);
@@ -198,7 +226,7 @@ export function PublicPasteShell({
   const [pendingComment, setPendingComment] = useState(false);
   const [replyToId, setReplyToId] = useState<number | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
-  const [reportReason, setReportReason] = useState("Spam");
+  const [reportReason, setReportReason] = useState(copy.defaultReportReason);
   const [reportNotes, setReportNotes] = useState("");
   const [reportState, setReportState] = useState<string | null>(null);
   const [codeImageOpen, setCodeImageOpen] = useState(false);
@@ -213,6 +241,9 @@ export function PublicPasteShell({
 
   const threadedComments = useMemo(() => buildThreadedComments(comments), [comments]);
   const replyTarget = replyToId != null ? comments.find((entry) => entry.id === replyToId) ?? null : null;
+  const replyPlaceholder = replyTarget
+    ? copy.replyPlaceholder.replace("{author}", commentAuthorLabel(replyTarget))
+    : copy.commentPlaceholder;
 
   useEffect(() => {
     void Promise.resolve().then(() => {
@@ -349,13 +380,13 @@ export function PublicPasteShell({
           setAccessRequirement(nextRequirement);
           setUnlockError(
             nextRequirement === "password"
-              ? "CAPTCHA complete. Enter the paste password to continue."
-              : body?.error ?? "Complete the CAPTCHA to continue."
+              ? copy.unlockCaptchaStepUp
+              : body?.error ?? copy.verificationDescription
           );
           return;
         }
 
-        setUnlockError(body?.error ?? "Could not unlock paste.");
+        setUnlockError(body?.error ?? copy.unlockGenericError);
         return;
       }
 
@@ -403,7 +434,7 @@ export function PublicPasteShell({
 
     if (!response.ok) {
       const body = await readJson<{ error?: string }>(response);
-      setCommentError(body?.error ?? "Could not post comment.");
+      setCommentError(body?.error ?? copy.commentGenericError);
       setPendingComment(false);
       return;
     }
@@ -416,7 +447,7 @@ export function PublicPasteShell({
 
   async function handleReport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setReportState("Sending report...");
+    setReportState(copy.reportSending);
 
     const response = await fetch("/api/reports", {
       method: "POST",
@@ -432,13 +463,13 @@ export function PublicPasteShell({
 
     if (!response.ok) {
       const body = await readJson<{ error?: string }>(response);
-      setReportState(body?.error ?? "Could not submit report.");
+      setReportState(body?.error ?? copy.reportGenericError);
       return;
     }
 
     setReportNotes("");
     setReportOpen(false);
-    setReportState("Report submitted. Thanks for helping keep the feed clean.");
+    setReportState(copy.reportSubmitted);
   }
 
   async function copyLink(target: "share" | "raw") {
@@ -457,7 +488,7 @@ export function PublicPasteShell({
     window.print();
   }
 
-  const authorName = paste.author.displayName || paste.author.username || "Anonymous";
+  const authorName = paste.author.displayName || paste.author.username || copy.anonymous;
   const authorProfileHref = paste.author.username ? `/u/${encodeURIComponent(paste.author.username)}` : null;
   const forkHref = `/app?fork=${encodeURIComponent(paste.slug)}`;
   const secretMode = paste.secretMode;
@@ -481,20 +512,26 @@ export function PublicPasteShell({
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-3xl">
               <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
-                {secretMode ? "Secret link" : "Public paste"}
+                {secretMode ? copy.secretEyebrow : copy.publicEyebrow}
               </p>
               <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
                 {paste.title}
               </h1>
               <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                <Badge>{paste.visibility}</Badge>
+                <Badge>
+                  {paste.visibility === "public"
+                    ? copy.visibilityBadgePublic
+                    : paste.visibility === "unlisted"
+                      ? copy.visibilityBadgeUnlisted
+                      : copy.visibilityBadgePrivate}
+                </Badge>
                 <Badge>{paste.language}</Badge>
-                {secretMode ? <Badge>Secret mode</Badge> : null}
+                {secretMode ? <Badge>{copy.secretModeBadge}</Badge> : null}
                 {paste.category ? <Badge>{paste.category}</Badge> : null}
-                {paste.requiresPassword ? <Badge>Password protected</Badge> : null}
-                {paste.requiresCaptcha ? <Badge>CAPTCHA required</Badge> : null}
-                {paste.burnAfterRead ? <Badge>Burn after read</Badge> : null}
-                {paste.burnAfterViews > 0 ? <Badge>Burn after {paste.burnAfterViews} views</Badge> : null}
+                {paste.requiresPassword ? <Badge>{copy.passwordProtectedBadge}</Badge> : null}
+                {paste.requiresCaptcha ? <Badge>{copy.captchaRequiredBadge}</Badge> : null}
+                {paste.burnAfterRead ? <Badge>{copy.burnAfterReadBadge}</Badge> : null}
+                {paste.burnAfterViews > 0 ? <Badge>{copy.burnAfterViewsBadge(paste.burnAfterViews)}</Badge> : null}
               </div>
               <PasteLineageBanner
                 className="mt-4 border-white/10 bg-white/[0.04]"
@@ -502,59 +539,40 @@ export function PublicPasteShell({
                 replyTo={paste.replyTo ?? null}
               />
               <p className="mt-4 text-sm leading-7 text-muted-foreground">
-                {secretMode ? (
-                  <>
-                    Shared by{" "}
-                    {authorProfileHref ? (
-                      <Link className="text-foreground underline-offset-4 hover:text-primary hover:underline" href={authorProfileHref}>
-                        {authorName}
-                      </Link>
-                    ) : (
-                      <span className="text-foreground">{authorName}</span>
-                    )}{" "}
-                    on {formatDate(paste.createdAt)}.
-                    Updated {formatDate(paste.updatedAt)}. {paste.viewCount.toLocaleString()} view{paste.viewCount === 1 ? "" : "s"}.
-                    This link stays out of the public archive and disables comments and stars.
-                  </>
+                {authorProfileHref ? (
+                  <Link className="text-foreground underline-offset-4 hover:text-primary hover:underline" href={authorProfileHref}>
+                    {authorName}
+                  </Link>
                 ) : (
-                  <>
-                    Posted by{" "}
-                    {authorProfileHref ? (
-                      <Link className="text-foreground underline-offset-4 hover:text-primary hover:underline" href={authorProfileHref}>
-                        {authorName}
-                      </Link>
-                    ) : (
-                      <span className="text-foreground">{authorName}</span>
-                    )}{" "}
-                    on {formatDate(paste.createdAt)}.
-                    Updated {formatDate(paste.updatedAt)}. {paste.viewCount.toLocaleString()} view{paste.viewCount === 1 ? "" : "s"}.
-                  </>
-                )}
+                  <span className="text-foreground">{authorName}</span>
+                )}{" "}
+                · {copy.updatedViews(formatDate(paste.updatedAt), paste.viewCount)}
+                {secretMode ? ` ${copy.secretLead}` : null}
               </p>
             </div>
 
             <div className="no-print grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:gap-3">
               <Button className="w-full sm:w-auto" type="button" variant="outline" onClick={() => setShareOpen(true)}>
                 <Share2 className="h-4 w-4" />
-                Share
+                {copy.share}
               </Button>
               <Button className="w-full sm:w-auto" type="button" variant="outline" onClick={() => copyLink("share")}>
                 <Copy className="h-4 w-4" />
-                Copy link
+                {copy.copyLink}
               </Button>
               <Button className="w-full sm:w-auto" type="button" variant="outline" onClick={() => copyLink("raw")}>
                 <Copy className="h-4 w-4" />
-                Copy raw URL
+                {copy.copyRawLink}
               </Button>
               <Button asChild className="w-full sm:w-auto" type="button" variant="outline">
-                <Link href={forkHref} prefetch={false} title="Open workspace with a fork of this paste">
+                <Link href={forkHref} prefetch={false} title={copy.forkTitle}>
                   <GitFork className="h-4 w-4" />
-                  Fork
+                  {copy.fork}
                 </Link>
               </Button>
               <Button className="w-full sm:w-auto" type="button" variant="outline" onClick={handlePrintPaste}>
                 <Printer className="h-4 w-4" />
-                Print
+                {copy.print}
               </Button>
               <Button
                 className="w-full sm:w-auto"
@@ -562,41 +580,41 @@ export function PublicPasteShell({
                 type="button"
                 variant="outline"
                 onClick={() => setCodeImageOpen(true)}
-                title={locked ? "Unlock the paste to export code as an image" : "Export code as an image"}
+                title={locked ? copy.codeImageLockedTitle : copy.codeImageReadyTitle}
               >
                 <ImageIcon className="h-4 w-4" />
-                Code image
+                {copy.codeImage}
               </Button>
               {locked ? (
                 <Button className="w-full sm:w-auto" disabled type="button" variant="outline">
                   <Download className="h-4 w-4" />
-                  Download
+                  {copy.download}
                 </Button>
               ) : (
                 <Button asChild className="w-full sm:w-auto" type="button" variant="outline">
                   <Link href={downloadCheckHref} prefetch={false}>
                     <Download className="h-4 w-4" />
-                    Download
+                    {copy.download}
                   </Link>
                 </Button>
               )}
               {locked ? (
                 <Button className="w-full sm:w-auto" disabled type="button" variant="outline">
                   <FileDown className="h-4 w-4" />
-                  Download raw
+                  {copy.downloadRaw}
                 </Button>
               ) : (
                 <Button asChild className="w-full sm:w-auto" type="button" variant="outline">
                   <Link href={downloadCheckHref} prefetch={false}>
                     <FileDown className="h-4 w-4" />
-                    Download raw
+                    {copy.downloadRaw}
                   </Link>
                 </Button>
               )}
               <Button asChild className="w-full sm:w-auto" type="button" variant="outline">
                 <Link href={`/raw/${paste.slug}`} prefetch={false}>
                   <Code2 className="h-4 w-4" />
-                  Raw
+                  {copy.raw}
                 </Link>
               </Button>
               {!secretMode ? (
@@ -608,7 +626,7 @@ export function PublicPasteShell({
                   variant="secondary"
                 >
                   <Star className="h-4 w-4" />
-                  {paste.starredByViewer ? "Starred" : "Star"} ({paste.stars})
+                  {paste.starredByViewer ? copy.starred : copy.star} ({paste.stars})
                 </Button>
               ) : null}
             </div>
@@ -619,7 +637,7 @@ export function PublicPasteShell({
           onOpenChange={setShareOpen}
           open={shareOpen}
           rawUrl={rawUrl}
-          text={`${secretMode ? "Shared secret link" : "Shared paste"} on WOX-Bin`}
+          text={copy.shareDialogText(secretMode ? copy.secretEyebrow : copy.publicEyebrow)}
           title={paste.title}
           url={shareUrl}
         />
@@ -634,12 +652,12 @@ export function PublicPasteShell({
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold">
-                      {accessRequirement === "captcha" ? "Human verification required" : "Password required"}
+                      {accessRequirement === "captcha" ? copy.verificationRequired : copy.passwordRequired}
                     </h2>
                     <p className="text-sm text-muted-foreground">
                       {accessRequirement === "captcha"
-                        ? "This paste requires a Turnstile challenge before the content and comments are shown."
-                        : "This paste is protected. Enter the password to view the content and comments."}
+                        ? copy.verificationDescription
+                        : copy.passwordDescription}
                     </p>
                   </div>
                 </div>
@@ -650,7 +668,7 @@ export function PublicPasteShell({
                   ) : (
                     <Input
                       onChange={(event) => setPassword(event.target.value)}
-                      placeholder="Paste password"
+                      placeholder={copy.passwordPlaceholder}
                       type="password"
                       value={password}
                     />
@@ -659,11 +677,11 @@ export function PublicPasteShell({
                   <Button disabled={pendingUnlock} type="submit">
                     {pendingUnlock
                       ? accessRequirement === "captcha"
-                        ? "Verifying..."
-                        : "Unlocking..."
+                        ? copy.verifying
+                        : copy.unlocking
                       : accessRequirement === "captcha"
-                        ? "Verify and continue"
-                        : "Unlock paste"}
+                        ? copy.verifyAndContinue
+                        : copy.unlockPaste}
                   </Button>
                 </form>
               </CardContent>
@@ -684,7 +702,7 @@ export function PublicPasteShell({
                     <div
                       className="flex w-full items-center gap-0.5 rounded-lg border border-border bg-background/80 p-0.5 sm:w-auto"
                       role="group"
-                      aria-label="Markdown view"
+                      aria-label={copy.codeView}
                     >
                       <Button
                         type="button"
@@ -694,7 +712,7 @@ export function PublicPasteShell({
                         onClick={() => setMdView("source")}
                       >
                         <Code2 className="h-3.5 w-3.5" />
-                        Source
+                        {copy.source}
                       </Button>
                       <Button
                         type="button"
@@ -704,14 +722,14 @@ export function PublicPasteShell({
                         onClick={() => setMdView("preview")}
                       >
                         <BookOpen className="h-3.5 w-3.5" />
-                        Preview
+                        {copy.preview}
                       </Button>
                     </div>
                   ) : paste.language === "markup" ? (
                     <div
                       className="flex w-full items-center gap-0.5 rounded-lg border border-border bg-background/80 p-0.5 sm:w-auto"
                       role="group"
-                      aria-label="HTML view"
+                      aria-label={copy.codeView}
                     >
                       <Button
                         type="button"
@@ -721,7 +739,7 @@ export function PublicPasteShell({
                         onClick={() => setHtmlView("source")}
                       >
                         <Code2 className="h-3.5 w-3.5" />
-                        Source
+                        {copy.source}
                       </Button>
                       <Button
                         type="button"
@@ -731,11 +749,11 @@ export function PublicPasteShell({
                         onClick={() => setHtmlView("preview")}
                       >
                         <AppWindow className="h-3.5 w-3.5" />
-                        Preview
+                        {copy.preview}
                       </Button>
                     </div>
                   ) : (
-                    <span className="text-xs text-muted-foreground">Code view</span>
+                    <span className="text-xs text-muted-foreground">{copy.codeView}</span>
                   )}
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
                     <label className="flex cursor-pointer items-center gap-2 select-none">
@@ -744,9 +762,9 @@ export function PublicPasteShell({
                         checked={showLineNumbers}
                         onChange={(e) => setShowLineNumbers(e.target.checked)}
                         className="h-3.5 w-3.5 rounded border-input accent-primary"
-                        aria-label="Show line numbers"
+                        aria-label={copy.lineNumbers}
                       />
-                      Line numbers
+                      {copy.lineNumbers}
                     </label>
                     <label className="flex cursor-pointer items-center gap-2 select-none">
                       <input
@@ -754,9 +772,9 @@ export function PublicPasteShell({
                         checked={showLineSeparators}
                         onChange={(e) => setShowLineSeparators(e.target.checked)}
                         className="h-3.5 w-3.5 rounded border-input accent-primary"
-                        aria-label="Show horizontal line guides"
+                        aria-label={copy.lineGuides}
                       />
-                      Line guides
+                      {copy.lineGuides}
                     </label>
                     <label className="flex cursor-pointer items-center gap-2 select-none">
                       <input
@@ -764,9 +782,9 @@ export function PublicPasteShell({
                         checked={wrapLongLines}
                         onChange={(e) => setWrapLongLines(e.target.checked)}
                         className="h-3.5 w-3.5 rounded border-input accent-primary"
-                        aria-label="Wrap long lines"
+                        aria-label={copy.wordWrap}
                       />
-                      Word wrap
+                      {copy.wordWrap}
                     </label>
                   </div>
                 </div>
@@ -775,11 +793,16 @@ export function PublicPasteShell({
                   <div
                     className="wox-user-markdown wox-markdown-preview min-h-[50vh] overflow-auto rounded-[1.25rem] border border-border bg-muted/60 p-4 text-sm leading-relaxed text-foreground dark:bg-black/30"
                     dangerouslySetInnerHTML={{
-                      __html: markdownPreviewHtml || "<p class=\"text-muted-foreground\">Nothing to preview.</p>"
+                      __html: markdownPreviewHtml || `<p class="text-muted-foreground">${copy.nothingToPreview}</p>`
                     }}
                   />
                 ) : paste.language === "markup" && htmlView === "preview" ? (
-                  <SandboxedHtmlPreviewFrame html={paste.content} />
+                  <SandboxedHtmlPreviewFrame
+                    body={copy.untrustedHtmlRiskBody}
+                    footer={copy.untrustedHtmlRiskFooter}
+                    html={paste.content}
+                    title={copy.untrustedHtmlRiskTitle}
+                  />
                 ) : (
                   <PrismLineMap
                     content={paste.content}
@@ -795,10 +818,8 @@ export function PublicPasteShell({
                 {paste.files.length > 0 ? (
                 <div className="space-y-4">
                   <div>
-                    <h2 className="text-lg font-semibold">Attached files</h2>
-                    <p className="text-sm text-muted-foreground">
-                      Multi-file pastes stay grouped together so shared snippets keep their context.
-                    </p>
+                    <h2 className="text-lg font-semibold">{copy.attachedFiles}</h2>
+                    <p className="text-sm text-muted-foreground">{copy.attachedFilesDescription}</p>
                   </div>
                   {paste.files.map((file, index) => {
                     const isMedia = isPasteFileMedia(file);
@@ -810,7 +831,9 @@ export function PublicPasteShell({
                             <p className="font-medium text-foreground">{file.filename}</p>
                             <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
                               {isMedia ? (
-                                <span className="capitalize">{file.mediaKind}</span>
+                                <span className="capitalize">
+                                  {file.mediaKind === "image" ? copy.imageKind : copy.videoKind}
+                                </span>
                               ) : (
                                 file.language
                               )}
@@ -841,12 +864,17 @@ export function PublicPasteShell({
                             )}
                           </div>
                         ) : isMedia ? (
-                          <p className="text-sm text-destructive">This attachment could not be displayed.</p>
+                          <p className="text-sm text-destructive">{copy.attachmentDisplayError}</p>
                         ) : file.language === "markup" ? (
                           <MarkupAttachmentViewer
                             file={file}
+                            riskBody={copy.untrustedHtmlRiskBody}
+                            riskFooter={copy.untrustedHtmlRiskFooter}
+                            riskTitle={copy.untrustedHtmlRiskTitle}
                             showLineNumbers={showLineNumbers}
                             showLineSeparators={showLineSeparators}
+                            sourceLabel={copy.source}
+                            previewLabel={copy.preview}
                             wrapLongLines={wrapLongLines}
                           />
                         ) : (
@@ -874,22 +902,20 @@ export function PublicPasteShell({
           <CardContent className="space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Discussion</p>
-                <h2 className="mt-2 text-2xl font-semibold">Comments</h2>
+                <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">{copy.discussionEyebrow}</p>
+                <h2 className="mt-2 text-2xl font-semibold">{copy.commentsTitle}</h2>
               </div>
-              <Badge>{comments.length} messages</Badge>
+              <Badge>{copy.messages(comments.length)}</Badge>
             </div>
             <Separator />
             {secretMode ? (
               <div className="rounded-[1.25rem] border border-dashed border-border bg-black/10 p-4 text-sm text-muted-foreground">
-                Secret links do not support public comments or stars.
+                {copy.secretNoComments}
               </div>
             ) : locked ? (
-              <p className="text-sm text-muted-foreground">Unlock the paste to read or post comments.</p>
+              <p className="text-sm text-muted-foreground">{copy.unlockToComments}</p>
             ) : threadedComments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No comments yet. The first reply usually sets the tone.
-              </p>
+              <p className="text-sm text-muted-foreground">{copy.noComments}</p>
             ) : (
               <div className="space-y-4">
                 {threadedComments.map((entry) => (
@@ -906,7 +932,7 @@ export function PublicPasteShell({
                     </div>
                     {entry.parentAuthor ? (
                       <p className="mt-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                        Replying to {entry.parentAuthor}
+                        {copy.replyingTo(entry.parentAuthor)}
                       </p>
                     ) : null}
                     <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-muted-foreground">
@@ -920,7 +946,7 @@ export function PublicPasteShell({
                           type="button"
                           variant={replyToId === entry.id ? "secondary" : "ghost"}
                         >
-                          {replyToId === entry.id ? "Cancel reply" : "Reply"}
+                          {replyToId === entry.id ? copy.cancelReply : copy.reply}
                         </Button>
                       </div>
                     ) : null}
@@ -934,23 +960,23 @@ export function PublicPasteShell({
                 <form className="space-y-4" onSubmit={handleComment}>
                   {replyTarget ? (
                     <div className="rounded-[1rem] border border-white/10 bg-white/[0.03] px-4 py-3 text-xs text-muted-foreground">
-                      Replying to <span className="font-medium text-foreground">{commentAuthorLabel(replyTarget)}</span>
+                      {copy.replyingTo(commentAuthorLabel(replyTarget))}
                     </div>
                   ) : null}
                   <Textarea
                     onChange={(event) => setComment(event.target.value)}
-                    placeholder={replyTarget ? `Reply to ${commentAuthorLabel(replyTarget)}` : "Add a thoughtful comment"}
+                    placeholder={replyPlaceholder}
                     value={comment}
                   />
                   {commentError ? <p className="text-sm text-destructive">{commentError}</p> : null}
                   <Button disabled={pendingComment || !comment.trim()} type="submit">
                     <MessageSquare className="h-4 w-4" />
-                    {pendingComment ? "Posting..." : replyTarget ? "Post reply" : "Post comment"}
+                    {pendingComment ? copy.postingComment : replyTarget ? copy.postReply : copy.postComment}
                   </Button>
                 </form>
               ) : (
                 <div className="rounded-[1.25rem] border border-dashed border-border bg-black/10 p-4 text-sm text-muted-foreground">
-                  Sign in to join the discussion or star this paste.
+                  {copy.signInToJoin}
                 </div>
               )
             ) : null}
@@ -960,8 +986,8 @@ export function PublicPasteShell({
         <Card>
           <CardContent className="space-y-5">
             <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Metadata</p>
-              <h2 className="mt-2 text-2xl font-semibold">Share details</h2>
+              <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">{copy.metadataEyebrow}</p>
+              <h2 className="mt-2 text-2xl font-semibold">{copy.shareDetailsTitle}</h2>
             </div>
             <div className="grid gap-3 text-sm text-muted-foreground">
               {paste.forkedFrom || paste.replyTo ? (
@@ -972,27 +998,27 @@ export function PublicPasteShell({
                 />
               ) : null}
               <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.03] p-4">
-                <p className="font-medium text-foreground">Slug</p>
+                <p className="font-medium text-foreground">{copy.slugLabel}</p>
                 <p className="mt-2 font-mono text-xs">{paste.slug}</p>
               </div>
               <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.03] p-4">
-                <p className="font-medium text-foreground">Visibility</p>
+                <p className="font-medium text-foreground">{copy.visibilityLabel}</p>
                   <p className="mt-2">
                     {secretMode
-                      ? "Secret link mode. Hidden from archive, feed, comments, and stars. The payload is still stored server-side unless the author used fragment sharing."
+                      ? copy.visibilitySecret
                       : paste.visibility === "public"
-                      ? "Listed in the public feed."
+                        ? copy.visibilityPublic
                     : paste.visibility === "unlisted"
-                      ? "Available by direct link only."
-                      : "Visible only to the owner and moderators."}
+                        ? copy.visibilityUnlisted
+                        : copy.visibilityPrivate}
                 </p>
               </div>
               <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.03] p-4">
-                <p className="font-medium text-foreground">Activity</p>
+                <p className="font-medium text-foreground">{copy.activityLabel}</p>
                 <p className="mt-2">
                   {secretMode
-                    ? `${paste.viewCount.toLocaleString()} view${paste.viewCount === 1 ? "" : "s"} tracked. Comments and stars are disabled.`
-                    : `${paste.commentsCount} comments and ${paste.stars} stars.`}
+                    ? copy.activitySecret(paste.viewCount)
+                    : copy.activityPublic(paste.commentsCount, paste.stars)}
                 </p>
               </div>
             </div>
@@ -1002,14 +1028,12 @@ export function PublicPasteShell({
             <div className="space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Moderation</p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Flag content that should be reviewed by moderators.
-                  </p>
+                  <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">{copy.moderationEyebrow}</p>
+                  <p className="mt-2 text-sm text-muted-foreground">{copy.moderationBody}</p>
                 </div>
                 <Button onClick={() => setReportOpen((value) => !value)} type="button" variant="outline">
                   <Flag className="h-4 w-4" />
-                  {reportOpen ? "Hide form" : "Report"}
+                  {reportOpen ? copy.hideReportForm : copy.report}
                 </Button>
               </div>
 
@@ -1017,16 +1041,16 @@ export function PublicPasteShell({
                 <form className="space-y-4" onSubmit={handleReport}>
                   <Input
                     onChange={(event) => setReportReason(event.target.value)}
-                    placeholder="Reason"
+                    placeholder={copy.reasonPlaceholder}
                     value={reportReason}
                   />
                   <Textarea
                     onChange={(event) => setReportNotes(event.target.value)}
-                    placeholder="Optional notes for moderators"
+                    placeholder={copy.notesPlaceholder}
                     value={reportNotes}
                   />
                   <Button type="submit" variant="destructive">
-                    Submit report
+                    {copy.submitReport}
                   </Button>
                 </form>
               ) : null}

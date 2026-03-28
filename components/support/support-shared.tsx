@@ -5,12 +5,10 @@ import { useMemo } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { UiLanguage } from "@/lib/i18n";
 import { parseDataUrl } from "@/lib/paste-file-media";
 import {
   supportPriorityTone,
-  SUPPORT_CATEGORY_LABELS,
-  SUPPORT_PRIORITY_LABELS,
-  SUPPORT_STATUS_LABELS,
   supportStatusTone,
   SUPPORT_ATTACHMENT_MAX_COUNT,
   SUPPORT_ATTACHMENT_MAX_BYTES,
@@ -19,39 +17,57 @@ import {
   type SupportTicketMessage,
   type SupportTicketSummary
 } from "@/lib/support";
+import { SUPPORT_CENTER_COPY } from "@/lib/support-page-copy";
 
-export function formatSupportTimestamp(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
+function supportLocale(language: UiLanguage) {
+  switch (language) {
+    case "fil":
+      return "fil-PH";
+    case "ja":
+      return "ja-JP";
+    case "es":
+      return "es-ES";
+    default:
+      return "en-US";
+  }
+}
+
+export function formatSupportTimestamp(value: string, language: UiLanguage = "en") {
+  return new Intl.DateTimeFormat(supportLocale(language), {
     dateStyle: "medium",
     timeStyle: "short"
   }).format(new Date(value));
 }
 
-export async function filesToSupportAttachments(fileList: FileList | null): Promise<SupportTicketAttachment[]> {
+export async function filesToSupportAttachments(
+  fileList: FileList | null,
+  language: UiLanguage = "en"
+): Promise<SupportTicketAttachment[]> {
   if (!fileList || fileList.length === 0) {
     return [];
   }
 
+  const copy = SUPPORT_CENTER_COPY[language];
   const files = Array.from(fileList).slice(0, SUPPORT_ATTACHMENT_MAX_COUNT);
   return Promise.all(
     files.map(
       (file) =>
         new Promise<SupportTicketAttachment>((resolve, reject) => {
           if (!file.type.startsWith("image/")) {
-            reject(new Error(`Unsupported file type: ${file.name}`));
+            reject(new Error(copy.unsupportedFileType(file.name)));
             return;
           }
           if (file.size > SUPPORT_ATTACHMENT_MAX_BYTES) {
-            reject(new Error(`${file.name} is too large. Max image size is 3 MB.`));
+            reject(new Error(copy.fileTooLarge(file.name)));
             return;
           }
 
           const reader = new FileReader();
-          reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
+          reader.onerror = () => reject(new Error(copy.fileReadError(file.name)));
           reader.onload = () => {
             const parsed = typeof reader.result === "string" ? parseDataUrl(reader.result) : null;
             if (!parsed) {
-              reject(new Error(`Could not parse ${file.name}.`));
+              reject(new Error(copy.fileParseError(file.name)));
               return;
             }
             resolve({
@@ -69,11 +85,15 @@ export async function filesToSupportAttachments(fileList: FileList | null): Prom
 
 export function SupportAttachmentPreview({
   attachments,
-  onRemove
+  onRemove,
+  language = "en"
 }: {
   attachments: SupportTicketAttachment[];
   onRemove?: (index: number) => void;
+  language?: UiLanguage;
 }) {
+  const copy = SUPPORT_CENTER_COPY[language];
+
   if (!attachments.length) {
     return null;
   }
@@ -97,7 +117,7 @@ export function SupportAttachmentPreview({
             </div>
             {onRemove ? (
               <Button size="sm" type="button" variant="ghost" onClick={() => onRemove(index)}>
-                Remove
+                {copy.removeAttachment}
               </Button>
             ) : null}
           </div>
@@ -117,28 +137,40 @@ function messageTone(message: SupportTicketMessage, viewerUserId: string) {
 export function SupportThread({
   ticket,
   viewerUserId,
-  viewerIsStaff
+  viewerIsStaff,
+  language
 }: {
   ticket: SupportTicketDetail;
   viewerUserId: string;
   viewerIsStaff: boolean;
+  language: UiLanguage;
 }) {
+  const copy = SUPPORT_CENTER_COPY[language];
+
   return (
     <div className="space-y-4">
       {ticket.messages.map((message) => (
         <article key={message.id} className={`rounded-2xl border p-4 ${messageTone(message, viewerUserId)}`}>
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-medium text-foreground">{message.author?.label ?? "Deleted user"}</p>
+            <p className="text-sm font-medium text-foreground">{message.author?.label ?? copy.deletedUser}</p>
             <Badge className="border-border bg-background/60 text-muted-foreground">
-              {message.authorRole === "admin" ? "Admin" : message.authorRole === "moderator" ? "Moderator" : "User"}
+              {message.authorRole === "admin"
+                ? copy.adminRole
+                : message.authorRole === "moderator"
+                  ? copy.moderatorRole
+                  : copy.userRole}
             </Badge>
             {message.internalNote && viewerIsStaff ? (
-              <Badge className="border-amber-500/30 bg-amber-500/10 text-amber-100">Internal note</Badge>
+              <Badge className="border-amber-500/30 bg-amber-500/10 text-amber-100">{copy.internalNote}</Badge>
             ) : null}
-            <span className="text-xs text-muted-foreground">{formatSupportTimestamp(message.createdAt)}</span>
+            <span className="text-xs text-muted-foreground">{formatSupportTimestamp(message.createdAt, language)}</span>
           </div>
           <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-muted-foreground">{message.content}</p>
-          {message.attachments.length ? <div className="mt-4"><SupportAttachmentPreview attachments={message.attachments} /></div> : null}
+          {message.attachments.length ? (
+            <div className="mt-4">
+              <SupportAttachmentPreview attachments={message.attachments} language={language} />
+            </div>
+          ) : null}
         </article>
       ))}
     </div>
@@ -148,12 +180,15 @@ export function SupportThread({
 export function SupportTicketList({
   tickets,
   selectedTicketId,
-  onSelect
+  onSelect,
+  language
 }: {
   tickets: SupportTicketSummary[];
   selectedTicketId: string | null;
   onSelect: (ticketId: string) => void;
+  language: UiLanguage;
 }) {
+  const copy = SUPPORT_CENTER_COPY[language];
   const orderedTickets = useMemo(
     () => [...tickets].sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()),
     [tickets]
@@ -177,18 +212,18 @@ export function SupportTicketList({
                 <p className="truncate text-sm font-semibold text-foreground">{ticket.subject}</p>
                 <p className="mt-1 text-xs text-muted-foreground">#{ticket.id.slice(0, 8).toUpperCase()}</p>
               </div>
-              <Badge className={supportStatusTone(ticket.status)}>{SUPPORT_STATUS_LABELS[ticket.status]}</Badge>
+              <Badge className={supportStatusTone(ticket.status)}>{copy.statusLabels[ticket.status]}</Badge>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              <Badge>{SUPPORT_CATEGORY_LABELS[ticket.category]}</Badge>
-              <Badge className={supportPriorityTone(ticket.priority)}>{SUPPORT_PRIORITY_LABELS[ticket.priority]}</Badge>
+              <Badge>{copy.categoryLabels[ticket.category]}</Badge>
+              <Badge className={supportPriorityTone(ticket.priority)}>{copy.priorityLabels[ticket.priority]}</Badge>
             </div>
             {ticket.lastMessagePreview ? (
               <p className="mt-3 max-h-12 overflow-hidden text-sm leading-6 text-muted-foreground">{ticket.lastMessagePreview}</p>
             ) : null}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
-              <span>{ticket.messageCount} message(s)</span>
-              <span>{formatSupportTimestamp(ticket.lastMessageAt)}</span>
+              <span>{copy.messageCount(ticket.messageCount)}</span>
+              <span>{formatSupportTimestamp(ticket.lastMessageAt, language)}</span>
             </div>
           </button>
         );

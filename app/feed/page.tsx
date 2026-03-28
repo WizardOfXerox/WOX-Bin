@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { SiteHeader } from "@/components/site/site-header";
 import { FEED_ARCHIVE_COPY } from "@/lib/feed-archive-copy";
-import { listFeedPastes } from "@/lib/paste-service";
+import { getCachedRecentPublicPastes } from "@/lib/public-feed-cache";
 import { RECENT_PUBLIC_PASTES_LIMIT } from "@/lib/public-feed-view";
 import { getServerTranslator } from "@/lib/server-i18n";
 import { formatDate } from "@/lib/utils";
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function FeedPage() {
   const { language, t } = await getServerTranslator();
   const copy = FEED_ARCHIVE_COPY[language].feed;
-  const pastes = await listFeedPastes(RECENT_PUBLIC_PASTES_LIMIT);
+  const pastes = await getCachedRecentPublicPastes();
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-4 py-8 md:px-6 md:py-10">

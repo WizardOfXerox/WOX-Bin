@@ -102,6 +102,10 @@ export default async function DiscordBotPage() {
                 <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5">
                   {snapshot.config.hasPublicKey ? "Webhook commands ready" : "Webhook commands pending"}
                 </span>
+                <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5">
+                  {snapshot.linkedRoles.connectedAccountCount} Discord-linked account
+                  {snapshot.linkedRoles.connectedAccountCount === 1 ? "" : "s"}
+                </span>
               </div>
             </div>
 
@@ -242,12 +246,27 @@ export default async function DiscordBotPage() {
           <Card className="border-white/10 bg-white/[0.03]">
             <CardContent className="space-y-3 pt-6">
               <div className="flex items-center gap-2 text-sm font-medium">
+                <Link2 className="h-4 w-4 text-primary" />
+                Linked roles
+              </div>
+              <p className="text-sm leading-7 text-muted-foreground">
+                WOX-Bin now supports a real linked-role flow: users can sign in, connect Discord, and sync plan,
+                verification, onboarding, and account-age metadata back to Discord.
+              </p>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/discord/linked-roles">Open linked roles</Link>
+              </Button>
+            </CardContent>
+          </Card>
+          <Card className="border-white/10 bg-white/[0.03]">
+            <CardContent className="space-y-3 pt-6">
+              <div className="flex items-center gap-2 text-sm font-medium">
                 <Bot className="h-4 w-4 text-primary" />
                 Control center
               </div>
               <p className="text-sm leading-7 text-muted-foreground">
-                The Vercel app now includes an admin dashboard for invite status, guild linkage, webhook coverage, and
-                rollout health.
+                The Vercel app now includes an admin dashboard for invite status, per-guild setup health, webhook
+                coverage, linked-role readiness, and rollout activity.
               </p>
               {viewerIsAdmin ? (
                 <Button asChild size="sm" variant="outline">

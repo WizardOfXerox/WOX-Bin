@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import type { UiLanguage } from "@/lib/i18n";
 import {
   filesToSupportAttachments,
   formatSupportTimestamp,
@@ -16,19 +17,19 @@ import {
   SupportTicketList
 } from "@/components/support/support-shared";
 import {
-  SUPPORT_CATEGORY_LABELS,
   SUPPORT_TICKET_CATEGORIES,
-  SUPPORT_STATUS_LABELS,
   supportStatusTone,
   type SupportTicketAttachment,
   type SupportTicketDetail
 } from "@/lib/support";
+import { SUPPORT_CENTER_COPY } from "@/lib/support-page-copy";
 
 type Props = {
   initialTickets: SupportTicketDetail[];
   initialSelectedTicketId?: string | null;
   viewerUserId: string;
   viewerIsStaff: boolean;
+  language: UiLanguage;
 };
 
 function sortTickets(tickets: SupportTicketDetail[]) {
@@ -41,7 +42,8 @@ function upsertTicket(tickets: SupportTicketDetail[], ticket: SupportTicketDetai
   return sortTickets(next);
 }
 
-export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerUserId, viewerIsStaff }: Props) {
+export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerUserId, viewerIsStaff, language }: Props) {
+  const copy = SUPPORT_CENTER_COPY[language];
   const [tickets, setTickets] = useState(() => sortTickets(initialTickets));
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(
     initialSelectedTicketId && initialTickets.some((ticket) => ticket.id === initialSelectedTicketId)
@@ -80,11 +82,11 @@ export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerU
     onError: (message: string | null) => void
   ) {
     try {
-      const attachments = await filesToSupportAttachments(event.target.files);
+      const attachments = await filesToSupportAttachments(event.target.files, language);
       setter(attachments);
       onError(null);
     } catch (error) {
-      onError(error instanceof Error ? error.message : "Could not load selected image.");
+      onError(error instanceof Error ? error.message : copy.attachmentGenericError);
     }
   }
 
@@ -108,7 +110,7 @@ export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerU
 
     const payload = (await response.json().catch(() => null)) as { error?: string; ticket?: SupportTicketDetail } | null;
     if (!response.ok || !payload?.ticket) {
-      setCreateError(payload?.error ?? "Could not create support ticket.");
+      setCreateError(payload?.error ?? copy.createError);
       setCreateLoading(false);
       return;
     }
@@ -121,7 +123,7 @@ export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerU
     setBody("");
     setCreateAttachments([]);
     setCreatePickerKey((value) => value + 1);
-    setCreateStatus("Support ticket created.");
+    setCreateStatus(copy.createdTicket);
     setCreateLoading(false);
   }
 
@@ -146,7 +148,7 @@ export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerU
 
     const payload = (await response.json().catch(() => null)) as { error?: string; ticket?: SupportTicketDetail } | null;
     if (!response.ok || !payload?.ticket) {
-      setReplyError(payload?.error ?? "Could not send support reply.");
+      setReplyError(payload?.error ?? copy.replyError);
       setReplyLoading(false);
       return;
     }
@@ -155,7 +157,7 @@ export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerU
     setReplyBody("");
     setReplyAttachments([]);
     setReplyPickerKey((value) => value + 1);
-    setReplyStatus("Reply sent.");
+    setReplyStatus(copy.replySent);
     setReplyLoading(false);
   }
 
@@ -175,7 +177,7 @@ export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerU
 
     const payload = (await response.json().catch(() => null)) as { error?: string; ticket?: SupportTicketDetail } | null;
     if (!response.ok || !payload?.ticket) {
-      setActionError(payload?.error ?? "Could not update ticket.");
+      setActionError(payload?.error ?? copy.actionError);
       setActionLoading(false);
       return;
     }
@@ -189,16 +191,13 @@ export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerU
       <Card>
         <CardContent className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Support</p>
-            <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">Internal ticketing</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-7 text-muted-foreground">
-              Open a ticket for account problems, moderation disputes, paste issues, or bugs. Every reply stays attached to
-              the same thread, and image attachments are supported for screenshots.
-            </p>
+            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">{copy.eyebrow}</p>
+            <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">{copy.title}</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-7 text-muted-foreground">{copy.description}</p>
           </div>
           {viewerIsStaff ? (
             <Button asChild variant="outline">
-              <Link href="/support/manage">Open staff dashboard</Link>
+              <Link href="/support/manage">{copy.staffDashboardCta}</Link>
             </Button>
           ) : null}
         </CardContent>
@@ -209,19 +208,19 @@ export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerU
           <Card>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-sm font-medium text-foreground">New ticket</p>
-                <p className="mt-1 text-sm text-muted-foreground">Start with the issue summary, then add details and screenshots.</p>
+                <p className="text-sm font-medium text-foreground">{copy.newTicketTitle}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{copy.newTicketDescription}</p>
               </div>
 
               <form className="space-y-4" onSubmit={(event) => void handleCreateTicket(event)}>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground" htmlFor="support-subject">
-                    Subject
+                    {copy.subjectLabel}
                   </label>
                   <Input
                     id="support-subject"
                     maxLength={140}
-                    placeholder="Example: Sign-in loop after password reset"
+                    placeholder={copy.subjectPlaceholder}
                     value={subject}
                     onChange={(event) => setSubject(event.target.value)}
                   />
@@ -229,7 +228,7 @@ export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerU
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground" htmlFor="support-category">
-                    Category
+                    {copy.categoryLabel}
                   </label>
                   <select
                     id="support-category"
@@ -239,7 +238,7 @@ export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerU
                   >
                     {SUPPORT_TICKET_CATEGORIES.map((value) => (
                       <option key={value} value={value}>
-                        {SUPPORT_CATEGORY_LABELS[value]}
+                        {copy.categoryLabels[value]}
                       </option>
                     ))}
                   </select>
@@ -247,12 +246,12 @@ export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerU
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground" htmlFor="support-related-paste">
-                    Related paste slug
+                    {copy.relatedPasteLabel}
                   </label>
                   <Input
                     id="support-related-paste"
                     maxLength={128}
-                    placeholder="Optional"
+                    placeholder={copy.relatedPastePlaceholder}
                     value={relatedPasteSlug}
                     onChange={(event) => setRelatedPasteSlug(event.target.value)}
                   />
@@ -260,11 +259,11 @@ export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerU
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground" htmlFor="support-body">
-                    Details
+                    {copy.detailsLabel}
                   </label>
                   <Textarea
                     id="support-body"
-                    placeholder="Describe the issue, what you expected, what happened instead, and the exact error text if you have it."
+                    placeholder={copy.detailsPlaceholder}
                     value={body}
                     onChange={(event) => setBody(event.target.value)}
                   />
@@ -272,7 +271,7 @@ export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerU
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground" htmlFor="support-images">
-                    Screenshots
+                    {copy.screenshotsLabel}
                   </label>
                   <Input
                     key={createPickerKey}
@@ -282,11 +281,12 @@ export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerU
                     type="file"
                     onChange={(event) => void handleAttachmentInput(event, setCreateAttachments, setCreateError)}
                   />
-                  <p className="text-xs text-muted-foreground">Up to 4 images. Max 3 MB each.</p>
+                  <p className="text-xs text-muted-foreground">{copy.screenshotsHint}</p>
                 </div>
 
                 <SupportAttachmentPreview
                   attachments={createAttachments}
+                  language={language}
                   onRemove={(index) => setCreateAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))}
                 />
 
@@ -294,7 +294,7 @@ export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerU
                 {createStatus ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{createStatus}</p> : null}
 
                 <Button disabled={createLoading} type="submit">
-                  {createLoading ? "Creating…" : "Create ticket"}
+                  {createLoading ? copy.creatingTicket : copy.createTicket}
                 </Button>
               </form>
             </CardContent>
@@ -304,15 +304,15 @@ export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerU
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-medium text-foreground">Your tickets</p>
-                  <p className="mt-1 text-sm text-muted-foreground">Open, resolved, and closed threads stay here.</p>
+                  <p className="text-sm font-medium text-foreground">{copy.yourTicketsTitle}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{copy.yourTicketsDescription}</p>
                 </div>
                 <Badge>{tickets.length}</Badge>
               </div>
               {tickets.length ? (
-                <SupportTicketList tickets={tickets} selectedTicketId={selectedTicketId} onSelect={setSelectedTicketId} />
+                <SupportTicketList language={language} tickets={tickets} selectedTicketId={selectedTicketId} onSelect={setSelectedTicketId} />
               ) : (
-                <p className="text-sm text-muted-foreground">No tickets yet.</p>
+                <p className="text-sm text-muted-foreground">{copy.noTickets}</p>
               )}
             </CardContent>
           </Card>
@@ -324,36 +324,34 @@ export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerU
               <>
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Ticket</p>
+                    <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">{copy.ticketEyebrow}</p>
                     <h2 className="mt-2 text-2xl font-semibold text-foreground">{selectedTicket.subject}</h2>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      #{selectedTicket.id.slice(0, 8).toUpperCase()} opened {formatSupportTimestamp(selectedTicket.createdAt)}
+                      {copy.openedAt(selectedTicket.id.slice(0, 8).toUpperCase(), formatSupportTimestamp(selectedTicket.createdAt, language))}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <Badge className={supportStatusTone(selectedTicket.status)}>
-                      {SUPPORT_STATUS_LABELS[selectedTicket.status]}
-                    </Badge>
-                    <Badge>{SUPPORT_CATEGORY_LABELS[selectedTicket.category]}</Badge>
+                    <Badge className={supportStatusTone(selectedTicket.status)}>{copy.statusLabels[selectedTicket.status]}</Badge>
+                    <Badge>{copy.categoryLabels[selectedTicket.category]}</Badge>
                   </div>
                 </div>
 
                 <div className="grid gap-3 rounded-2xl border border-border bg-muted/20 p-4 sm:grid-cols-2 xl:grid-cols-4">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Owner</p>
-                    <p className="mt-2 text-sm font-medium text-foreground">{selectedTicket.owner?.label ?? "Unknown user"}</p>
+                    <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">{copy.ownerLabel}</p>
+                    <p className="mt-2 text-sm font-medium text-foreground">{selectedTicket.owner?.label ?? copy.unknownOwner}</p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Last update</p>
-                    <p className="mt-2 text-sm font-medium text-foreground">{formatSupportTimestamp(selectedTicket.lastMessageAt)}</p>
+                    <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">{copy.lastUpdateLabel}</p>
+                    <p className="mt-2 text-sm font-medium text-foreground">{formatSupportTimestamp(selectedTicket.lastMessageAt, language)}</p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Messages</p>
+                    <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">{copy.messagesLabel}</p>
                     <p className="mt-2 text-sm font-medium text-foreground">{selectedTicket.messageCount}</p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Related paste</p>
-                    <p className="mt-2 text-sm font-medium text-foreground">{selectedTicket.relatedPasteSlug ?? "None"}</p>
+                    <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">{copy.relatedPasteMetaLabel}</p>
+                    <p className="mt-2 text-sm font-medium text-foreground">{selectedTicket.relatedPasteSlug ?? copy.none}</p>
                   </div>
                 </div>
 
@@ -362,32 +360,28 @@ export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerU
                 <div className="flex flex-wrap gap-3">
                   {selectedTicket.status === "closed" ? (
                     <Button disabled={actionLoading} type="button" variant="outline" onClick={() => void handleTicketAction("reopen")}>
-                      {actionLoading ? "Updating…" : "Reopen ticket"}
+                      {actionLoading ? copy.updatingTicket : copy.reopenTicket}
                     </Button>
                   ) : (
                     <Button disabled={actionLoading} type="button" variant="outline" onClick={() => void handleTicketAction("close")}>
-                      {actionLoading ? "Updating…" : "Close ticket"}
+                      {actionLoading ? copy.updatingTicket : copy.closeTicket}
                     </Button>
                   )}
                 </div>
 
-                <SupportThread ticket={selectedTicket} viewerIsStaff={viewerIsStaff} viewerUserId={viewerUserId} />
+                <SupportThread language={language} ticket={selectedTicket} viewerIsStaff={viewerIsStaff} viewerUserId={viewerUserId} />
 
                 <form className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4" onSubmit={(event) => void handleReply(event)}>
                   <div>
-                    <p className="text-sm font-medium text-foreground">Reply</p>
-                    <p className="mt-1 text-sm text-muted-foreground">Add context, follow-up details, or screenshots.</p>
+                    <p className="text-sm font-medium text-foreground">{copy.replyTitle}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{copy.replyDescription}</p>
                   </div>
 
-                  <Textarea
-                    placeholder="Write your reply…"
-                    value={replyBody}
-                    onChange={(event) => setReplyBody(event.target.value)}
-                  />
+                  <Textarea placeholder={copy.replyPlaceholder} value={replyBody} onChange={(event) => setReplyBody(event.target.value)} />
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground" htmlFor="support-reply-images">
-                      Attach images
+                      {copy.attachImagesLabel}
                     </label>
                     <Input
                       key={replyPickerKey}
@@ -401,6 +395,7 @@ export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerU
 
                   <SupportAttachmentPreview
                     attachments={replyAttachments}
+                    language={language}
                     onRemove={(index) => setReplyAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))}
                   />
 
@@ -408,16 +403,14 @@ export function SupportCenter({ initialTickets, initialSelectedTicketId, viewerU
                   {replyStatus ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{replyStatus}</p> : null}
 
                   <Button disabled={replyLoading} type="submit">
-                    {replyLoading ? "Sending…" : "Send reply"}
+                    {replyLoading ? copy.sendingReply : copy.sendReply}
                   </Button>
                 </form>
               </>
             ) : (
               <div className="rounded-2xl border border-dashed border-border bg-muted/10 p-8 text-center">
-                <p className="text-lg font-medium text-foreground">Select a ticket</p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Your message thread, screenshots, and ticket status will appear here.
-                </p>
+                <p className="text-lg font-medium text-foreground">{copy.selectTicketTitle}</p>
+                <p className="mt-2 text-sm text-muted-foreground">{copy.selectTicketDescription}</p>
               </div>
             )}
           </CardContent>

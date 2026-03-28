@@ -9,6 +9,7 @@ These Markdown files live **in the repository**. They are **not** automatically 
 | **[NPM-SCRIPTS.md](./NPM-SCRIPTS.md)** | **All `npm run` commands** — dev/build, `db:*`, codegen (`gen:*`, `fetch:*`), tests, worker, admin |
 | **[PRODUCT-SURFACES.md](./PRODUCT-SURFACES.md)** | Bounded map of the paste product vs the tools platform |
 | **[ROADMAP.md](./ROADMAP.md)** | Current staged roadmap for stability, Discord ops, product polish, and scale hardening |
+| **[PLATFORM-HARDENING.md](./PLATFORM-HARDENING.md)** | v2 decisions for report workflows, public feed caching, storage boundaries, worker split, and operator incident habits |
 | **[VERCEL-CONVERSIONS.md](./VERCEL-CONVERSIONS.md)** | FFmpeg jobs + S3 on Vercel: env vars, presigned uploads, worker off-platform, CORS |
 | **[VERCEL-READINESS-AUDIT.md](./VERCEL-READINESS-AUDIT.md)** | Current code-level deployment audit for Vercel |
 | **[CONVERSION-WORKER.md](./CONVERSION-WORKER.md)** | Local/worker: MinIO, Docker, `npm run worker:convert` |

@@ -21,6 +21,7 @@ Configure your host (Vercel does not expose a native TCP health probe for server
 - **`503`** spikes on `/api/health` (database connectivity).
 - **5xx** rate on **`/api/webhooks/stripe`** (billing drift — fix webhook secret, payload, or code).
 - **429** spikes on auth or publish routes (possible abuse — confirm **Upstash Redis** is configured).
+- **Open report queue growth** on **`/admin/reports`** (moderation debt or a real public-abuse spike).
 - **`[rate-limit] Redis limiter unavailable`** warnings in logs (Redis outage or network issue; app is on degraded per-instance fallback).
 
 ## Response checklist
@@ -30,6 +31,7 @@ Configure your host (Vercel does not expose a native TCP health probe for server
 3. Run the deployment verification script against production if the issue started after a deploy.
 4. Open Vercel logs filtered to the failing route or `/api/health`.
 5. If DB pings fail, verify provider status, connection limits, and current `DATABASE_URL`.
+6. If a public-abuse issue is active, inspect `/admin/reports` before deciding whether to hide content or tighten route-level controls.
 
 ## Optional integrations
 
@@ -39,4 +41,5 @@ Configure your host (Vercel does not expose a native TCP health probe for server
 ## Related
 
 - [SECURITY.md](./SECURITY.md) — rate limits and Redis
+- [PLATFORM-HARDENING.md](./PLATFORM-HARDENING.md) — worker, storage, and moderation scale decisions
 - [RUNBOOK-WORKER.md](./RUNBOOK-WORKER.md) — conversion worker process

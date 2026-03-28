@@ -30,6 +30,7 @@ import type { PasteFileDraft, PasteFileMediaKind, PublicPasteRecord } from "@/li
 import { dispatchUserWebhook } from "@/lib/webhooks";
 import { buildStarterAccountPasteSeed } from "@/lib/example-data";
 import { isPublicFeedEligible } from "@/lib/public-feed-view";
+import { invalidatePublicFeedCache } from "@/lib/public-feed-cache-tags";
 
 type Viewer = {
   id?: string | null;
@@ -781,6 +782,7 @@ export async function savePasteForUser(userId: string, input: SavePasteInput) {
     visibility: hydratedPaste.visibility,
     updatedAt: hydratedPaste.updatedAt
   });
+  invalidatePublicFeedCache();
 
   return hydratedPaste;
 }
@@ -810,6 +812,7 @@ export async function deletePasteForUser(userId: string, slug: string) {
     title: row.title,
     visibility: row.visibility
   });
+  invalidatePublicFeedCache();
   return true;
 }
 
@@ -890,6 +893,7 @@ export async function createAnonymousPaste(input: SavePasteInput, ip: string | n
 
   const [row] = await db.select().from(pastes).where(eq(pastes.id, pasteId)).limit(1);
   const paste = await hydratePaste(row, null);
+  invalidatePublicFeedCache();
 
   return {
     paste,
@@ -1614,17 +1618,41 @@ export async function createReport(options: {
   ip?: string | null;
 }) {
   let pasteId: string | null = null;
+  let commentId: number | null = null;
+
+  if (options.commentId) {
+    const [comment] = await db
+      .select({ id: comments.id, pasteId: comments.pasteId })
+      .from(comments)
+      .where(eq(comments.id, options.commentId))
+      .limit(1);
+    if (!comment) {
+      throw new Error("Comment not found.");
+    }
+    commentId = comment.id;
+    pasteId = comment.pasteId;
+  }
 
   if (options.pasteSlug) {
     const [paste] = await db.select({ id: pastes.id }).from(pastes).where(eq(pastes.slug, options.pasteSlug)).limit(1);
-    pasteId = paste?.id ?? null;
+    if (!paste) {
+      throw new Error("Paste not found.");
+    }
+    if (pasteId && paste.id !== pasteId) {
+      throw new Error("Comment does not belong to that paste.");
+    }
+    pasteId = paste.id;
+  }
+
+  if (!pasteId && !commentId) {
+    throw new Error("Report target required.");
   }
 
   const [report] = await db
     .insert(reports)
     .values({
       pasteId,
-      commentId: options.commentId ?? null,
+      commentId,
       reporterUserId: options.reporterUserId ?? null,
       reporterIpHash: hashIp(options.ip),
       reason: options.reason,
@@ -1675,6 +1703,7 @@ export async function moderatePaste(options: {
         }
       : undefined
   });
+  invalidatePublicFeedCache();
 
   return row;
 }

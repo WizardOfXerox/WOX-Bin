@@ -34,11 +34,17 @@ export async function GET() {
     return jsonError("User not found.", 404);
   }
 
-  const [googleAccount, totpStatus] = await Promise.all([
+  const [googleAccount, discordAccount, totpStatus] = await Promise.all([
     db
       .select({ provider: accounts.provider })
       .from(accounts)
       .where(and(eq(accounts.userId, session.user.id), eq(accounts.provider, "google")))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    db
+      .select({ provider: accounts.provider })
+      .from(accounts)
+      .where(and(eq(accounts.userId, session.user.id), eq(accounts.provider, "discord")))
       .limit(1)
       .then((rows) => rows[0] ?? null),
     getTotpStatus(session.user.id)
@@ -53,6 +59,7 @@ export async function GET() {
     emailVerified: row.emailVerified ? row.emailVerified.toISOString() : null,
     hasPassword: Boolean(row.passwordHash),
     googleConnected: Boolean(googleAccount),
+    discordConnected: Boolean(discordAccount),
     totpAvailable: totpStatus.available,
     totpEnabled: totpStatus.enabled,
     totpEnabledAt: totpStatus.enabledAt?.toISOString() ?? null,

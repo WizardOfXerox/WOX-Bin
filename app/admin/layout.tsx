@@ -8,6 +8,7 @@ const links = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/deployment", label: "Deployment" },
   { href: "/admin/discord", label: "Discord" },
+  { href: "/admin/reports", label: "Reports" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/pastes", label: "Pastes" },
   { href: "/admin/announcements", label: "Announcements" },

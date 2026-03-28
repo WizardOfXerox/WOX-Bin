@@ -1,9 +1,9 @@
-"use client";
-
 import Link from "next/link";
 import { ArrowRight, Link as LinkIcon, Link2, MessageCircleMore, ScanSearch, ShieldCheck, ShieldEllipsis, Vote } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
+import type { UiLanguage } from "@/lib/i18n";
+import { PRIVACY_TOOLS_COPY } from "@/lib/privacy-tools-copy";
 
 const TOOLS = [
   {
@@ -50,26 +50,25 @@ const TOOLS = [
   }
 ] as const;
 
-export function PrivacyHub() {
+export function PrivacyHub({ language }: { language: UiLanguage }) {
+  const copy = PRIVACY_TOOLS_COPY[language];
+
   return (
     <div className="space-y-6">
       <Card className="border-primary/20 bg-primary/10">
         <CardContent className="space-y-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary/90">Privacy tools</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Encrypted shares, proofs, polls, and metadata cleanup.</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary/90">{copy.eyebrow}</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight">{copy.title}</h1>
           </div>
-          <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-            This suite brings together the privacy-first features that fit WOX-Bin cleanly on Vercel: encrypted
-            snapshots and chat, browser-side metadata scrubbing, public proof receipts, anonymous polls, and a
-            first-class NoRef link generator.
-          </p>
+          <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">{copy.description}</p>
         </CardContent>
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {TOOLS.map((tool) => {
           const Icon = tool.icon;
+          const toolCopy = copy.tools[tool.href] ?? tool;
           return (
             <Link className="group" href={tool.href} key={tool.href}>
               <Card className="h-full transition group-hover:border-primary/30">
@@ -81,8 +80,8 @@ export function PrivacyHub() {
                     <ArrowRight className="size-4 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-foreground" />
                   </div>
                   <div className="space-y-2">
-                    <h2 className="text-lg font-semibold">{tool.title}</h2>
-                    <p className="text-sm leading-7 text-muted-foreground">{tool.description}</p>
+                    <h2 className="text-lg font-semibold">{toolCopy.title}</h2>
+                    <p className="text-sm leading-7 text-muted-foreground">{toolCopy.description}</p>
                   </div>
                 </CardContent>
               </Card>

@@ -84,6 +84,9 @@ export async function POST(request: Request) {
         targetType: "discord_guild",
         targetId: parsed.data.guildId,
         metadata: {
+          guildName: setupState.integration.guildName,
+          createdChannels: setupState.result.createdChannels.length,
+          createdRoles: setupState.result.createdRoles.length,
           warnings: setupState.result.warnings.length,
           webhookCreated: setupState.result.webhookCreated
         }
@@ -105,6 +108,7 @@ export async function POST(request: Request) {
         targetType: "discord_guild",
         targetId: parsed.data.guildId,
         metadata: {
+          guildName: guild.guildName,
           enabled: parsed.data.enabled
         }
       });
@@ -117,16 +121,43 @@ export async function POST(request: Request) {
         return jsonError("This guild does not have an announcement webhook yet. Run setup again.", 400);
       }
 
-      const response = await fetch(guild.announcementWebhookUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(buildDiscordWebhookTestBody(guild.guildName, resolveDiscordBotSiteBaseUrl())),
-        signal: AbortSignal.timeout(5000)
-      });
+      let response: Response;
+      try {
+        response = await fetch(guild.announcementWebhookUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(buildDiscordWebhookTestBody(guild.guildName, resolveDiscordBotSiteBaseUrl())),
+          signal: AbortSignal.timeout(5000)
+        });
+      } catch (error) {
+        await logAudit({
+          actorUserId: session.user.id,
+          action: "admin.discord.webhook_test",
+          targetType: "discord_guild",
+          targetId: parsed.data.guildId,
+          metadata: {
+            guildName: guild.guildName,
+            status: "failed",
+            error: error instanceof Error ? error.message : "Unknown Discord webhook error"
+          }
+        });
+        return jsonError("Discord webhook test could not reach the webhook endpoint.", 502);
+      }
 
       if (!response.ok) {
+        await logAudit({
+          actorUserId: session.user.id,
+          action: "admin.discord.webhook_test",
+          targetType: "discord_guild",
+          targetId: parsed.data.guildId,
+          metadata: {
+            guildName: guild.guildName,
+            status: "failed",
+            httpStatus: response.status
+          }
+        });
         return jsonError(`Discord webhook test failed with HTTP ${response.status}.`, 502);
       }
 
@@ -137,7 +168,12 @@ export async function POST(request: Request) {
         actorUserId: session.user.id,
         action: "admin.discord.webhook_test",
         targetType: "discord_guild",
-        targetId: parsed.data.guildId
+        targetId: parsed.data.guildId,
+        metadata: {
+          guildName: guild.guildName,
+          status: "delivered",
+          httpStatus: response.status
+        }
       });
     } else if (parsed.data.action === "quickpaste") {
       const paste = await createDiscordBotQuickPaste({

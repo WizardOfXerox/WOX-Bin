@@ -3,10 +3,12 @@ import Link from "next/link";
 import { Link2, ShieldCheck, UserCheck } from "lucide-react";
 
 import { auth } from "@/auth";
+import { DiscordLinkedRolesPanel } from "@/components/discord/discord-linked-roles-panel";
 import { SiteHeader } from "@/components/site/site-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { getDiscordLinkedRolesUserSnapshot } from "@/lib/discord/linked-roles";
 
 export const metadata: Metadata = {
   title: "Discord Linked Roles Verification",
@@ -19,6 +21,7 @@ export default async function DiscordLinkedRolesPage() {
   const session = await auth();
   const user = session?.user ?? null;
   const isSignedIn = Boolean(user?.id);
+  const linkedRolesSnapshot = await getDiscordLinkedRolesUserSnapshot(user?.id ?? null);
 
   const statusChips = isSignedIn
     ? [
@@ -38,7 +41,8 @@ export default async function DiscordLinkedRolesPage() {
         <SiteHeader />
 
         <section className="glass-panel overflow-hidden px-6 py-6">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+          <div className="space-y-6">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
             <div className="space-y-5">
               <Badge className="px-3 py-1 text-xs">Discord Linked Roles</Badge>
               <div className="space-y-3">
@@ -135,12 +139,15 @@ export default async function DiscordLinkedRolesPage() {
                     Next step
                   </div>
                   <p className="text-sm leading-7 text-muted-foreground">
-                    After you save this page as the Linked Roles Verification URL in Discord, you can continue using
-                    WOX-Bin’s Discord dashboard for install links, webhooks, and slash-command setup.
+                    After you save this page as the Linked Roles Verification URL in Discord, users can sign in here,
+                    connect Discord, and sync their metadata without leaving WOX-Bin’s hosted flow.
                   </p>
                 </CardContent>
               </Card>
             </div>
+          </div>
+
+            <DiscordLinkedRolesPanel initialSnapshot={linkedRolesSnapshot} />
           </div>
         </section>
       </div>

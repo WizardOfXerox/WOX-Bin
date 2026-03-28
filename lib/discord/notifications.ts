@@ -1,6 +1,7 @@
 import type { AnnouncementRecord } from "@/lib/announcements";
 import { listDiscordAnnouncementWebhookTargets } from "@/lib/discord/guilds";
 import { buildDiscordSiteLinks, normalizeDiscordSiteBaseUrl } from "@/lib/discord/shared";
+import { logAudit } from "@/lib/audit";
 
 function resolvePublicBaseUrl() {
   return (
@@ -59,25 +60,55 @@ export async function dispatchDiscordAnnouncement(announcement: AnnouncementReco
   }
 
   const payload = buildDiscordAnnouncementWebhookBody(announcement);
-  const results = await Promise.allSettled(
-    targets.map((target) =>
-      fetch(String(target.announcementWebhookUrl), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(5000)
-      })
-    )
+  const results = await Promise.all(
+    targets.map(async (target) => {
+      try {
+        const response = await fetch(String(target.announcementWebhookUrl), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(5000)
+        });
+
+        const status = response.ok ? "delivered" : "failed";
+        await logAudit({
+          action: "discord.announcement.delivery",
+          targetType: "discord_guild",
+          targetId: target.guildId,
+          metadata: {
+            guildId: target.guildId,
+            guildName: target.guildName,
+            announcementId: announcement.id,
+            announcementTitle: announcement.title,
+            httpStatus: response.status,
+            status
+          }
+        });
+
+        return response.ok;
+      } catch (error) {
+        await logAudit({
+          action: "discord.announcement.delivery",
+          targetType: "discord_guild",
+          targetId: target.guildId,
+          metadata: {
+            guildId: target.guildId,
+            guildName: target.guildName,
+            announcementId: announcement.id,
+            announcementTitle: announcement.title,
+            status: "failed",
+            error: error instanceof Error ? error.message : "Unknown Discord webhook error"
+          }
+        });
+
+        return false;
+      }
+    })
   );
 
-  let delivered = 0;
-  for (const result of results) {
-    if (result.status === "fulfilled" && result.value.ok) {
-      delivered += 1;
-    }
-  }
+  const delivered = results.filter(Boolean).length;
 
   return {
     delivered,

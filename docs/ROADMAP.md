@@ -74,6 +74,15 @@ Success looks like:
 
 Goal: turn the Discord stack from “working” into a serious operator surface.
 
+Status: completed on `2026-03-28`.
+
+Delivered in this phase:
+
+- expanded `/admin/discord` into a real guild-focused operator console with a searchable guild picker, richer per-guild health, quickpaste presets, and recent Discord activity
+- added clearer webhook delivery and announcement-mirroring feedback through the admin console and audit-backed guild activity history
+- finished the Linked Roles path with Discord account linking, metadata sync, verification UI, and plan/staff/account-state mapping
+- made the long-term Discord runtime split explicit in the product and operator docs: hosted interactions for commands, optional gateway companion for presence and lifecycle events
+
 Primary work:
 
 - expand `/admin/discord` further:
@@ -104,6 +113,10 @@ Success looks like:
 
 Goal: make the product feel more complete to end users, not just operators.
 
+Status:
+
+- completed in the local worktree on `2026-03-28`
+
 Primary work:
 
 - deepen language coverage across:
@@ -133,6 +146,15 @@ Success looks like:
 ## v2 — scale and platform hardening
 
 Goal: make WOX-Bin safer to grow without the architecture bending under it.
+
+Status: completed on `2026-03-28`.
+
+Delivered in this phase:
+
+- added a real admin reports queue, report abuse throttling, and audit-backed report status workflow
+- added short-lived tagged caching for the human-facing public feed, archive, and Atom feed surfaces with mutation-driven invalidation
+- documented the platform hardening strategy for storage boundaries, worker/runtime split, and operator incident habits
+- surfaced report load directly in the admin overview so moderation debt is visible alongside paste and deployment health
 
 Primary work:
 

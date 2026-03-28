@@ -19,6 +19,8 @@ WOX-Bin now includes a first-party Discord bot foundation that runs in hybrid mo
 - now has a Linked Roles verification landing page at `/discord/linked-roles`
 - now has an admin control dashboard at `/admin/discord`
 - now lets admins run bot/operator actions from `/admin/discord` without dropping into Discord first
+- can link a signed-in WOX-Bin account to Discord and sync Linked Roles metadata from the website
+- now shows recent operator activity and webhook-delivery feedback inside the Discord admin console
 
 ## Required env
 
@@ -45,6 +47,9 @@ Site process:
 
 - `DATABASE_URL`
   Needed by both the site and the bot because the bot stores guild setup state in the same Postgres database.
+- `AUTH_DISCORD_ID`
+- `AUTH_DISCORD_SECRET`
+  Needed if you want users to connect their Discord identity through `/settings/account` and sync Linked Roles metadata from the website.
 
 ## Recommended portal setup order
 
@@ -134,6 +139,10 @@ Recommended install settings:
   Public landing page for installation, command overview, bootstrap layout, and high-level bot status.
 - `/admin/discord`
   Admin-only control dashboard and operator console for install readiness, linked guild visibility, setup refresh, site-ops toggles, webhook tests, bot quickpastes, and announcement publishing.
+- `/discord/linked-roles`
+  Public verification and sync page for Discord Linked Roles.
+- `/settings/account`
+  Account settings page where a signed-in WOX-Bin user can connect or disconnect Discord before syncing Linked Roles metadata.
 
 ## Admin operator console
 
@@ -144,7 +153,30 @@ Recommended install settings:
 - send a webhook test into the configured announcement channel
 - create a bot-owned quickpaste using the site-owned `DISCORD_BOT_SITE_API_KEY`
 - publish a live site announcement that mirrors into every site-ops guild with a stored webhook
+- inspect recent operator activity and the latest webhook or announcement delivery outcome for each linked guild
+- review bootstrap coverage per guild so missing channels, roles, and webhook wiring are obvious without re-running setup blindly
 - copy the live Discord portal URLs directly from the dashboard
+
+## Linked Roles flow
+
+WOX-Bin now supports a real Linked Roles sync path instead of only exposing a placeholder verification URL.
+
+Flow:
+
+1. connect Discord from `/settings/account`
+2. open `/discord/linked-roles`
+3. use the sync action to push the current WOX-Bin account state into Discord
+4. configure your server role in Discord to consume those metadata records
+
+Current metadata records:
+
+- `plan_tier`
+- `staff_level`
+- `email_verified`
+- `profile_ready`
+- `account_created_at`
+
+This lets Discord roles key off of actual WOX-Bin account state such as plan, staff tier, and whether the user has completed the basic account setup path.
 
 ## Recovery checklist
 

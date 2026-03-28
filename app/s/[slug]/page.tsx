@@ -7,6 +7,7 @@ import { PublicPasteShell } from "@/components/public-paste-shell";
 import { getPasteAccessCookieName, getPasteCaptchaCookieName } from "@/lib/paste-access";
 import { getPasteSharePath } from "@/lib/paste-links";
 import { getPasteForViewer, listCommentsForPaste } from "@/lib/paste-service";
+import { getServerUiLanguage } from "@/lib/server-i18n";
 import { viewerFromSession } from "@/lib/session";
 
 type PageProps = {
@@ -51,6 +52,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function SecretPastePage({ params }: PageProps) {
   const { slug } = await params;
   const session = await auth();
+  const language = await getServerUiLanguage();
   const viewer = viewerFromSession(session);
   const cookieStore = await cookies();
   const accessGrant = cookieStore.get(getPasteAccessCookieName(slug))?.value ?? null;
@@ -96,6 +98,7 @@ export default async function SecretPastePage({ params }: PageProps) {
       initialAccessRequirement={trackedResult.lockReason}
       initialLocked={trackedResult.locked}
       initialPaste={trackedResult.paste}
+      language={language}
       signedIn={Boolean(session?.user?.id)}
     />
   );
