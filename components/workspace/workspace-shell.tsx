@@ -235,7 +235,7 @@ function isShortcutConsumingTarget(target: EventTarget | null) {
 
 function workspaceHeaderNavClass(active: boolean) {
   return cn(
-    "rounded-md px-2 py-1.5 text-xs transition-all duration-200 ease-wox-out sm:px-2.5 sm:text-sm",
+    "rounded-md px-1.5 py-1 text-[11px] transition-all duration-200 ease-wox-out sm:px-2 sm:text-[13px]",
     active
       ? "bg-muted/90 font-medium text-foreground"
       : "text-muted-foreground hover:bg-muted/60 hover:text-foreground motion-safe:hover:translate-y-px"
@@ -1089,10 +1089,12 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   const [editorPaneCompact, setEditorPaneCompact] = useState(false);
   const [workspaceMobileMenuOpen, setWorkspaceMobileMenuOpen] = useState(false);
   const [phoneViewport, setPhoneViewport] = useState(false);
+  const [shortViewport, setShortViewport] = useState(false);
   const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
   const [mobileFolderActions, setMobileFolderActions] = useState<MobileFolderActionsState>({ open: false });
   const [mobilePasteActions, setMobilePasteActions] = useState<MobilePasteActionsState>({ open: false });
+  const [libraryToolsExpanded, setLibraryToolsExpanded] = useState(false);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
   /** Mobile: editor uses transparent text over Prism — need ≥16px to avoid iOS zoom and keep overlay aligned. */
@@ -1105,7 +1107,9 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   const deferredSearch = useDeferredValue(search);
   const effectiveEditorFontPx = narrowEditorViewport ? Math.max(editorFontSize, 16) : editorFontSize;
   const workspaceZoomFactor = pageZoom / 100;
-  const workspaceOuterVerticalPadding = phoneViewport ? "0.75rem" : "1.5rem";
+  const compactLibraryChrome = !phoneViewport && shortViewport;
+  const activeLibraryToolCount = (pinnedOnly ? 1 : 0) + (listQuickFilter !== "all" ? 1 : 0) + (sortOrder !== "pinned_updated" ? 1 : 0);
+  const workspaceOuterVerticalPadding = phoneViewport ? "0.75rem" : shortViewport ? "1rem" : "1.5rem";
   const workspaceViewportStyle =
     pageZoom === DESKTOP_DEFAULT_WORKSPACE_ZOOM
       ? undefined
@@ -1500,6 +1504,29 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
     mq.addListener(syncNarrow);
     return () => mq.removeListener(syncNarrow);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const mq = window.matchMedia("(max-height: 940px)");
+    const syncShortViewport = () => {
+      setShortViewport(mq.matches);
+    };
+    syncShortViewport();
+    if (typeof mq.addEventListener === "function") {
+      mq.addEventListener("change", syncShortViewport);
+      return () => mq.removeEventListener("change", syncShortViewport);
+    }
+    mq.addListener(syncShortViewport);
+    return () => mq.removeListener(syncShortViewport);
+  }, []);
+
+  useEffect(() => {
+    if (!compactLibraryChrome) {
+      setLibraryToolsExpanded(false);
+    }
+  }, [compactLibraryChrome]);
 
   /** When the viewport becomes phone/tablet width, reclaim space for the editor (don’t persist — keeps desktop sidebar prefs). */
   useEffect(() => {
@@ -3740,6 +3767,8 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   }
 
   function renderSidebar() {
+    const showExpandedLibraryTools = !compactLibraryChrome || libraryToolsExpanded;
+
     return (
       <FileDropSurface
         activeClassName="rounded-xl ring-2 ring-primary/25"
@@ -3755,8 +3784,13 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
         overlayMessage={`Drop to import ${workspaceCopy.importJsonLabel} or text/code file`}
       >
         <Card className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl" data-tutorial="library-sidebar">
-        <CardContent className="flex min-h-0 flex-1 flex-col p-0">
-          <div className="border-b border-border px-3 py-2 sm:px-5 sm:py-4">
+          <CardContent className="flex min-h-0 flex-1 flex-col p-0">
+          <div
+            className={cn(
+              "border-b border-border px-3 sm:px-5",
+              compactLibraryChrome ? "py-2.5 sm:px-4 sm:py-3" : "py-2 sm:py-4"
+            )}
+          >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{workspaceCopy.libraryEyebrow}</p>
@@ -3797,7 +3831,15 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 >
                   <PanelLeft className="h-4 w-4" />
                 </Button>
-                <Button className="h-8 gap-1.5 px-2.5 text-xs sm:text-sm" onClick={handleNewPaste} size="sm" type="button">
+                <Button
+                  className={cn(
+                    "gap-1.5 px-2.5 text-xs sm:text-sm",
+                    compactLibraryChrome ? "h-7 px-2 text-[11px] sm:h-8 sm:text-xs" : "h-8"
+                  )}
+                  onClick={handleNewPaste}
+                  size="sm"
+                  type="button"
+                >
                   <FilePlus2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   {workspaceCopy.newPaste}
                 </Button>
@@ -3806,25 +3848,30 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
             <div className="relative mt-3">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                className="h-9 pl-9 text-sm"
+                className={cn("pl-9", compactLibraryChrome ? "h-8 text-[13px]" : "h-9 text-sm")}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={workspaceCopy.searchPlaceholder}
                 ref={searchInputRef}
                 value={search}
               />
             </div>
-            <p className="mt-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{workspaceCopy.folders}</p>
+            <p className={cn("text-[10px] font-semibold uppercase tracking-widest text-muted-foreground", compactLibraryChrome ? "mt-2" : "mt-3")}>
+              {workspaceCopy.folders}
+            </p>
             <ContextMenu>
               <ContextMenuTrigger asChild>
                 <div
                   aria-label="Folders — right-click empty area for new folder"
-                  className="mt-1.5 flex min-h-[2.75rem] flex-nowrap gap-2 overflow-x-auto overflow-y-visible rounded-xl border border-transparent p-1.5 -m-1.5 pb-2 transition-colors [-webkit-overflow-scrolling:touch] hover:border-border/35 data-[state=open]:border-border/50 data-[state=open]:bg-muted/25 sm:flex-wrap sm:overflow-x-visible sm:pb-1.5"
+                  className={cn(
+                    "mt-1.5 flex flex-nowrap overflow-x-auto overflow-y-visible rounded-xl border border-transparent p-1.5 -m-1.5 transition-colors [-webkit-overflow-scrolling:touch] hover:border-border/35 data-[state=open]:border-border/50 data-[state=open]:bg-muted/25 sm:flex-wrap sm:overflow-x-visible",
+                    compactLibraryChrome ? "min-h-[2.5rem] gap-1.5 pb-1.5" : "min-h-[2.75rem] gap-2 pb-2 sm:pb-1.5"
+                  )}
                 >
               <div className="flex shrink-0 items-center gap-1">
                 <ContextMenu>
                   <ContextMenuTrigger asChild>
                     <Button
-                      className="h-9 shrink-0 touch-manipulation text-xs sm:h-8"
+                      className={cn("shrink-0 touch-manipulation text-xs", compactLibraryChrome ? "h-8 px-2.5 text-[11px]" : "h-9 sm:h-8")}
                       onClick={() => setSidebarFolder("all")}
                       size="sm"
                       type="button"
@@ -3860,7 +3907,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 ) : null}
               </div>
               <Button
-                className="h-9 shrink-0 touch-manipulation text-xs sm:h-8"
+                className={cn("shrink-0 touch-manipulation text-xs", compactLibraryChrome ? "h-8 px-2.5 text-[11px]" : "h-9 sm:h-8")}
                 onClick={() => {
                   setSidebarFolder(PUBLIC_FEED_FOLDER);
                   setListQuickFilter("all");
@@ -3876,7 +3923,10 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   <ContextMenu>
                     <ContextMenuTrigger asChild>
                       <Button
-                        className="h-9 max-w-[10rem] shrink-0 touch-manipulation truncate text-xs sm:h-8 sm:max-w-[9.5rem]"
+                        className={cn(
+                          "max-w-[10rem] shrink-0 touch-manipulation truncate text-xs",
+                          compactLibraryChrome ? "h-8 text-[11px] sm:max-w-[9rem]" : "h-9 sm:h-8 sm:max-w-[9.5rem]"
+                        )}
                         onClick={() => setSidebarFolder(folder)}
                         size="sm"
                         title={folder}
@@ -3950,7 +4000,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               </ContextMenuContent>
             </ContextMenu>
             {!sidebarShowsPublicFeed && batchSelected.size > 0 ? (
-              <div className="mt-3 flex flex-col gap-2 rounded-lg border border-primary/30 bg-primary/5 p-2.5">
+              <div className={cn("flex flex-col gap-2 rounded-lg border border-primary/30 bg-primary/5", compactLibraryChrome ? "mt-2 p-2" : "mt-3 p-2.5")}>
                 <p className="text-xs font-medium text-foreground">{workspaceCopy.selected(batchSelected.size)}</p>
                 <div className="flex flex-wrap gap-1.5">
                   <Button
@@ -3980,7 +4030,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               </div>
             ) : null}
 
-            {!sidebarShowsPublicFeed ? (
+            {!sidebarShowsPublicFeed && !compactLibraryChrome ? (
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Button className="h-8 text-xs" onClick={selectAllVisibleBatch} size="sm" type="button" variant="outline">
                   {workspaceCopy.selectVisible}
@@ -3998,79 +4048,122 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               </div>
             ) : null}
 
-            <div className="mt-3 space-y-2 rounded-lg border border-border/60 bg-muted/20 p-2.5">
-              <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  <ListOrdered className="h-3 w-3" />
-                  {workspaceCopy.sortAndFilter}
-                </span>
+            {compactLibraryChrome ? (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {!sidebarShowsPublicFeed ? (
+                  <>
+                    <Button className="h-7 px-2 text-[11px]" onClick={selectAllVisibleBatch} size="sm" type="button" variant="outline">
+                      {workspaceCopy.selectVisible}
+                    </Button>
+                    <Button
+                      className="h-7 px-2 text-[11px] text-muted-foreground"
+                      disabled={batchSelected.size === 0}
+                      onClick={clearBatchSelection}
+                      size="sm"
+                      type="button"
+                      variant="ghost"
+                    >
+                      {workspaceCopy.clearSelection}
+                    </Button>
+                  </>
+                ) : null}
                 <Button
-                  className="h-7 px-2 text-[11px]"
-                  onClick={() => setPinnedOnly((v) => !v)}
+                  className="h-7 gap-1.5 px-2 text-[11px]"
+                  onClick={() => setLibraryToolsExpanded((open) => !open)}
                   size="sm"
                   type="button"
-                  variant={pinnedOnly ? "default" : "outline"}
+                  variant={libraryToolsExpanded ? "default" : "outline"}
                 >
-                  {workspaceCopy.pinnedOnly}
+                  <ListOrdered className="h-3.5 w-3.5" />
+                  {activeLibraryToolCount > 0 ? `${workspaceCopy.sortAndFilter} (${activeLibraryToolCount})` : workspaceCopy.sortAndFilter}
+                </Button>
+                <Button className="h-7 gap-1.5 px-2 text-[11px]" onClick={() => fileInputRef.current?.click()} size="sm" type="button" variant="outline">
+                  <Upload className="h-3.5 w-3.5" />
+                  {workspaceCopy.importFile}
+                </Button>
+                <Button className="h-7 gap-1.5 px-2 text-[11px]" onClick={() => void handleExportWorkspace()} size="sm" type="button" variant="outline">
+                  <Download className="h-3.5 w-3.5" />
+                  {workspaceCopy.export}
                 </Button>
               </div>
-              <select
-                className="h-9 w-full min-w-0 rounded-lg border border-border bg-card/90 px-3 text-sm shadow-sm"
-                id="wox-sort-order"
-                onChange={(e) => setSortOrder(e.target.value as SortOrder)}
-                title="Sort order"
-                value={sortOrder}
-              >
-                <option value="pinned_updated">{workspaceCopy.sortPinnedUpdated}</option>
-                <option value="updated">{workspaceCopy.sortUpdated}</option>
-                <option value="newest">{workspaceCopy.sortNewest}</option>
-                <option value="oldest">{workspaceCopy.sortOldest}</option>
-                <option value="title">{workspaceCopy.sortTitle}</option>
-              </select>
-              <div className="flex flex-wrap gap-1.5">
-                <Button
-                  className="h-8 text-xs"
-                  onClick={() => setListQuickFilter("all")}
-                  size="sm"
-                  type="button"
-                  variant={listQuickFilter === "all" ? "default" : "outline"}
+            ) : null}
+
+            {showExpandedLibraryTools ? (
+              <div className={cn("space-y-2 rounded-lg border border-border/60 bg-muted/20", compactLibraryChrome ? "mt-2 p-2" : "mt-3 p-2.5")}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    <ListOrdered className="h-3 w-3" />
+                    {workspaceCopy.sortAndFilter}
+                  </span>
+                  <Button
+                    className="h-7 px-2 text-[11px]"
+                    onClick={() => setPinnedOnly((v) => !v)}
+                    size="sm"
+                    type="button"
+                    variant={pinnedOnly ? "default" : "outline"}
+                  >
+                    {workspaceCopy.pinnedOnly}
+                  </Button>
+                </div>
+                <select
+                  className="h-9 w-full min-w-0 rounded-lg border border-border bg-card/90 px-3 text-sm shadow-sm"
+                  id="wox-sort-order"
+                  onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+                  title="Sort order"
+                  value={sortOrder}
                 >
-                  {workspaceCopy.everything}
-                </Button>
-                <Button
-                  className="h-8 text-xs"
-                  onClick={() => setListQuickFilter("favorites")}
-                  size="sm"
-                  type="button"
-                  variant={listQuickFilter === "favorites" ? "default" : "outline"}
-                >
-                  {workspaceCopy.favorites}
-                </Button>
-                <Button
-                  className="h-8 text-xs"
-                  onClick={() => setListQuickFilter("recent")}
-                  size="sm"
-                  type="button"
-                  variant={listQuickFilter === "recent" ? "default" : "outline"}
-                >
-                  {workspaceCopy.recent}
-                </Button>
-                <Button
-                  className="h-8 text-xs"
-                  onClick={() => setListQuickFilter("archived")}
-                  size="sm"
-                  type="button"
-                  variant={listQuickFilter === "archived" ? "default" : "outline"}
-                >
-                  {workspaceCopy.archived}
-                </Button>
+                  <option value="pinned_updated">{workspaceCopy.sortPinnedUpdated}</option>
+                  <option value="updated">{workspaceCopy.sortUpdated}</option>
+                  <option value="newest">{workspaceCopy.sortNewest}</option>
+                  <option value="oldest">{workspaceCopy.sortOldest}</option>
+                  <option value="title">{workspaceCopy.sortTitle}</option>
+                </select>
+                <div className="flex flex-wrap gap-1.5">
+                  <Button
+                    className="h-8 text-xs"
+                    onClick={() => setListQuickFilter("all")}
+                    size="sm"
+                    type="button"
+                    variant={listQuickFilter === "all" ? "default" : "outline"}
+                  >
+                    {workspaceCopy.everything}
+                  </Button>
+                  <Button
+                    className="h-8 text-xs"
+                    onClick={() => setListQuickFilter("favorites")}
+                    size="sm"
+                    type="button"
+                    variant={listQuickFilter === "favorites" ? "default" : "outline"}
+                  >
+                    {workspaceCopy.favorites}
+                  </Button>
+                  <Button
+                    className="h-8 text-xs"
+                    onClick={() => setListQuickFilter("recent")}
+                    size="sm"
+                    type="button"
+                    variant={listQuickFilter === "recent" ? "default" : "outline"}
+                  >
+                    {workspaceCopy.recent}
+                  </Button>
+                  <Button
+                    className="h-8 text-xs"
+                    onClick={() => setListQuickFilter("archived")}
+                    size="sm"
+                    type="button"
+                    variant={listQuickFilter === "archived" ? "default" : "outline"}
+                  >
+                    {workspaceCopy.archived}
+                  </Button>
+                </div>
               </div>
-            </div>
+            ) : null}
           </div>
 
           <div
             className={cn(
-              "min-h-0 flex-1 overflow-y-auto px-3 pb-4 workspace-scrollbar-hide",
+              "min-h-0 flex-1 overflow-y-auto px-3 workspace-scrollbar-hide",
+              compactLibraryChrome ? "pb-3" : "pb-4",
               libraryViewMode === "archive" ? "space-y-1.5" : "space-y-3"
             )}
             ref={libraryScrollRef}
@@ -4333,37 +4426,39 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
             )}
           </div>
 
-          <div className="border-t border-border px-5 py-4">
-            <div className="flex flex-wrap gap-3">
-              <Button onClick={() => fileInputRef.current?.click()} size="sm" type="button" variant="outline">
-                <Upload className="h-4 w-4" />
-                {workspaceCopy.importFile}
-              </Button>
-              <Button onClick={() => void handleExportWorkspace()} size="sm" type="button" variant="outline">
-                <Download className="h-4 w-4" />
-                {workspaceCopy.export}
-              </Button>
+          <input
+            accept={WORKSPACE_FILE_IMPORT_ACCEPT}
+            aria-label="Import workspace backup or text file"
+            className="hidden"
+            onChange={handleImportFile}
+            ref={fileInputRef}
+            type="file"
+          />
+          {!compactLibraryChrome ? (
+            <div className="border-t border-border px-5 py-4">
+              <div className="flex flex-wrap gap-3">
+                <Button onClick={() => fileInputRef.current?.click()} size="sm" type="button" variant="outline">
+                  <Upload className="h-4 w-4" />
+                  {workspaceCopy.importFile}
+                </Button>
+                <Button onClick={() => void handleExportWorkspace()} size="sm" type="button" variant="outline">
+                  <Download className="h-4 w-4" />
+                  {workspaceCopy.export}
+                </Button>
+              </div>
+              <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                <span className="font-medium text-foreground/80">{workspaceCopy.importJsonLabel}</span> restores the local library.{" "}
+                <span className="font-medium text-foreground/80">{workspaceCopy.importTextLabel}</span> and similar files create one new paste
+                (syntax from the file extension). Use “All files” in the picker if an extension is not listed.
+                {!sidebarShowsPublicFeed ? (
+                  <>
+                    {" "}
+                    <span className="font-medium text-foreground/80">{workspaceCopy.importDragDropLabel}</span> anywhere on this library panel to import.
+                  </>
+                ) : null}
+              </p>
             </div>
-            <input
-              accept={WORKSPACE_FILE_IMPORT_ACCEPT}
-              aria-label="Import workspace backup or text file"
-              className="hidden"
-              onChange={handleImportFile}
-              ref={fileInputRef}
-              type="file"
-            />
-            <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-              <span className="font-medium text-foreground/80">{workspaceCopy.importJsonLabel}</span> restores the local library.{" "}
-              <span className="font-medium text-foreground/80">{workspaceCopy.importTextLabel}</span> and similar files create one new paste
-              (syntax from the file extension). Use “All files” in the picker if an extension is not listed.
-              {!sidebarShowsPublicFeed ? (
-                <>
-                  {" "}
-                  <span className="font-medium text-foreground/80">{workspaceCopy.importDragDropLabel}</span> anywhere on this library panel to import.
-                </>
-              ) : null}
-            </p>
-          </div>
+          ) : null}
         </CardContent>
       </Card>
       </FileDropSurface>
@@ -4390,7 +4485,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 <div
                   className={cn(
                     "shrink-0 z-20 -mx-3 isolate box-border flex flex-col justify-start border-b border-border px-3 [overflow-anchor:none] print:-mx-0 print:border-0 print:bg-transparent print:px-0 print:pb-2 print:shadow-none sm:-mx-4 sm:px-4 lg:-mx-6 lg:px-6",
-                    editorPaneCompact ? "bg-card shadow-md supports-[backdrop-filter]:bg-card" : "bg-card/98 backdrop-blur-md supports-[backdrop-filter]:bg-card/95",
+                    editorPaneCompact ? "bg-card shadow-md" : "bg-card",
                     editorPaneCompact ? "pb-2 shadow-md" : "pb-3 shadow-none max-lg:pb-2 sm:pb-4"
                   )}
                   style={{ transition: "box-shadow 180ms ease-out" }}
@@ -5008,7 +5103,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   <ContextMenu>
                     <ContextMenuTrigger asChild>
                       <div
-                        className="wox-user-markdown wox-markdown-preview max-h-[70vh] min-h-[50vh] overflow-auto rounded-[1.25rem] border border-border bg-muted/60 p-4 text-sm leading-relaxed text-foreground workspace-scrollbar-hide outline-none print:hidden dark:bg-black/30"
+                        className="wox-user-markdown wox-markdown-preview min-h-[min(48dvh,26rem)] overflow-y-auto rounded-[1.25rem] border border-border bg-muted/60 p-4 text-sm leading-relaxed text-foreground outline-none print:hidden md:min-h-[50vh] dark:bg-black/30"
                         dangerouslySetInnerHTML={{
                           __html: markdownPreviewHtml || "<p class='text-muted-foreground'>Nothing to preview.</p>"
                         }}
@@ -6331,7 +6426,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
       )}
     >
       <div className="flex min-h-0 w-full flex-1 flex-col gap-1.5 md:gap-3" style={workspaceViewportStyle}>
-      <header className="glass-panel z-40 shrink-0 border-b border-border px-3 py-1.5 print:hidden sm:px-4 sm:py-2">
+      <header className="glass-panel z-40 shrink-0 border-b border-border px-3 py-1.5 print:hidden sm:px-4 sm:py-1.5">
         <div className="flex items-center justify-between gap-2 md:hidden">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
             <Link
@@ -6659,11 +6754,11 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
           </div>
         ) : null}
 
-        <div className="mt-2 hidden md:grid md:gap-3">
-          <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 sm:gap-x-3">
+        <div className="mt-1.5 hidden md:grid md:gap-2.5">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-2.5 gap-y-1.5">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 sm:gap-x-2.5">
               <Link
-                className="shrink-0 text-sm font-semibold tracking-tight text-foreground"
+                className="shrink-0 text-[13px] font-semibold tracking-tight text-foreground lg:text-sm"
                 href="/app"
                 title={
                   mode === "account"
@@ -6672,7 +6767,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 }
               >
                 WOX-Bin
-                <span className="font-normal text-muted-foreground"> workspace</span>
+                <span className="hidden font-normal text-muted-foreground xl:inline"> workspace</span>
               </Link>
               {sessionUser ? (
                 <>
@@ -6695,40 +6790,40 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               ) : null}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+            <div className="flex flex-wrap items-center gap-1.5 xl:justify-end">
               {sessionUser ? (
                 <>
                   <div className="rounded-full border border-border bg-muted/50 p-0.5">
                     <Button
-                      className="h-8 rounded-full px-2.5 text-xs sm:px-3 sm:text-sm"
+                      className="h-[1.875rem] rounded-full px-2 text-[11px] sm:px-2.5 sm:text-xs"
                       onClick={() => void switchMode("account")}
                       size="sm"
                       title="Account sync (hosted)"
                       type="button"
                       variant={mode === "account" ? "default" : "ghost"}
                     >
-                      <Cloud className="h-3.5 w-3.5 sm:mr-1 sm:h-4 sm:w-4" />
+                      <Cloud className="h-3.5 w-3.5 sm:mr-1 sm:h-3.5 sm:w-3.5" />
                       <span className="hidden sm:inline">Account</span>
                     </Button>
                     <Button
-                      className="h-8 rounded-full px-2.5 text-xs sm:px-3 sm:text-sm"
+                      className="h-[1.875rem] rounded-full px-2 text-[11px] sm:px-2.5 sm:text-xs"
                       onClick={() => void switchMode("local")}
                       size="sm"
                       title="Local drafts (device)"
                       type="button"
                       variant={mode === "local" ? "default" : "ghost"}
                     >
-                      <FolderTree className="h-3.5 w-3.5 sm:mr-1 sm:h-4 sm:w-4" />
+                      <FolderTree className="h-3.5 w-3.5 sm:mr-1 sm:h-3.5 sm:w-3.5" />
                       <span className="hidden sm:inline">Local</span>
                     </Button>
                   </div>
-                  <Button className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm" onClick={() => openTutorial(0)} type="button" variant="outline">
-                    <WandSparkles className="h-3.5 w-3.5 sm:mr-1 sm:h-4 sm:w-4" />
+                  <Button className="h-[1.875rem] px-2 text-[11px] sm:px-2.5 sm:text-xs" onClick={() => openTutorial(0)} type="button" variant="outline">
+                    <WandSparkles className="h-3.5 w-3.5 sm:mr-1 sm:h-3.5 sm:w-3.5" />
                     <span className="hidden sm:inline">{t("workspace.tutorial")}</span>
                   </Button>
                   <div className="flex items-center gap-1 rounded-full border border-border bg-muted/40 p-0.5">
                     <Button
-                      className="h-8 w-8 rounded-full px-0"
+                      className="h-[1.875rem] w-[1.875rem] rounded-full px-0"
                       disabled={pageZoom <= MIN_WORKSPACE_ZOOM}
                       onClick={() => changePageZoom(-WORKSPACE_ZOOM_STEP)}
                       size="icon"
@@ -6739,7 +6834,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                       <ZoomOut className="h-3.5 w-3.5" />
                     </Button>
                     <button
-                      className="min-w-[3.35rem] rounded-full px-2 py-1 text-center text-xs font-medium tabular-nums text-foreground"
+                      className="min-w-[3.1rem] rounded-full px-1.5 py-1 text-center text-[11px] font-medium tabular-nums text-foreground"
                       onClick={() => setPageZoom(defaultWorkspaceZoom(phoneViewport))}
                       title="Reset zoom"
                       type="button"
@@ -6747,7 +6842,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                       {pageZoom}%
                     </button>
                     <Button
-                      className="h-8 w-8 rounded-full px-0"
+                      className="h-[1.875rem] w-[1.875rem] rounded-full px-0"
                       disabled={pageZoom >= MAX_WORKSPACE_ZOOM}
                       onClick={() => changePageZoom(WORKSPACE_ZOOM_STEP)}
                       size="icon"
@@ -6759,28 +6854,28 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                     </Button>
                   </div>
                   {sessionUser.role === "admin" ? (
-                    <Button asChild className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm" type="button" variant="outline">
+                    <Button asChild className="h-[1.875rem] px-2 text-[11px] sm:px-2.5 sm:text-xs" type="button" variant="outline">
                       <Link className="inline-flex items-center gap-1.5" href="/admin">
-                        <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        <Shield className="h-3.5 w-3.5" />
                         Admin
                       </Link>
                     </Button>
                   ) : null}
                   <Button
-                    className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm"
+                    className="h-[1.875rem] px-2 text-[11px] sm:px-2.5 sm:text-xs"
                     onClick={() => signOut({ callbackUrl: "/" })}
                     type="button"
                     variant="outline"
                   >
-                    <LogOut className="h-3.5 w-3.5 sm:mr-1 sm:h-4 sm:w-4" />
+                    <LogOut className="h-3.5 w-3.5 sm:mr-1" />
                     Sign out
                   </Button>
                 </>
               ) : (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   <div className="flex items-center gap-1 rounded-full border border-border bg-muted/40 p-0.5">
                     <Button
-                      className="h-8 w-8 rounded-full px-0"
+                      className="h-[1.875rem] w-[1.875rem] rounded-full px-0"
                       disabled={pageZoom <= MIN_WORKSPACE_ZOOM}
                       onClick={() => changePageZoom(-WORKSPACE_ZOOM_STEP)}
                       size="icon"
@@ -6791,7 +6886,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                       <ZoomOut className="h-3.5 w-3.5" />
                     </Button>
                     <button
-                      className="min-w-[3.35rem] rounded-full px-2 py-1 text-center text-xs font-medium tabular-nums text-foreground"
+                      className="min-w-[3.1rem] rounded-full px-1.5 py-1 text-center text-[11px] font-medium tabular-nums text-foreground"
                       onClick={() => setPageZoom(defaultWorkspaceZoom(phoneViewport))}
                       title="Reset zoom"
                       type="button"
@@ -6799,7 +6894,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                       {pageZoom}%
                     </button>
                     <Button
-                      className="h-8 w-8 rounded-full px-0"
+                      className="h-[1.875rem] w-[1.875rem] rounded-full px-0"
                       disabled={pageZoom >= MAX_WORKSPACE_ZOOM}
                       onClick={() => changePageZoom(WORKSPACE_ZOOM_STEP)}
                       size="icon"
@@ -6810,14 +6905,14 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                       <ZoomIn className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                  <Button className="h-8 text-xs sm:h-9 sm:text-sm" onClick={() => openTutorial(0)} size="sm" type="button" variant="outline">
-                    <WandSparkles className="h-3.5 w-3.5 sm:mr-1 sm:h-4 sm:w-4" />
+                  <Button className="h-[1.875rem] px-2 text-[11px] sm:px-2.5 sm:text-xs" onClick={() => openTutorial(0)} size="sm" type="button" variant="outline">
+                    <WandSparkles className="h-3.5 w-3.5 sm:mr-1" />
                     Tutorial
                   </Button>
-                  <Button asChild className="h-8 text-xs sm:h-9 sm:text-sm" size="sm" variant="outline">
+                  <Button asChild className="h-[1.875rem] px-2 text-[11px] sm:px-2.5 sm:text-xs" size="sm" variant="outline">
                     <Link href="/sign-in">Sign in</Link>
                   </Button>
-                  <Button asChild className="h-8 text-xs sm:h-9 sm:text-sm" size="sm">
+                  <Button asChild className="h-[1.875rem] px-2 text-[11px] sm:px-2.5 sm:text-xs" size="sm">
                     <Link href="/sign-up">Sign up</Link>
                   </Button>
                 </div>
@@ -6825,10 +6920,10 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
             </div>
           </div>
 
-          <div className="flex min-w-0 flex-wrap items-start gap-2 2xl:items-center">
+          <div className="flex min-w-0 flex-wrap items-start gap-1.5 2xl:items-center">
             <nav
               aria-label="Site"
-              className="flex min-w-0 flex-wrap items-center gap-0.5 sm:gap-1"
+              className="flex min-w-0 flex-wrap items-center gap-0.5"
               data-tutorial="workspace-nav"
             >
               <Link className={workspaceHeaderNavClass(pathname === "/")} href="/">
@@ -6865,7 +6960,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
               ) : null}
             </nav>
 
-            <div className="flex min-w-0 basis-full flex-wrap items-center gap-2 rounded-[1.15rem] border border-border/70 bg-muted/25 px-2.5 py-2 2xl:ml-auto 2xl:basis-auto 2xl:border-0 2xl:bg-transparent 2xl:px-0 2xl:py-0">
+            <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 rounded-[1rem] border border-border/70 bg-muted/20 px-2 py-1.5 2xl:ml-auto 2xl:basis-auto 2xl:border-0 2xl:bg-transparent 2xl:px-0 2xl:py-0">
               <WorkspaceHeaderAppearance
                 appHighContrast={appHighContrast}
                 className="sm:border-0 sm:pl-0"

@@ -43,7 +43,7 @@ export default function ToolsLayout({ children }: { children: ReactNode }) {
       <header
         className={cn(
           "sticky top-0 z-30 border-b border-border",
-          "bg-background/90 backdrop-blur-md supports-[backdrop-filter]:bg-background/75"
+          "bg-background/98"
         )}
       >
         <div className="mx-auto flex h-11 max-w-5xl items-center justify-between gap-2 px-3 sm:h-12 sm:px-4 md:px-6">

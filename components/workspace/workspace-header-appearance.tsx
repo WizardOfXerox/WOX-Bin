@@ -41,7 +41,7 @@ export function WorkspaceHeaderAppearance({
     <div
       aria-label="Theme and appearance"
       className={cn(
-        "flex flex-wrap items-center gap-x-1.5 gap-y-1 border-border sm:border-l sm:pl-2 md:gap-x-2 md:pl-3",
+        "flex flex-wrap items-center gap-x-1 gap-y-1 border-border sm:border-l sm:pl-2 md:gap-x-1.5 md:pl-2.5",
         stacked && "flex-col items-stretch gap-3 border-0 pl-0 sm:border-0 sm:pl-0",
         className
       )}
@@ -65,7 +65,7 @@ export function WorkspaceHeaderAppearance({
         </label>
         <select
           className={cn(
-            "h-8 max-w-[6.5rem] truncate rounded-md border border-border bg-card/90 px-2 text-[11px] text-foreground shadow-sm backdrop-blur-sm sm:max-w-[8rem] sm:text-xs",
+            "h-[1.875rem] max-w-[6rem] truncate rounded-md border border-border bg-card px-2 text-[11px] text-foreground shadow-sm sm:max-w-[7rem] sm:text-[11px]",
             stacked && "h-11 max-w-none text-sm"
           )}
           id={stacked ? "wox-header-ui-theme-m" : "wox-header-ui-theme"}
@@ -84,7 +84,7 @@ export function WorkspaceHeaderAppearance({
         </label>
         <select
           className={cn(
-            "h-8 max-w-[9.5rem] truncate rounded-md border border-border bg-card/90 px-2 text-[11px] text-foreground shadow-sm backdrop-blur-sm sm:max-w-[11rem] sm:text-xs",
+            "h-[1.875rem] max-w-[8.5rem] truncate rounded-md border border-border bg-card px-2 text-[11px] text-foreground shadow-sm sm:max-w-[9.5rem] sm:text-[11px]",
             stacked && "h-11 max-w-none text-sm"
           )}
           id={stacked ? "wox-header-syntax-theme-m" : "wox-header-syntax-theme"}
@@ -103,7 +103,7 @@ export function WorkspaceHeaderAppearance({
         </label>
         <select
           className={cn(
-            "h-8 max-w-[7.5rem] truncate rounded-md border border-border bg-card/90 px-2 text-[11px] text-foreground shadow-sm backdrop-blur-sm sm:max-w-[9rem] sm:text-xs",
+            "h-[1.875rem] max-w-[6.75rem] truncate rounded-md border border-border bg-card px-2 text-[11px] text-foreground shadow-sm sm:max-w-[8rem] sm:text-[11px]",
             stacked && "h-11 max-w-none text-sm"
           )}
           id={stacked ? "wox-header-workspace-tone-m" : "wox-header-workspace-tone"}
@@ -120,7 +120,7 @@ export function WorkspaceHeaderAppearance({
       </div>
       <Button
         aria-pressed={appHighContrast}
-        className={cn("h-8 w-8 shrink-0 p-0", stacked && "h-11 w-11")}
+        className={cn("h-[1.875rem] w-[1.875rem] shrink-0 p-0", stacked && "h-11 w-11")}
         onClick={onToggleHighContrast}
         size="icon"
         title="High contrast borders"
