@@ -18,7 +18,6 @@ import {
 } from "react";
 import { flushSync } from "react-dom";
 
-import { parseUserMarkdown } from "@/lib/markdown/parse-user-markdown";
 import {
   Brackets,
   ChevronsLeft,
@@ -2181,11 +2180,35 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
     });
   }, [findMatches, findOpen, findQuery]);
 
-  const markdownPreviewHtml = useMemo(() => {
+  const [markdownPreviewHtml, setMarkdownPreviewHtml] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
     if (!selectedPaste || selectedPaste.language !== "markdown" || !mdPreviewOpen) {
-      return "";
+      setMarkdownPreviewHtml("");
+      return () => {
+        cancelled = true;
+      };
     }
-    return parseUserMarkdown(selectedPaste.content, { breaks: true });
+
+    const source = selectedPaste.content;
+
+    import("@/lib/markdown/parse-user-markdown")
+      .then(({ parseUserMarkdown }) => {
+        if (!cancelled) {
+          setMarkdownPreviewHtml(parseUserMarkdown(source, { breaks: true }));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMarkdownPreviewHtml("");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedPaste, mdPreviewOpen]);
 
   const diffVersionHtml = useMemo(() => {
