@@ -1114,6 +1114,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   const [workspaceMobileMenuOpen, setWorkspaceMobileMenuOpen] = useState(false);
   const [phoneViewport, setPhoneViewport] = useState(false);
   const [shortViewport, setShortViewport] = useState(false);
+  const [narrowDesktopViewport, setNarrowDesktopViewport] = useState(false);
   const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
   const [mobileFolderActions, setMobileFolderActions] = useState<MobileFolderActionsState>({ open: false });
@@ -1131,7 +1132,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   const deferredSearch = useDeferredValue(search);
   const effectiveEditorFontPx = narrowEditorViewport ? Math.max(editorFontSize, 16) : editorFontSize;
   const workspaceZoomFactor = pageZoom / 100;
-  const compactLibraryChrome = !phoneViewport && shortViewport;
+  const compactLibraryChrome = !phoneViewport && (shortViewport || narrowDesktopViewport);
   const activeLibraryToolCount =
     (pinnedOnly ? 1 : 0) + (listQuickFilter !== "all" ? 1 : 0) + (sortOrder !== "pinned_updated" ? 1 : 0);
   const workspaceOuterVerticalPadding = phoneViewport ? "0.75rem" : shortViewport ? "1rem" : "1.5rem";
@@ -1544,6 +1545,24 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
     }
     mq.addListener(syncShortViewport);
     return () => mq.removeListener(syncShortViewport);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    // Laptop-width workspaces still need denser sidebar chrome even when the viewport is technically "tall".
+    const mq = window.matchMedia("(max-width: 1560px)");
+    const syncNarrowDesktop = () => {
+      setNarrowDesktopViewport(mq.matches);
+    };
+    syncNarrowDesktop();
+    if (typeof mq.addEventListener === "function") {
+      mq.addEventListener("change", syncNarrowDesktop);
+      return () => mq.removeEventListener("change", syncNarrowDesktop);
+    }
+    mq.addListener(syncNarrowDesktop);
+    return () => mq.removeListener(syncNarrowDesktop);
   }, []);
 
   useEffect(() => {
