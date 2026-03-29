@@ -3,9 +3,10 @@ import { NextResponse } from "next/server";
 import { checkEdgeRateLimit } from "@/lib/firewall";
 import { logError, logInfo } from "@/lib/logging";
 import { safeDownloadBasename } from "@/lib/paste-download";
-import { createFileDrop, assertSafeRemoteSource, FILE_DROP_MAX_BYTES, PublicDropError } from "@/lib/public-drops";
+import { createFileDrop, FILE_DROP_MAX_BYTES, PublicDropError } from "@/lib/public-drops";
 import { getAppOrigin, getRequestIp } from "@/lib/request";
 import { rateLimit } from "@/lib/rate-limit";
+import { readResponseBytesCapped, safeFetchPublicUrl, SafeOutboundError } from "@/lib/safe-outbound";
 
 function textError(message: string, status = 400) {
   return new NextResponse(`${message}\n`, {
@@ -65,9 +66,9 @@ export async function POST(request: Request) {
       sizeBytes = uploadFile.size;
       contentBase64 = Buffer.from(await uploadFile.arrayBuffer()).toString("base64");
     } else if (uploadUrl) {
-      const remoteUrl = await assertSafeRemoteSource(uploadUrl);
-      const remoteResponse = await fetch(remoteUrl, {
-        redirect: "follow",
+      const { response: remoteResponse, finalUrl } = await safeFetchPublicUrl(uploadUrl, {
+        label: "Remote upload URL",
+        maxRedirects: 3,
         headers: {
           "User-Agent": "WOX-Bin/2.0 remote fetch"
         }
@@ -77,19 +78,15 @@ export async function POST(request: Request) {
         return textError(`Remote fetch failed (${remoteResponse.status}).`, 400);
       }
 
-      const lengthHeader = remoteResponse.headers.get("content-length");
-      const parsedLength = lengthHeader ? Number(lengthHeader) : NaN;
-      if (!Number.isFinite(parsedLength) || parsedLength <= 0) {
-        return textError("Remote URL must provide Content-Length.", 400);
-      }
-      if (parsedLength > FILE_DROP_MAX_BYTES) {
-        return textError(`Remote file exceeds ${FILE_DROP_MAX_BYTES} bytes.`, 413);
+      const bytes = await readResponseBytesCapped(remoteResponse, FILE_DROP_MAX_BYTES, "Remote file");
+      if (bytes.byteLength === 0) {
+        return textError("Remote file is empty.", 400);
       }
 
-      filename = filenameFromUrl(remoteUrl);
+      filename = filenameFromUrl(finalUrl);
       mimeType = remoteResponse.headers.get("content-type")?.trim() || "application/octet-stream";
-      sizeBytes = parsedLength;
-      contentBase64 = Buffer.from(await remoteResponse.arrayBuffer()).toString("base64");
+      sizeBytes = bytes.byteLength;
+      contentBase64 = bytes.toString("base64");
     } else {
       return textError("Provide file=@... or url=...", 400);
     }
@@ -119,6 +116,14 @@ export async function POST(request: Request) {
       }
     });
   } catch (error) {
+    if (error instanceof SafeOutboundError) {
+      logInfo("public_drop.file_rejected", {
+        ip,
+        message: error.message,
+        status: error.status
+      });
+      return textError(error.message, error.status);
+    }
     if (error instanceof PublicDropError) {
       logInfo("public_drop.file_rejected", {
         ip,

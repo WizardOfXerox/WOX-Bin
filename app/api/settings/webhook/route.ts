@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { jsonError, planLimitErrorResponse } from "@/lib/http";
+import { SafeOutboundError } from "@/lib/safe-outbound";
 import { getWebhookSettingsForUser, sendWebhookTestForUser, updateWebhookUrlForUser } from "@/lib/webhooks";
 import { webhookSettingsSchema } from "@/lib/validators";
 
@@ -31,6 +32,9 @@ export async function PUT(request: Request) {
     const snapshot = await updateWebhookUrlForUser(session.user.id, parsed.data.webhookUrl.trim() || null);
     return NextResponse.json(snapshot);
   } catch (error) {
+    if (error instanceof SafeOutboundError) {
+      return jsonError(error.message, error.status);
+    }
     return planLimitErrorResponse(error) ?? jsonError("Could not update webhook settings.", 500);
   }
 }

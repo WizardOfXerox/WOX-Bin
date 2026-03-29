@@ -1,6 +1,3 @@
-import { lookup } from "node:dns/promises";
-import { isIP } from "node:net";
-
 import { and, eq, isNull, ne } from "drizzle-orm";
 
 import { publicDropObjectStorageFlag } from "@/flags";
@@ -9,6 +6,7 @@ import { randomToken, hashToken } from "@/lib/crypto";
 import { db } from "@/lib/db";
 import { publicDrops } from "@/lib/db/schema";
 import { asciiContentDispositionFilename, safeDownloadBasename } from "@/lib/paste-download";
+import { assertSafePublicUrl } from "@/lib/safe-outbound";
 import {
   deleteObjectIfExists,
   getConvertS3Client,
@@ -118,65 +116,17 @@ async function deleteStoredPublicDropObject(row: PublicDropRow) {
   return true;
 }
 
-function isPrivateIpv4(address: string) {
-  return (
-    address.startsWith("10.") ||
-    address.startsWith("127.") ||
-    address.startsWith("192.168.") ||
-    address.startsWith("169.254.") ||
-    /^172\.(1[6-9]|2\d|3[0-1])\./.test(address)
-  );
-}
-
-function isPrivateIpv6(address: string) {
-  const normalized = address.toLowerCase();
-  return (
-    normalized === "::1" ||
-    normalized.startsWith("fe80:") ||
-    normalized.startsWith("fc") ||
-    normalized.startsWith("fd") ||
-    normalized === "::"
-  );
-}
-
-function isPrivateAddress(address: string) {
-  const version = isIP(address);
-  if (version === 4) {
-    return isPrivateIpv4(address);
-  }
-  if (version === 6) {
-    return isPrivateIpv6(address);
-  }
-  return true;
-}
-
 export async function assertSafeRemoteSource(rawUrl: string) {
-  let url: URL;
   try {
-    url = new URL(rawUrl);
-  } catch {
-    throw new PublicDropError("Invalid remote URL.", 400);
+    return await assertSafePublicUrl(rawUrl, "Remote URL");
+  } catch (error) {
+    throw new PublicDropError(
+      error instanceof Error ? error.message : "Remote URL must point to a public host.",
+      error instanceof Error && "status" in error && typeof (error as { status?: unknown }).status === "number"
+        ? (error as { status: number }).status
+        : 400
+    );
   }
-
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new PublicDropError("Only http and https remote URLs are allowed.", 400);
-  }
-
-  const hostname = url.hostname.trim().toLowerCase();
-  if (!hostname || hostname === "localhost" || hostname.endsWith(".local")) {
-    throw new PublicDropError("Remote URL must point to a public host.", 400);
-  }
-
-  if (isIP(hostname) && isPrivateAddress(hostname)) {
-    throw new PublicDropError("Remote URL must point to a public host.", 400);
-  }
-
-  const addresses = await lookup(hostname, { all: true });
-  if (addresses.some((entry) => isPrivateAddress(entry.address))) {
-    throw new PublicDropError("Remote URL must point to a public host.", 400);
-  }
-
-  return url;
 }
 
 export function parseDropExpires(value: string | null | undefined, fallbackHours: number) {

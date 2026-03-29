@@ -4,6 +4,12 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { extractGithubGistId, normalizeRawPasteFetchUrl } from "@/lib/import-paste-url";
 import { jsonError } from "@/lib/http";
+import {
+  assertSafePublicUrl,
+  readResponseTextCapped,
+  safeFetchPublicUrl,
+  SafeOutboundError
+} from "@/lib/safe-outbound";
 
 const bodySchema = z.object({
   url: z.string().trim().min(1, "URL required").max(2048)
@@ -11,33 +17,15 @@ const bodySchema = z.object({
 
 const MAX_BYTES = 2_000_000;
 
-function blockedHost(hostname: string): boolean {
-  const h = hostname.toLowerCase();
-  if (h === "localhost" || h.endsWith(".localhost")) {
-    return true;
+function safeTitleSegment(input: string | undefined) {
+  if (!input) {
+    return "Imported";
   }
-  if (h.endsWith(".local")) {
-    return true;
+  try {
+    return decodeURIComponent(input).slice(0, 120) || "Imported";
+  } catch {
+    return input.slice(0, 120) || "Imported";
   }
-  if (h === "0.0.0.0" || h === "[::1]" || h === "::1") {
-    return true;
-  }
-  if (/^127\.\d+\.\d+\.\d+$/.test(h)) {
-    return true;
-  }
-  if (/^10\.\d+\.\d+\.\d+$/.test(h)) {
-    return true;
-  }
-  if (/^192\.168\.\d+\.\d+$/.test(h)) {
-    return true;
-  }
-  if (/^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/.test(h)) {
-    return true;
-  }
-  if (/^169\.254\.\d+\.\d+$/.test(h)) {
-    return true;
-  }
-  return false;
 }
 
 export async function POST(request: Request) {
@@ -52,19 +40,10 @@ export async function POST(request: Request) {
     return jsonError(parsed.error.issues[0]?.message ?? "Invalid body.");
   }
 
-  let target: URL;
   try {
-    target = new URL(parsed.data.url);
-  } catch {
-    return jsonError("Invalid URL.");
-  }
-
-  if (target.protocol !== "http:" && target.protocol !== "https:") {
-    return jsonError("Only http and https URLs are allowed.");
-  }
-
-  if (blockedHost(target.hostname)) {
-    return jsonError("That host is not allowed.");
+    await assertSafePublicUrl(parsed.data.url, "Import URL");
+  } catch (error) {
+    return jsonError(error instanceof Error ? error.message : "Invalid URL.");
   }
 
   const controller = new AbortController();
@@ -95,7 +74,7 @@ export async function POST(request: Request) {
       fileEntries.sort(([a], [b]) => a.localeCompare(b));
       const [firstName, firstFile] = fileEntries[0]!;
       const text = firstFile.content ?? "";
-      if (text.length > MAX_BYTES) {
+      if (Buffer.byteLength(text, "utf8") > MAX_BYTES) {
         return jsonError("Gist content is too large (max 2 MB).", 413);
       }
       const desc = gistJson.description?.trim();
@@ -104,21 +83,9 @@ export async function POST(request: Request) {
     }
 
     const fetchUrl = normalizeRawPasteFetchUrl(parsed.data.url);
-    let fetchTarget: URL;
-    try {
-      fetchTarget = new URL(fetchUrl);
-    } catch {
-      return jsonError("Invalid URL after normalization.");
-    }
-    if (fetchTarget.protocol !== "http:" && fetchTarget.protocol !== "https:") {
-      return jsonError("Only http and https URLs are allowed.");
-    }
-    if (blockedHost(fetchTarget.hostname)) {
-      return jsonError("That host is not allowed.");
-    }
-
-    const res = await fetch(fetchTarget.toString(), {
-      redirect: "follow",
+    const { response, finalUrl } = await safeFetchPublicUrl(fetchUrl, {
+      label: "Import URL",
+      maxRedirects: 3,
       signal: controller.signal,
       headers: {
         "User-Agent": "WOX-Bin-import/1.0",
@@ -126,21 +93,19 @@ export async function POST(request: Request) {
       }
     });
 
-    if (!res.ok) {
-      return jsonError(`Remote server returned ${res.status}.`, 502);
+    if (!response.ok) {
+      return jsonError(`Remote server returned ${response.status}.`, 502);
     }
 
-    const buf = await res.arrayBuffer();
-    if (buf.byteLength > MAX_BYTES) {
-      return jsonError("Response is too large (max 2 MB).", 413);
-    }
-
-    const text = new TextDecoder("utf-8", { fatal: false }).decode(buf);
-    const lastSeg = fetchTarget.pathname.split("/").filter(Boolean).pop()?.replace(/\.txt$/i, "");
-    const title = lastSeg ? decodeURIComponent(lastSeg).slice(0, 120) : "Imported";
+    const text = await readResponseTextCapped(response, MAX_BYTES, "Imported response");
+    const lastSeg = finalUrl.pathname.split("/").filter(Boolean).pop()?.replace(/\.txt$/i, "");
+    const title = safeTitleSegment(lastSeg);
 
     return NextResponse.json({ text, title });
-  } catch {
+  } catch (error) {
+    if (error instanceof SafeOutboundError) {
+      return jsonError(error.message, error.status);
+    }
     return jsonError("Could not fetch that URL.", 502);
   } finally {
     clearTimeout(timeout);

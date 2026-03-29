@@ -37,6 +37,7 @@
     "@aws-sdk/s3-request-presigner": "^3.1014.0",
     "@hookform/resolvers": "latest",
     "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/api-logs": "^0.214.0",
     "@radix-ui/react-context-menu": "^2.2.16",
     "@radix-ui/react-dialog": "latest",
     "@radix-ui/react-dropdown-menu": "latest",
@@ -57,7 +58,7 @@
     "diff-match-patch": "^1.0.5",
     "discord.js": "^14.25.1",
     "docx": "^9.6.1",
-    "drizzle-orm": "latest",
+    "drizzle-orm": "^0.45.2",
     "exifr": "^7.1.3",
     "fflate": "^0.8.2",
     "flags": "^4.0.5",
@@ -69,7 +70,7 @@
     "marked": "^17.0.5",
     "next": "latest",
     "next-auth": "latest",
-    "nodemailer": "^7.0.13",
+    "nodemailer": "^8.0.4",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^5.5.207",
     "playwright": "^1.58.2",
@@ -109,5 +110,25 @@
     "tsx": "latest",
     "typescript": "latest",
     "vitest": "latest"
+  },
+  "overrides": {
+    "discord.js": {
+      "undici": "6.24.1"
+    },
+    "minimatch": {
+      "brace-expansion": "1.1.13"
+    },
+    "micromatch": {
+      "picomatch": "2.3.2"
+    },
+    "vite": {
+      "picomatch": "4.0.4"
+    },
+    "vitest": {
+      "picomatch": "4.0.4"
+    },
+    "tinyglobby": {
+      "picomatch": "4.0.4"
+    }
   }
 }

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { logAudit } from "@/lib/audit";
 import { PlanLimitError, formatPlanName } from "@/lib/plans";
+import { assertSafePublicUrl, safeFetchPublicUrl, SafeOutboundError } from "@/lib/safe-outbound";
 import { getUserPlanSummary } from "@/lib/usage-service";
 
 type UserWebhookEvent =
@@ -49,17 +50,21 @@ export async function updateWebhookUrlForUser(userId: string, webhookUrl: string
     });
   }
 
+  const normalizedWebhookUrl = webhookUrl
+    ? (await assertSafePublicUrl(webhookUrl, "Webhook URL")).toString()
+    : null;
+
   await db
     .update(users)
     .set({
-      webhookUrl,
+      webhookUrl: normalizedWebhookUrl,
       updatedAt: new Date()
     })
     .where(eq(users.id, userId));
 
   await logAudit({
     actorUserId: userId,
-    action: webhookUrl ? "webhook.updated" : "webhook.cleared",
+    action: normalizedWebhookUrl ? "webhook.updated" : "webhook.cleared",
     targetType: "user",
     targetId: userId
   });
@@ -95,8 +100,10 @@ export async function dispatchUserWebhook(
   }
 
   try {
-    const response = await fetch(targetUser.webhookUrl, {
+    const { response } = await safeFetchPublicUrl(targetUser.webhookUrl, {
       method: "POST",
+      label: "Webhook URL",
+      maxRedirects: 0,
       headers: {
         "Content-Type": "application/json"
       },
@@ -129,6 +136,11 @@ export async function dispatchUserWebhook(
       status: response.status
     } as const;
   } catch (error) {
+    const errorMessage = error instanceof SafeOutboundError
+      ? error.message
+      : error instanceof Error
+        ? error.message
+        : "Unknown webhook error";
     await logAudit({
       actorUserId: userId,
       action: "webhook.failed",
@@ -136,13 +148,13 @@ export async function dispatchUserWebhook(
       targetId: targetUser.webhookUrl,
       metadata: {
         event,
-        error: error instanceof Error ? error.message : "Unknown webhook error"
+        error: errorMessage
       }
     });
 
     return {
       delivered: false,
-      reason: "request_failed"
+      reason: error instanceof SafeOutboundError ? "unsafe_url" : "request_failed"
     } as const;
   }
 }
