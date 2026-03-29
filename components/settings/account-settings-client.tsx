@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { useUiLanguage } from "@/components/providers/ui-language-provider";
+import { isExternalImageUrl } from "@/lib/avatar";
 
 export type AccountProfileInitial = {
   email: string | null;
@@ -36,9 +37,11 @@ type Props = {
 export function AccountSettingsClient({ initial }: Props) {
   const { t } = useUiLanguage();
   const { update } = useSession();
+  const initialExternalAvatarUrl = isExternalImageUrl(initial.image) ? initial.image?.trim() ?? "" : "";
   const [username, setUsername] = useState(initial.username ?? "");
   const [displayName, setDisplayName] = useState(initial.displayName ?? "");
   const [image, setImage] = useState(initial.image ?? "");
+  const [avatarUrl, setAvatarUrl] = useState(initialExternalAvatarUrl);
   const [avatarUploadMessage, setAvatarUploadMessage] = useState<string | null>(null);
   const [hasPassword, setHasPassword] = useState(initial.hasPassword);
   const [googleConnected, setGoogleConnected] = useState(initial.googleConnected);
@@ -94,6 +97,11 @@ export function AccountSettingsClient({ initial }: Props) {
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const previewImage =
+    typeof image === "string" &&
+    (image.startsWith("data:image/") || image.startsWith("/api/avatar/") || isExternalImageUrl(image))
+      ? image
+      : "";
 
   async function readAvatarAsDataUrl(file: File) {
     return new Promise<string>((resolve, reject) => {
@@ -132,6 +140,7 @@ export function AccountSettingsClient({ initial }: Props) {
     try {
       const dataUrl = await readAvatarAsDataUrl(file);
       setImage(dataUrl);
+      setAvatarUrl("");
       setAvatarUploadMessage(`${file.name} selected. Save profile to publish it.`);
       setError(null);
       setStatus(null);
@@ -142,7 +151,16 @@ export function AccountSettingsClient({ initial }: Props) {
 
   function handleRemoveAvatar() {
     setImage("");
+    setAvatarUrl("");
     setAvatarUploadMessage("Avatar will be removed when you save.");
+    setError(null);
+    setStatus(null);
+  }
+
+  function handleAvatarUrlChange(value: string) {
+    setAvatarUrl(value);
+    setImage(value);
+    setAvatarUploadMessage(null);
     setError(null);
     setStatus(null);
   }
@@ -199,7 +217,9 @@ export function AccountSettingsClient({ initial }: Props) {
       setDisplayName(body.displayName ?? "");
     }
     if (body.image !== undefined) {
-      setImage(body.image ?? "");
+      const nextImage = body.image ?? "";
+      setImage(nextImage);
+      setAvatarUrl(isExternalImageUrl(nextImage) ? nextImage : "");
     }
     setAvatarUploadMessage(null);
     setSavedProfile({
@@ -675,7 +695,7 @@ export function AccountSettingsClient({ initial }: Props) {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                 <UserAvatar
                   className="shadow-sm"
-                  image={image}
+                  image={previewImage}
                   label={displayName || username || initial.email}
                   size="xl"
                   username={username}
@@ -688,6 +708,26 @@ export function AccountSettingsClient({ initial }: Props) {
                     Upload PNG, JPG, WebP, GIF, or AVIF up to 5 MB. Uploaded avatars are stored on your account and
                     served back through a short image URL so sessions stay small.
                   </p>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground" htmlFor="account-image-url">
+                      Avatar URL
+                    </label>
+                    <Input
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      id="account-image-url"
+                      inputMode="url"
+                      onChange={(event) => handleAvatarUrlChange(event.target.value)}
+                      placeholder="https://example.com/avatar.png"
+                      spellCheck={false}
+                      type="url"
+                      value={avatarUrl}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Use an external <span className="font-mono text-foreground">https://</span> image if you want the avatar to stay
+                      outside the database. Uploads still work when you want a stored local copy.
+                    </p>
+                  </div>
                   {initial.avatarUploadEnabled ? (
                     <Input
                       accept="image/png,image/jpeg,image/webp,image/gif,image/avif"

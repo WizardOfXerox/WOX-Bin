@@ -7,6 +7,7 @@ import { isAdminSession } from "@/lib/admin-auth";
 const links = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/deployment", label: "Deployment" },
+  { href: "/admin/storage", label: "Storage" },
   { href: "/admin/discord", label: "Discord" },
   { href: "/admin/reports", label: "Reports" },
   { href: "/admin/users", label: "Users" },
@@ -26,8 +27,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto w-full max-w-[1920px] px-3 py-4 sm:px-4 md:px-6 xl:px-8 2xl:px-10">
-        <div className="grid min-h-[calc(100dvh-2rem)] gap-5 xl:grid-cols-[17rem_minmax(0,1fr)] 2xl:grid-cols-[18rem_minmax(0,1fr)] 2xl:gap-6">
+      <div className="w-full px-3 py-4 sm:px-4 md:px-6 xl:px-8 2xl:px-10">
+        <div className="grid min-h-[calc(100dvh-2rem)] gap-5 xl:grid-cols-[clamp(16rem,18vw,20rem)_minmax(0,1fr)] 2xl:gap-6">
           <aside className="glass-panel h-fit w-full shrink-0 p-5 sm:p-6 xl:sticky xl:top-6 xl:max-h-[calc(100dvh-3rem)] xl:overflow-y-auto">
             <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Admin</p>
             <p className="mt-2 font-semibold">{session.user.username ?? session.user.email ?? "Admin"}</p>

@@ -46,7 +46,7 @@ export default function ToolsLayout({ children }: { children: ReactNode }) {
           "bg-background/98"
         )}
       >
-        <div className="mx-auto flex h-11 max-w-5xl items-center justify-between gap-2 px-3 sm:h-12 sm:px-4 md:px-6">
+        <div className="flex h-11 w-full items-center justify-between gap-2 px-3 sm:h-12 sm:px-4 md:px-6 xl:px-8">
           <Link
             className="flex min-w-0 max-w-[55%] touch-manipulation items-center gap-2 text-sm font-semibold text-foreground sm:max-w-none"
             href="/tools"

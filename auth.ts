@@ -21,6 +21,7 @@ import { env } from "@/lib/env";
 import { getAccountRestrictionCode, getEffectiveAccountModeration } from "@/lib/account-moderation";
 import { verifyPassword } from "@/lib/crypto";
 import { logAudit } from "@/lib/audit";
+import { pruneBrowserSessionsForUser, SESSION_MAX_AGE_SECONDS } from "@/lib/browser-session";
 import { buildMagicLinkEmail } from "@/lib/email-templates";
 import { rateLimit } from "@/lib/rate-limit";
 import { getAppOriginFromHeaderRecord, getRequestIpFromHeaderRecord } from "@/lib/request";
@@ -222,7 +223,7 @@ export const authOptions: NextAuthOptions = {
   }) as Adapter,
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60 // 30 days
+    maxAge: SESSION_MAX_AGE_SECONDS
   },
   providers,
   callbacks: {
@@ -275,6 +276,7 @@ export const authOptions: NextAuthOptions = {
             userId,
             lastSeenAt: new Date()
           });
+          await pruneBrowserSessionsForUser(userId, newId);
           token.browserSessionId = newId;
           sid = newId;
         }
@@ -328,6 +330,7 @@ export const authOptions: NextAuthOptions = {
           userId: user.id,
           lastSeenAt: new Date()
         });
+        await pruneBrowserSessionsForUser(user.id, sid);
         token.browserSessionId = sid;
         delete token.error;
 

@@ -1,5 +1,6 @@
 import { and, inArray, isNull, lte, ne } from "drizzle-orm";
 
+import { pruneBrowserSessions } from "@/lib/browser-session";
 import { db } from "@/lib/db";
 import {
   conversionJobs,
@@ -44,6 +45,7 @@ export type CleanupSummary = {
   emailVerificationTokensDeleted: number;
   totpSetupSessionsDeleted: number;
   mfaLoginTicketsDeleted: number;
+  browserSessionsDeleted: number;
   conversionJobsDeleted: number;
   conversionObjectsDeleted: number;
 };
@@ -127,6 +129,8 @@ export async function runScheduledCleanup(now = new Date()): Promise<CleanupSumm
       db.delete(mfaLoginTickets).where(lte(mfaLoginTickets.expiresAt, now)).returning({ id: mfaLoginTickets.id })
     ]);
 
+  const browserSessionsDeleted = await pruneBrowserSessions({ now });
+
   const expiredConversionJobs = await db
     .select({
       id: conversionJobs.id,
@@ -168,6 +172,7 @@ export async function runScheduledCleanup(now = new Date()): Promise<CleanupSumm
     emailVerificationTokensDeleted: deletedEmailVerificationTokens.length,
     totpSetupSessionsDeleted: deletedTotpSetupSessions.length,
     mfaLoginTicketsDeleted: deletedMfaLoginTickets.length,
+    browserSessionsDeleted,
     conversionJobsDeleted: expiredConversionJobs.length,
     conversionObjectsDeleted: conversionObjectKeys.size
   };

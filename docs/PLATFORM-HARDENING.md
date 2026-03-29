@@ -49,6 +49,8 @@ The high-traffic human-facing public feed surfaces now share a short-lived tagge
 
 Today WOX-Bin still stores standard hosted paste bodies and smaller attachment payloads in Postgres.
 
+For the operational view of database growth, thresholds, and storage-heavy feature paths, see `docs/STORAGE-RUNWAY.md`.
+
 That is acceptable while:
 
 - the dominant content is still text or small files

@@ -6543,7 +6543,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   return (
     <main
       className={cn(
-        "wox-workspace-root workspace-full mx-auto flex h-[100dvh] max-h-[100dvh] min-h-0 w-full max-w-[1960px] flex-col gap-2 overflow-hidden px-3 py-2 motion-safe:animate-wox-fade-in sm:px-4 sm:py-3 lg:gap-4 lg:px-6 lg:py-4 xl:px-8 2xl:px-10",
+        "wox-workspace-root workspace-full flex h-[100dvh] max-h-[100dvh] min-h-0 w-full max-w-none flex-col gap-2 overflow-hidden px-2 py-2 motion-safe:animate-wox-fade-in sm:px-4 sm:py-3 lg:gap-4 lg:px-5 lg:py-4 xl:px-6 2xl:px-8",
         workspaceTone === "deep" && "workspace-tone-deep",
         workspaceTone === "warm" && "workspace-tone-warm",
         workspaceTone === "forest" && "workspace-tone-forest"
@@ -7265,7 +7265,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                       </Button>
                     </div>
                   ) : (
-                    <div className="min-h-0 min-w-0 max-h-[min(40dvh,20rem)] shrink-0 overflow-hidden print:hidden lg:max-h-none lg:w-[min(100%,272px)] lg:max-w-[300px] lg:shrink-0 xl:w-[min(100%,300px)] xl:max-w-[330px] 2xl:w-[min(100%,340px)] 2xl:max-w-[380px]">
+                    <div className="min-h-0 min-w-0 max-h-[min(40dvh,20rem)] shrink-0 overflow-hidden print:hidden lg:max-h-none lg:w-[clamp(17rem,20vw,24rem)] lg:min-w-[17rem] lg:max-w-[24rem] lg:shrink-0 2xl:w-[clamp(18rem,21vw,25rem)] 2xl:min-w-[18rem] 2xl:max-w-[25rem]">
                       {renderSidebar()}
                     </div>
                   )}
@@ -7291,7 +7291,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                       </Button>
                     </div>
                   ) : (
-                    <div className="min-h-0 min-w-0 max-h-[min(36dvh,18rem)] shrink-0 overflow-y-auto overflow-x-hidden print:hidden lg:max-h-none lg:w-[min(100%,290px)] lg:max-w-[320px] lg:shrink-0 xl:w-[min(100%,320px)] xl:max-w-[360px] 2xl:w-[min(100%,360px)] 2xl:max-w-[420px]">
+                    <div className="min-h-0 min-w-0 max-h-[min(36dvh,18rem)] shrink-0 overflow-y-auto overflow-x-hidden print:hidden lg:max-h-none lg:w-[clamp(18rem,22vw,27rem)] lg:min-w-[18rem] lg:max-w-[27rem] lg:shrink-0 2xl:w-[clamp(19rem,23vw,28rem)] 2xl:min-w-[19rem] 2xl:max-w-[28rem]">
                       {renderDetails()}
                     </div>
                   )}
