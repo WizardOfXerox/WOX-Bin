@@ -4576,9 +4576,8 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden print:overflow-visible">
               <div
                 className={cn(
-                  "shrink-0 z-20 -mx-3 isolate box-border flex flex-col justify-start border-b border-border px-3 [overflow-anchor:none] print:-mx-0 print:border-0 print:bg-transparent print:px-0 print:pb-2 print:shadow-none sm:-mx-4 sm:px-4 lg:-mx-6 lg:px-6",
-                  editorPaneCompact ? "bg-card shadow-md" : "bg-card",
-                  editorPaneCompact ? "pb-2 shadow-md" : "pb-3 shadow-none max-lg:pb-2 sm:pb-4"
+                  "z-20 shrink-0 isolate box-border flex flex-col justify-start rounded-[1.35rem] border border-border/80 bg-card/95 px-3 [overflow-anchor:none] print:border-0 print:bg-transparent print:px-0 print:pb-2 print:shadow-none sm:px-4 lg:px-5 xl:px-6",
+                  editorPaneCompact ? "py-2 shadow-md" : "py-3 shadow-none max-lg:py-2 sm:py-4"
                 )}
                 style={{ transition: "box-shadow 180ms ease-out" }}
               >
