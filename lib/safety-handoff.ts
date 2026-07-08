@@ -1,4 +1,4 @@
-const SAFE_DOWNLOAD_PATH_PREFIXES = ["/raw/", "/x/", "/t/", "/api/convert/jobs/"];
+const SAFE_DOWNLOAD_PATH_PREFIXES = ["/raw/", "/x/", "/t/", "/file/", "/api/convert/jobs/"];
 
 function escapeHtml(value: string) {
   return value

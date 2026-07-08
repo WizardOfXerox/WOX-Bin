@@ -65,4 +65,29 @@ describe("public safety handoff routes", () => {
     expect(html).toContain("https://wox-bin.vercel.app/");
     expect(html).toContain("Download immediately");
   });
+
+  it("renders the download handoff for same-origin file attachment targets", async () => {
+    const { GET } = await downloadRoutePromise;
+    const response = await GET(
+      new Request(
+        "https://wox-bin.vercel.app/download-check?to=%2Ffile%2Fdemo123%2F0&label=image.png",
+        {
+          headers: {
+            referer: "https://evil.example/not-used"
+          }
+        }
+      )
+    );
+
+    const html = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Referrer-Policy")).toBe("no-referrer");
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(html).toContain("Download safety check");
+    expect(html).toContain("image.png");
+    expect(html).toContain("https://wox-bin.vercel.app/file/demo123/0");
+    expect(html).toContain("https://wox-bin.vercel.app/");
+    expect(html).toContain("Download immediately");
+  });
 });
