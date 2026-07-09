@@ -1046,6 +1046,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   const servicesItems = useMemo(() => [
     { href: "/app", icon: LayoutTemplate, labelKey: "nav.workspace" as const, color: "text-indigo-400" },
     { href: "/quick", icon: WandSparkles, labelKey: "nav.quickPaste" as const, color: "text-emerald-400" },
+    { href: "/file", icon: FileText, labelKey: "nav.fileShare" as const, color: "text-teal-400" },
     { href: "/clipboard", icon: ClipboardPaste, labelKey: "nav.clipboard" as const, color: "text-cyan-400" },
     { href: "/fragment", icon: Link2, labelKey: "nav.fragment" as const, color: "text-amber-400" },
     { href: "/bookmarkfs", icon: FolderTree, labelKey: "nav.bookmarkfs" as const, color: "text-violet-400" },
@@ -6309,6 +6310,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                         updatedAt: new Date().toISOString()
                       }))
                     }
+                    autoComplete="new-password"
                     placeholder="Optional paste password"
                     type="password"
                     value={selectedPaste.password || ""}

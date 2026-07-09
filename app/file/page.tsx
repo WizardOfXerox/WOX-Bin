@@ -402,6 +402,7 @@ export default function FileSharePage() {
                   <div className="space-y-2 rounded-[1.25rem] border border-border bg-muted/35 px-4 py-3">
                     <label className="block text-xs uppercase tracking-[0.24em] text-muted-foreground">Password lock</label>
                     <Input
+                      autoComplete="new-password"
                       onChange={(event) => setPassword(event.target.value)}
                       placeholder="Optional download code"
                       type="password"

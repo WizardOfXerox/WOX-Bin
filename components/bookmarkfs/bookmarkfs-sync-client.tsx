@@ -726,6 +726,7 @@ export function BookmarkFsSyncClient() {
               <label className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Vault passphrase</label>
               <div className="flex gap-2">
                 <Input
+                  autoComplete="new-password"
                   onChange={(event) => setPassphrase(event.target.value)}
                   placeholder="Only needed for encrypted vault files"
                   type="password"

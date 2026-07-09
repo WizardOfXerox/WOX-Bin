@@ -208,6 +208,7 @@ export function QuickPasteClient() {
               <div className="space-y-2 rounded-[1.25rem] border border-border bg-muted/35 px-4 py-3">
                 <label className="block text-xs uppercase tracking-[0.24em] text-muted-foreground">Optional password</label>
                 <Input
+                  autoComplete="new-password"
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="Protect this paste"
                   type="password"
