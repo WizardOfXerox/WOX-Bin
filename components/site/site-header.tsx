@@ -58,14 +58,14 @@ type Props = {
 function navItemClass(active: boolean) {
   return cn(
     "rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
-    active ? "bg-muted/95 text-foreground font-semibold" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+    active ? "bg-muted/80 text-foreground font-semibold" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
   );
 }
 
 function triggerClass(active: boolean) {
   return cn(
     "flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors group-hover:bg-muted/60 group-hover:text-foreground",
-    active ? "text-foreground bg-muted/40 font-semibold" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+    active ? "text-foreground bg-muted/80 font-semibold" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
   );
 }
 
@@ -196,7 +196,7 @@ export function SiteHeader({ className }: Props) {
 
   const desktopActions = (
     <>
-      <LanguageSwitcher compact />
+      <LanguageSwitcher compact variant="ghost" />
       <PwaInstallButton compact />
       {showLoadingSkeleton ? (
         <div aria-hidden className="h-9 w-28 animate-pulse rounded-full bg-muted/40" />

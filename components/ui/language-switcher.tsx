@@ -9,10 +9,12 @@ import { cn } from "@/lib/utils";
 
 export function LanguageSwitcher({
   className = "",
-  compact = false
+  compact = false,
+  variant = "outline"
 }: {
   className?: string;
   compact?: boolean;
+  variant?: "ghost" | "outline";
 }) {
   const { language, setLanguage, t } = useUiLanguage();
   const [open, setOpen] = useState(false);
@@ -59,16 +61,22 @@ export function LanguageSwitcher({
         aria-expanded={open}
         aria-haspopup="menu"
         className={cn(
-          "inline-flex items-center gap-2 rounded-full border border-border bg-background/70 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-background",
-          open ? "border-primary/35 bg-card text-foreground shadow-[0_16px_50px_rgba(0,0,0,0.25)]" : null
+          variant === "ghost"
+            ? "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground transition-all duration-200 ease-wox-out hover:bg-muted/60 hover:text-foreground cursor-pointer"
+            : "inline-flex items-center gap-2 rounded-full border border-border bg-background/70 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-background",
+          open
+            ? variant === "ghost"
+              ? "bg-muted/80 text-foreground"
+              : "border-primary/35 bg-card text-foreground shadow-[0_16px_50px_rgba(0,0,0,0.25)]"
+            : null
         )}
         onClick={() => setOpen((current) => !current)}
         type="button"
       >
-        <Languages className="h-4 w-4 shrink-0" />
+        <Languages className={cn("shrink-0", variant === "ghost" ? "h-3.5 w-3.5" : "h-4 w-4")} />
         {!compact ? <span className="hidden sm:inline">{t("common.language")}</span> : null}
         <span className="max-w-[7rem] truncate text-sm font-medium text-foreground">{languageLabel(language)}</span>
-        <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", open ? "rotate-180" : null)} />
+        <ChevronDown className={cn("shrink-0 transition-transform", variant === "ghost" ? "h-3 w-3" : "h-4 w-4", open ? "rotate-180" : null)} />
       </button>
 
       {open ? (

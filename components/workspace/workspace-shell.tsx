@@ -7298,7 +7298,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                   workspaceTone={workspaceTone}
                 />
                 <div className="hidden h-6 w-px bg-border/60 2xl:block" />
-                <LanguageSwitcher className="py-1.5" compact />
+                <LanguageSwitcher className="py-1.5" compact variant="ghost" />
                 <PwaInstallButton compact />
               </div>
             </div>

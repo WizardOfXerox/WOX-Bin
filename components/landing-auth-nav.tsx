@@ -163,7 +163,7 @@ export function LandingDesktopAuthNav({ initialSession = null }: Props) {
 
   return (
     <div className="hidden items-center gap-2 sm:gap-3 md:flex">
-      <LanguageSwitcher compact />
+      <LanguageSwitcher compact variant="ghost" />
 
       {/* Services Dropdown */}
       <div className="group relative">

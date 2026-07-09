@@ -75,7 +75,7 @@ export function SettingsNav({ plan, currentPath }: Props) {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <LanguageSwitcher compact />
+            <LanguageSwitcher compact variant="outline" />
             <Badge className={plan === "free" ? undefined : "border-amber-400/30 bg-amber-400/10 text-amber-100"}>
               {formatPlanName(plan)} plan
             </Badge>
