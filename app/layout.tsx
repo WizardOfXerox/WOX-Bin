@@ -7,6 +7,7 @@ import { AuthSessionProvider } from "@/components/providers/session-provider";
 import { PwaProvider } from "@/components/providers/pwa-provider";
 import { ThemeRootProvider } from "@/components/providers/theme-root-provider";
 import { UiLanguageProvider } from "@/components/providers/ui-language-provider";
+import { auth } from "@/auth";
 import { getHtmlLang, resolveUiLanguage, UI_LANGUAGE_COOKIE } from "@/lib/i18n";
 import {
   PWA_APP_NAME,
@@ -52,6 +53,7 @@ export default async function RootLayout({
   const showVercelTelemetry = process.env.VERCEL === "1";
   const cookieStore = await cookies();
   const initialLanguage = resolveUiLanguage(cookieStore.get(UI_LANGUAGE_COOKIE)?.value);
+  const session = await auth();
 
   return (
     <html
@@ -67,7 +69,7 @@ export default async function RootLayout({
         <UiLanguageProvider initialLanguage={initialLanguage}>
           <PwaProvider>
             <ThemeRootProvider>
-              <AuthSessionProvider session={null}>{children}</AuthSessionProvider>
+              <AuthSessionProvider session={session}>{children}</AuthSessionProvider>
             </ThemeRootProvider>
           </PwaProvider>
         </UiLanguageProvider>

@@ -110,8 +110,12 @@ export function PricingPage({ cards, links, signedIn }: Props) {
                 ) : null}
                 <div className="mt-6 space-y-3">
                   {plan.id === "free" ? (
-                    <Button asChild className="w-full" variant="outline">
-                      <Link href="/sign-up">Create free account</Link>
+                    <Button asChild={!signedIn} className="w-full" variant="outline" disabled={signedIn}>
+                      {signedIn ? (
+                        <span>Free plan active</span>
+                      ) : (
+                        <Link href="/sign-up">Create free account</Link>
+                      )}
                     </Button>
                   ) : null}
                   {plan.id === "pro" ? (
