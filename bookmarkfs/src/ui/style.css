@@ -3028,3 +3028,76 @@ body.ext-afterdark-view {
     flex-direction: column;
   }
 }
+
+/* Setup & Help Panel Styles */
+.ext-help-panel {
+  max-width: min(720px, 100%);
+  margin: 0 auto;
+  padding: 16px 24px 36px;
+  color: hsl(var(--x-fg));
+}
+
+.help-content h2 {
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin-bottom: 24px;
+  color: hsl(var(--x-fg));
+  border-bottom: 1px solid hsl(var(--x-border));
+  padding-bottom: 10px;
+}
+
+.help-section {
+  background: hsl(var(--x-surface2) / 0.35);
+  border: 1px solid hsl(var(--x-border));
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.help-section h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: hsl(var(--x-accent));
+}
+
+.help-section p {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: hsl(var(--x-muted));
+  margin-bottom: 14px;
+}
+
+.help-section ol, .help-section ul {
+  padding-left: 20px;
+  margin-bottom: 14px;
+}
+
+.help-section li {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: hsl(var(--x-muted));
+  margin-bottom: 8px;
+}
+
+.help-section code {
+  font-family: var(--x-font-mono);
+  font-size: 12px;
+  background: hsl(var(--x-surface2));
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid hsl(var(--x-border));
+  color: hsl(var(--x-fg));
+}
+
+.help-note {
+  margin-top: 14px;
+  padding: 12px;
+  border-left: 3px solid hsl(var(--x-accent));
+  background: hsl(var(--x-accent) / 0.05);
+  border-radius: 0 8px 8px 0;
+  font-style: italic;
+}
+

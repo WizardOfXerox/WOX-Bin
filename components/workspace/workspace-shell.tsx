@@ -1085,6 +1085,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -2813,6 +2814,61 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
     }
   }
 
+  function getLanguageExtension(lang: string) {
+    const l = (lang || "").trim().toLowerCase();
+    switch (l) {
+      case "javascript":
+      case "js":
+        return "js";
+      case "typescript":
+      case "ts":
+        return "ts";
+      case "python":
+      case "py":
+        return "py";
+      case "markdown":
+      case "md":
+        return "md";
+      case "html":
+        return "html";
+      case "css":
+        return "css";
+      case "json":
+        return "json";
+      case "rust":
+      case "rs":
+        return "rs";
+      case "go":
+        return "go";
+      case "c":
+        return "c";
+      case "cpp":
+        return "cpp";
+      case "java":
+        return "java";
+      default:
+        return "txt";
+    }
+  }
+
+  function exportToTxt() {
+    if (!selectedPaste) return;
+    const ext = getLanguageExtension(selectedPaste.language);
+    const filename = (selectedPaste.title?.trim() || "untitled").replace(/[^a-zA-Z0-9_\\-]/g, "_") + "." + ext;
+    const blob = new Blob([selectedPaste.content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setStatus(`Exported paste to ${filename}`);
+  }
+
+  function exportToPdf() {
+    window.print();
+  }
+
   async function handleSavePaste(opts?: { silent?: boolean }) {
     if (!selectedPaste || !snapshot.pastes.some((p) => p.id === selectedPaste.id)) {
       return;
@@ -2891,7 +2947,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
 
   // Omit `maybeAutosave` from deps: it is from useEffectEvent and must not be listed (React / eslint rule).
   useEffect(() => {
-    if (mode !== "account" || !selectedPaste || saving || !selectedPasteInWorkspace) {
+    if (!selectedPaste || saving || !selectedPasteInWorkspace) {
       return;
     }
     const fp = buildPasteFingerprint(selectedPaste);
@@ -2902,7 +2958,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
       void maybeAutosave();
     }, 2500);
     return () => window.clearTimeout(timer);
-  }, [mode, selectedPaste, saving, selectedPasteInWorkspace]);
+  }, [selectedPaste, saving, selectedPasteInWorkspace]);
 
   async function handleDeletePaste() {
     if (!selectedPaste) {
@@ -4717,13 +4773,13 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                               ? "Saved to Neon/Postgres through the account workspace."
                               : "Stored locally in IndexedDB until you choose to sync or export."}
                           </span>
-                          {mode === "account" && autosaveHint !== "idle" ? (
+                          {autosaveHint !== "idle" ? (
                             <span className="text-xs font-medium text-primary/90">
                               {autosaveHint === "pending" ? "Autosave…" : "Saved"}
                             </span>
                           ) : null}
                         </div>
-                      ) : mode === "account" && autosaveHint !== "idle" ? (
+                      ) : autosaveHint !== "idle" ? (
                         <p className="mt-0.5 text-[10px] font-medium text-primary/90 print:hidden">
                           {autosaveHint === "pending" ? "Autosave…" : "Saved"}
                         </p>
@@ -4758,6 +4814,49 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                         <Save className="h-4 w-4" />
                         {saving ? "Saving..." : "Save"}
                       </Button>
+                      <div className="relative inline-block">
+                        <Button
+                          className={phoneViewport ? "gap-1.5" : undefined}
+                          disabled={!selectedPaste}
+                          onClick={() => setExportDropdownOpen((o) => !o)}
+                          size={editorPaneCompact ? "sm" : "default"}
+                          type="button"
+                          variant="outline"
+                        >
+                          <Download className="h-4 w-4" />
+                          Export
+                        </Button>
+                        {exportDropdownOpen ? (
+                          <>
+                            <div
+                              className="fixed inset-0 z-40"
+                              onClick={() => setExportDropdownOpen(false)}
+                            />
+                            <div className="absolute right-0 mt-1.5 w-40 rounded-xl border border-border bg-card p-1 shadow-lg z-50">
+                              <button
+                                type="button"
+                                className="flex w-full items-center rounded-lg px-3 py-2 text-xs text-foreground hover:bg-muted/70 transition"
+                                onClick={() => {
+                                  setExportDropdownOpen(false);
+                                  exportToTxt();
+                                }}
+                              >
+                                Export to text
+                              </button>
+                              <button
+                                type="button"
+                                className="flex w-full items-center rounded-lg px-3 py-2 text-xs text-foreground hover:bg-muted/70 transition"
+                                onClick={() => {
+                                  setExportDropdownOpen(false);
+                                  exportToPdf();
+                                }}
+                              >
+                                Export to PDF
+                              </button>
+                            </div>
+                          </>
+                        ) : null}
+                      </div>
                       <Button
                         className={phoneViewport ? "gap-1.5" : undefined}
                         onClick={handleDuplicatePaste}
@@ -5560,6 +5659,17 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                                     >
                                       <FileText className="mr-2 h-4 w-4" />
                                       Copy filename
+                                    </ContextMenuItem>
+                                    <ContextMenuItem
+                                      onSelect={() => {
+                                        const anchor = document.createElement("a");
+                                        anchor.href = mediaSrc;
+                                        anchor.download = file.filename;
+                                        anchor.click();
+                                      }}
+                                    >
+                                      <Download className="mr-2 h-4 w-4" />
+                                      Download media
                                     </ContextMenuItem>
                                   </ContextMenuContent>
                                 </ContextMenu>
