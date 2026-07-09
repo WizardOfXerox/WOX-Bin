@@ -28,13 +28,14 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { accountLabelFromSession } from "@/lib/account-label";
 import { useUiLanguage } from "@/components/providers/ui-language-provider";
 import { cn } from "@/lib/utils";
+import type { TranslationKey } from "@/lib/i18n";
 
 type CategoryItem = {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   color: string;
-  labelKey: string;
-  descKey: string;
+  labelKey: TranslationKey;
+  descKey: TranslationKey;
 };
 
 type Props = {
