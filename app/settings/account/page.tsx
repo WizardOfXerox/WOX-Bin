@@ -72,7 +72,9 @@ export default async function AccountSettingsPage() {
     totpEnabled: totpStatus.enabled,
     totpEnabledAt: totpStatus.enabledAt?.toISOString() ?? null,
     totpLastUsedAt: totpStatus.lastUsedAt?.toISOString() ?? null,
-    avatarUploadEnabled
+    avatarUploadEnabled,
+    userId: session.user.id,
+    plan: session.user.plan
   };
 
   return (

@@ -1,15 +1,25 @@
 "use client";
 
+import Link from "next/link";
 import { signIn, signOut, useSession } from "next-auth/react";
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useState, useEffect, type ChangeEvent, type FormEvent, useCallback } from "react";
+import { Eye, EyeOff, Copy, KeyRound, Eraser, ExternalLink } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { useUiLanguage } from "@/components/providers/ui-language-provider";
 import { isExternalImageUrl } from "@/lib/avatar";
+import { formatDate } from "@/lib/utils";
+import type { AccountPlanSummary, PlanId } from "@/lib/plans";
+import {
+  clearPasteViewHistory,
+  readPasteViewHistory,
+  type PasteViewHistoryEntry
+} from "@/lib/paste-view-history";
 
 export type AccountProfileInitial = {
   email: string | null;
@@ -28,11 +38,83 @@ export type AccountProfileInitial = {
   totpEnabledAt: string | null;
   totpLastUsedAt: string | null;
   avatarUploadEnabled: boolean;
+  userId: string;
+  plan: PlanId;
 };
 
 type Props = {
   initial: AccountProfileInitial;
 };
+
+type ApiKeyRecord = {
+  id: string;
+  label: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+  token?: string | null;
+};
+
+type ApiKeyCreateResponse = {
+  key: ApiKeyRecord & {
+    token: string;
+  };
+  plan: AccountPlanSummary;
+};
+
+function apiKeyTokenStorageKey(userId: string) {
+  return `woxbin_key_tokens_${userId}`;
+}
+
+function readRememberedApiKeyTokens(userId: string | null | undefined): Record<string, string> {
+  if (typeof window === "undefined" || !userId) {
+    return {};
+  }
+  try {
+    const raw = window.localStorage.getItem(apiKeyTokenStorageKey(userId));
+    if (!raw) {
+      return {};
+    }
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries(parsed).filter(
+        (entry): entry is [string, string] =>
+          typeof entry[0] === "string" && typeof entry[1] === "string" && entry[1].length > 0
+      )
+    );
+  } catch {
+    return {};
+  }
+}
+
+function writeRememberedApiKeyTokens(userId: string | null | undefined, tokens: Record<string, string>) {
+  if (typeof window === "undefined" || !userId) {
+    return;
+  }
+  if (Object.keys(tokens).length === 0) {
+    window.localStorage.removeItem(apiKeyTokenStorageKey(userId));
+    return;
+  }
+  window.localStorage.setItem(apiKeyTokenStorageKey(userId), JSON.stringify(tokens));
+}
+
+function rememberApiKeyToken(userId: string | null | undefined, keyId: string, token: string) {
+  if (!userId || !keyId || !token) {
+    return;
+  }
+  writeRememberedApiKeyTokens(userId, {
+    ...readRememberedApiKeyTokens(userId),
+    [keyId]: token
+  });
+}
+
+function forgetRememberedApiKeyToken(userId: string | null | undefined, keyId: string) {
+  if (!userId || !keyId) {
+    return;
+  }
+  const next = { ...readRememberedApiKeyTokens(userId) };
+  delete next[keyId];
+  writeRememberedApiKeyTokens(userId, next);
+}
 
 export function AccountSettingsClient({ initial }: Props) {
   const { t } = useUiLanguage();
@@ -56,6 +138,142 @@ export function AccountSettingsClient({ initial }: Props) {
   });
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [apiKeys, setApiKeys] = useState<ApiKeyRecord[]>([]);
+  const [revealedApiKeyIds, setRevealedApiKeyIds] = useState<Set<string>>(() => new Set());
+  const [accountPlan, setAccountPlan] = useState<AccountPlanSummary | null>(null);
+  const [apiKeyLabel, setApiKeyLabel] = useState("CLI Upload");
+  const [apiKeyStatus, setApiKeyStatus] = useState<string | null>(null);
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
+  const [viewHistory, setViewHistory] = useState<PasteViewHistoryEntry[]>([]);
+  const [historyStatus, setHistoryStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    setViewHistory(readPasteViewHistory());
+
+    async function loadData() {
+      try {
+        const [keysResponse, workspaceResponse] = await Promise.all([
+          fetch("/api/workspace/keys", { cache: "no-store" }),
+          fetch("/api/workspace/pastes", { cache: "no-store" })
+        ]);
+
+        if (keysResponse.ok && workspaceResponse.ok) {
+          const keysData = (await keysResponse.json()) as { keys: ApiKeyRecord[] };
+          const workspaceData = (await workspaceResponse.json()) as { plan: AccountPlanSummary };
+          const rememberedApiKeyTokens = readRememberedApiKeyTokens(initial.userId);
+
+          setApiKeys(
+            keysData.keys.map((entry) => ({
+              ...entry,
+              token: rememberedApiKeyTokens[entry.id] ?? null
+            }))
+          );
+          setAccountPlan(workspaceData.plan);
+        }
+      } catch (err) {
+        console.error("Failed to load settings extra data:", err);
+      }
+    }
+    void loadData();
+  }, [initial.userId]);
+
+  const handleCreateApiKey = async () => {
+    setApiKeyError(null);
+    setApiKeyStatus(null);
+    try {
+      const response = await fetch("/api/workspace/keys", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          label: apiKeyLabel
+        })
+      });
+
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setApiKeyError(body?.error ?? "Could not create API key.");
+        return;
+      }
+
+      const body = (await response.json()) as ApiKeyCreateResponse;
+      const key = body.key;
+      rememberApiKeyToken(initial.userId, key.id, key.token);
+      setAccountPlan(body.plan);
+      setApiKeys((current) => [
+        {
+          id: key.id,
+          label: key.label,
+          createdAt: key.createdAt,
+          lastUsedAt: null,
+          token: key.token
+        },
+        ...current
+      ]);
+      setRevealedApiKeyIds((current) => new Set(current).add(key.id));
+      setApiKeyLabel("CLI Upload");
+      setApiKeyStatus("Created a new API key.");
+    } catch (err) {
+      setApiKeyError("Failed to create key.");
+    }
+  };
+
+  const handleRevokeApiKey = async (id: string) => {
+    setApiKeyError(null);
+    setApiKeyStatus(null);
+    try {
+      const response = await fetch(`/api/workspace/keys/${id}`, {
+        method: "DELETE"
+      });
+
+      if (!response.ok) {
+        setApiKeyError("Could not revoke the API key.");
+        return;
+      }
+
+      const body = (await response.json()) as { plan: AccountPlanSummary };
+      setAccountPlan(body.plan);
+      forgetRememberedApiKeyToken(initial.userId, id);
+      setRevealedApiKeyIds((current) => {
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
+      setApiKeys((current) => current.filter((entry) => entry.id !== id));
+      setApiKeyStatus("Revoked the selected API key.");
+    } catch (err) {
+      setApiKeyError("Failed to revoke key.");
+    }
+  };
+
+  const toggleApiKeyReveal = (id: string) => {
+    setRevealedApiKeyIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleCopyApiKeyToken = useCallback((token: string) => {
+    void navigator.clipboard.writeText(token);
+    setApiKeyStatus("Copied plain token to clipboard.");
+  }, []);
+
+  const handleClearHistory = () => {
+    clearPasteViewHistory();
+    setViewHistory([]);
+    setHistoryStatus("Cleared local paste history.");
+  };
+
+  const formatPlanNameLocal = (planName: string) => {
+    return planName.charAt(0).toUpperCase() + planName.slice(1);
+  };
   const [loading, setLoading] = useState(false);
 
   const [resendMessage, setResendMessage] = useState<string | null>(null);
@@ -771,6 +989,165 @@ export function AccountSettingsClient({ initial }: Props) {
               {loading ? "Saving…" : "Save profile"}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-5 pt-6">
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">History</p>
+            <h2 className="mt-2 text-xl font-semibold">Recently viewed</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Shared pastes you open are stored in this browser, so signed-in and anonymous visits can pick up where
+              they left off.
+            </p>
+          </div>
+          {viewHistory.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No viewed pastes yet. Open any shared paste and it will appear here.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {viewHistory.slice(0, 8).map((entry) => (
+                <div key={entry.slug} className="rounded-[1rem] border border-border bg-muted/40 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">{entry.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Viewed {formatDate(entry.viewedAt)}
+                        {entry.authorLabel ? ` • ${entry.authorLabel}` : ""}
+                      </p>
+                    </div>
+                    <Badge className="shrink-0 border-border bg-transparent text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                      {entry.secretMode ? "Secret" : entry.visibility}
+                    </Badge>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button asChild size="sm" type="button" variant="outline">
+                      <Link href={entry.path}>
+                        <ExternalLink className="h-4 w-4" />
+                        Open paste
+                      </Link>
+                    </Button>
+                    <span className="inline-flex items-center rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground">
+                      {entry.language || "none"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {viewHistory.length > 0 ? (
+            <Button onClick={handleClearHistory} type="button" variant="ghost">
+              <Eraser className="h-4 w-4" />
+              Clear local history
+            </Button>
+          ) : null}
+          {historyStatus ? <p className="text-xs text-emerald-600 dark:text-emerald-400">{historyStatus}</p> : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-5 pt-6">
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Developer</p>
+            <h2 className="mt-2 text-xl font-semibold">API keys</h2>
+            {accountPlan ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                {accountPlan.usage.apiKeys.toLocaleString()} of {accountPlan.limits.apiKeys.toLocaleString()} keys in use
+                (quota: {formatPlanNameLocal(accountPlan.quotaPlan)}). You can keep multiple keys active at once within
+                your plan limit.
+              </p>
+            ) : null}
+          </div>
+          <div className="space-y-3">
+            <Input
+              onChange={(event) => setApiKeyLabel(event.target.value)}
+              placeholder="Key label"
+              value={apiKeyLabel}
+            />
+            <Button
+              disabled={Boolean(accountPlan && accountPlan.usage.apiKeys >= accountPlan.limits.apiKeys)}
+              onClick={() => void handleCreateApiKey()}
+              type="button"
+              variant="outline"
+            >
+              <KeyRound className="h-4 w-4" />
+              Create API key
+            </Button>
+          </div>
+          {apiKeyError ? <p className="text-sm text-destructive">{apiKeyError}</p> : null}
+          {apiKeyStatus ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{apiKeyStatus}</p> : null}
+          <div className="space-y-3">
+            {apiKeys.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No API keys yet.</p>
+            ) : (
+              apiKeys.map((key) => (
+                <div key={key.id} className="rounded-[1rem] border border-border bg-muted/40 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium text-foreground">{key.label}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Created {formatDate(key.createdAt)}
+                        {key.lastUsedAt ? ` • Last used ${formatDate(key.lastUsedAt)}` : ""}
+                      </p>
+                    </div>
+                    <Button onClick={() => void handleRevokeApiKey(key.id)} size="sm" type="button" variant="ghost">
+                      Revoke
+                    </Button>
+                  </div>
+                  <div className="mt-3 rounded-[1rem] border border-border/80 bg-background/55 p-3">
+                    {key.token ? (
+                      <>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-medium text-foreground">Stored on this browser</p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                              onClick={() => toggleApiKeyReveal(key.id)}
+                              size="sm"
+                              type="button"
+                              variant="ghost"
+                            >
+                              {revealedApiKeyIds.has(key.id) ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                              {revealedApiKeyIds.has(key.id) ? "Hide" : "Show"}
+                            </Button>
+                            <Button
+                              onClick={() => handleCopyApiKeyToken(key.token ?? "")}
+                              size="sm"
+                              type="button"
+                              variant="secondary"
+                            >
+                              <Copy className="h-4 w-4" />
+                              Copy
+                            </Button>
+                          </div>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          This browser has a saved copy of the plaintext token for this key.
+                        </p>
+                        <div className="mt-3 min-w-0 break-all rounded-xl border border-border bg-muted/60 px-3 py-2 font-mono text-xs text-foreground">
+                          {revealedApiKeyIds.has(key.id) ? key.token : "\u2022".repeat(24)}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium text-foreground">Token unavailable here</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          WOX-Bin stores API keys as hashes on the server, so this browser cannot reveal older
+                          plaintext tokens it never created or saved. Create a replacement key if you need to copy
+                          it again.
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </CardContent>
       </Card>
 
