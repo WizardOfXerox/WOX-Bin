@@ -7550,16 +7550,6 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
           ) : null}
         </div>
 
-        <WorkspaceTutorial
-          onClose={closeTutorial}
-          onStepIndexChange={setTutorialStepIndex}
-          onTourChange={changeTutorialTour}
-          open={tutorialOpen}
-          stepIndex={tutorialStepIndex}
-          tourId={activeTutorialTour?.id ?? tutorialTourId}
-          tours={tutorialTours}
-        />
-
         <Dialog onOpenChange={setMobileLibraryOpen} open={phoneViewport && mobileLibraryOpen}>
           <DialogContent className="flex h-[min(92dvh,56rem)] w-[calc(100vw-1rem)] max-w-none flex-col overflow-hidden rounded-[1.25rem] p-0 sm:max-w-xl">
             <DialogHeader className="sr-only">
@@ -8307,6 +8297,16 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
           </DialogContent>
         </Dialog>
       </div>
+
+      <WorkspaceTutorial
+        onClose={closeTutorial}
+        onStepIndexChange={setTutorialStepIndex}
+        onTourChange={changeTutorialTour}
+        open={tutorialOpen}
+        stepIndex={tutorialStepIndex}
+        tourId={activeTutorialTour?.id ?? tutorialTourId}
+        tours={tutorialTours}
+      />
     </main>
   );
 }

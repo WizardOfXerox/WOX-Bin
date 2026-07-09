@@ -205,7 +205,7 @@ export function SiteHeader({ className }: Props) {
               <span>{accountLabelFromSession(session)}</span>
             </Link>
           </Button>
-          <Button onClick={() => void signOut({ callbackUrl: "/" })} type="button" variant="outline">
+          <Button className="whitespace-nowrap" onClick={() => void signOut({ callbackUrl: "/" })} type="button" variant="outline">
             <LogOut className="h-4 w-4" />
             {t("nav.signOut")}
           </Button>
@@ -215,7 +215,7 @@ export function SiteHeader({ className }: Props) {
           <Link href="/sign-in">{t("nav.signIn")}</Link>
         </Button>
       )}
-      <Button asChild>
+      <Button asChild className="whitespace-nowrap">
         <Link href="/app">
           {t("nav.openWorkspace")}
           <ArrowRight className="h-4 w-4" />
@@ -229,7 +229,7 @@ export function SiteHeader({ className }: Props) {
       <SiteAnnouncementBar />
       <div className="flex w-full items-center justify-between gap-4">
         {/* Left Side: Brand Logo + Desktop Nav */}
-        <div className="flex items-center gap-4 lg:gap-6">
+        <div className="flex min-w-0 items-center gap-4 lg:gap-6">
           <Link className="shrink-0 text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground hover:text-foreground transition-colors" href="/">
             WOX-Bin
           </Link>
@@ -349,7 +349,7 @@ export function SiteHeader({ className }: Props) {
         </div>
 
         {/* Right Side: Desktop Actions & Mobile Menu trigger */}
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3">
           <div className="hidden items-center gap-2 xl:flex">{desktopActions}</div>
 
           <Dialog>
