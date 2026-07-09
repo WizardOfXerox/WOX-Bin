@@ -276,19 +276,15 @@ export async function mountAfterdarkSurface(rootEl) {
 
   rootEl.innerHTML = `
     <div class="afterdark-shell${EMBEDDED ? " afterdark-shell--embedded" : ""}">
-      <header class="afterdark-hero">
-        <div class="afterdark-hero__copy">
-          <p class="afterdark-hero__eyebrow">${EMBEDDED ? "Injected takeover mode" : "Extension-only mode"}</p>
-          <h1>WOX-Bin Afterdark</h1>
-          <p class="afterdark-hero__text">
-            ${
-              EMBEDDED
-                ? "The extension is replacing the current WOX-Bin page shell with an extension-owned privacy desk while keeping your selected profile, local BookmarkFS vault, cached hosted data, and casefiles connected."
-                : "A private extension-owned workspace for quick publish, local casefiles, BookmarkFS vault handoff, cached hosted references, and the main WOX-Bin routes. This surface lives in the extension, not in the public app."
-            }
-          </p>
+      <header class="afterdark-header">
+        <div class="afterdark-header__brand">
+          <span class="afterdark-header__logo">WOX-Bin</span>
+          <span class="afterdark-header__badge">${EMBEDDED ? "Afterdark Takeover" : "Afterdark Companion"}</span>
         </div>
-        <div class="afterdark-hero__actions">
+        <div class="afterdark-header__center">
+          <section class="afterdark-stats" id="afterdark-stats"></section>
+        </div>
+        <div class="afterdark-header__actions">
           <button type="button" class="afterdark-btn afterdark-btn--primary" id="afterdark-open-app">Open workspace</button>
           <button type="button" class="afterdark-btn afterdark-btn--secondary" id="afterdark-open-sync">Open sync</button>
           ${
@@ -299,10 +295,10 @@ export async function mountAfterdarkSurface(rootEl) {
         </div>
       </header>
 
-      <section class="afterdark-stats" id="afterdark-stats"></section>
-
       <div class="afterdark-layout">
+        <!-- Left Sidebar: Library & Navigation -->
         <aside class="afterdark-sidebar">
+          <!-- Profiles -->
           <section class="afterdark-card">
             <div class="afterdark-card__head">
               <div>
@@ -311,13 +307,6 @@ export async function mountAfterdarkSurface(rootEl) {
               </div>
             </div>
             <div id="afterdark-profile-list" class="afterdark-profile-list"></div>
-            <div class="afterdark-setting">
-              <label class="afterdark-toggle">
-                <input type="checkbox" id="afterdark-page-launcher" />
-                <span>Show Afterdark launcher on WOX-Bin pages</span>
-              </label>
-              <p class="afterdark-hint">Adds a small floating launcher on supported WOX-Bin pages when the extension is installed.</p>
-            </div>
             <div id="afterdark-unlock-wrap" class="afterdark-unlock" hidden>
               <label for="afterdark-passphrase">Profile passphrase</label>
               <input type="password" id="afterdark-passphrase" class="afterdark-input" placeholder="Unlock selected profile" />
@@ -325,6 +314,7 @@ export async function mountAfterdarkSurface(rootEl) {
             </div>
           </section>
 
+          <!-- Routes / Navigation -->
           <section class="afterdark-card">
             <div class="afterdark-card__head">
               <div>
@@ -335,16 +325,17 @@ export async function mountAfterdarkSurface(rootEl) {
             <div class="afterdark-route-grid" id="afterdark-route-grid"></div>
           </section>
 
+          <!-- Casefiles -->
           <section class="afterdark-card">
             <div class="afterdark-card__head">
               <div>
                 <p class="afterdark-card__eyebrow">Registry</p>
                 <h2>Casefiles</h2>
-              </div>
-              <div class="afterdark-card__actions">
-                <button type="button" class="afterdark-btn afterdark-btn--secondary afterdark-btn--tiny" id="afterdark-new-case">New</button>
-                <button type="button" class="afterdark-btn afterdark-btn--ghost afterdark-btn--tiny" id="afterdark-import-case">Import</button>
-                <button type="button" class="afterdark-btn afterdark-btn--ghost afterdark-btn--tiny" id="afterdark-export-cases">Export all</button>
+                <div class="afterdark-card__actions">
+                  <button type="button" class="afterdark-btn afterdark-btn--secondary afterdark-btn--tiny" id="afterdark-new-case">New</button>
+                  <button type="button" class="afterdark-btn afterdark-btn--ghost afterdark-btn--tiny" id="afterdark-import-case">Import</button>
+                  <button type="button" class="afterdark-btn afterdark-btn--ghost afterdark-btn--tiny" id="afterdark-export-cases">Export all</button>
+                </div>
               </div>
             </div>
             <label class="afterdark-field">
@@ -356,7 +347,9 @@ export async function mountAfterdarkSurface(rootEl) {
           </section>
         </aside>
 
+        <!-- Center Column (Editor & Composer) -->
         <main class="afterdark-main">
+          <!-- Quick Compose -->
           <section class="afterdark-card">
             <div class="afterdark-card__head">
               <div>
@@ -384,6 +377,7 @@ export async function mountAfterdarkSurface(rootEl) {
             </div>
           </section>
 
+          <!-- Casefile Editor -->
           <section class="afterdark-card">
             <div class="afterdark-card__head">
               <div>
@@ -477,6 +471,7 @@ export async function mountAfterdarkSurface(rootEl) {
             </div>
           </section>
 
+          <!-- Timeline -->
           <section class="afterdark-card">
             <div class="afterdark-card__head">
               <div>
@@ -495,6 +490,7 @@ export async function mountAfterdarkSurface(rootEl) {
             <div class="afterdark-timeline" id="afterdark-timeline"></div>
           </section>
 
+          <!-- Recent Hosted Pastes -->
           <section class="afterdark-card">
             <div class="afterdark-card__head">
               <div>
@@ -507,7 +503,26 @@ export async function mountAfterdarkSurface(rootEl) {
           </section>
         </main>
 
+        <!-- Right Sidebar: Vault & References -->
         <aside class="afterdark-rail">
+          <!-- Launcher Settings -->
+          <section class="afterdark-card">
+            <div class="afterdark-card__head">
+              <div>
+                <p class="afterdark-card__eyebrow">Launcher</p>
+                <h2>Settings</h2>
+              </div>
+            </div>
+            <div class="afterdark-setting" style="margin-top:0; padding-top:0; border-top:0;">
+              <label class="afterdark-toggle">
+                <input type="checkbox" id="afterdark-page-launcher" />
+                <span>Show Afterdark launcher</span>
+              </label>
+              <p class="afterdark-hint">Adds a small floating launcher on supported WOX-Bin pages when the extension is installed.</p>
+            </div>
+          </section>
+
+          <!-- Evidence -->
           <section class="afterdark-card">
             <div class="afterdark-card__head">
               <div>
@@ -518,6 +533,7 @@ export async function mountAfterdarkSurface(rootEl) {
             <div id="afterdark-evidence-list" class="afterdark-list"></div>
           </section>
 
+          <!-- Vault -->
           <section class="afterdark-card">
             <div class="afterdark-card__head">
               <div>
@@ -529,6 +545,7 @@ export async function mountAfterdarkSurface(rootEl) {
             <div id="afterdark-vault-list" class="afterdark-list"></div>
           </section>
 
+          <!-- Offline cache -->
           <section class="afterdark-card">
             <div class="afterdark-card__head">
               <div>
