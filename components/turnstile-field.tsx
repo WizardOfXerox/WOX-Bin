@@ -134,24 +134,28 @@ export function TurnstileField({ siteKey }: Props) {
     const handlePageShow = () => resetWidget();
 
     async function mountWidget() {
-      await ensureTurnstileScript();
-      if (cancelled || !widgetRef.current || !window.turnstile) {
-        return;
+      try {
+        await ensureTurnstileScript();
+        if (cancelled || !widgetRef.current || !window.turnstile) {
+          return;
+        }
+
+        widgetRef.current.innerHTML = "";
+        const widgetId = window.turnstile.render(widgetRef.current, {
+          sitekey: resolvedSiteKey,
+          theme: "auto",
+          size: "normal",
+          callback: (nextToken) => setToken(nextToken),
+          "expired-callback": () => setToken(""),
+          "timeout-callback": () => setToken(""),
+          "error-callback": () => setToken("")
+        });
+
+        widgetIdRef.current = widgetId;
+        widgetRef.current.dataset.turnstileWidgetId = widgetId;
+      } catch (err) {
+        console.warn("Turnstile failed to load:", err);
       }
-
-      widgetRef.current.innerHTML = "";
-      const widgetId = window.turnstile.render(widgetRef.current, {
-        sitekey: resolvedSiteKey,
-        theme: "auto",
-        size: "normal",
-        callback: (nextToken) => setToken(nextToken),
-        "expired-callback": () => setToken(""),
-        "timeout-callback": () => setToken(""),
-        "error-callback": () => setToken("")
-      });
-
-      widgetIdRef.current = widgetId;
-      widgetRef.current.dataset.turnstileWidgetId = widgetId;
     }
 
     void mountWidget();

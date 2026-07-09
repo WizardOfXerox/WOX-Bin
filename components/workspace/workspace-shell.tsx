@@ -4438,14 +4438,14 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                       <ContextMenuTrigger asChild>
                         <div
                           className={cn(
-                            "transition",
+                            "transition-all duration-300 ease-in-out",
                             libraryViewMode === "archive"
                               ? selectedPaste?.id === paste.id
-                                ? "flex items-stretch gap-0 rounded-lg border border-primary/50 bg-primary/10"
-                                : "flex items-stretch gap-0 rounded-lg border border-border/70 bg-card/45 hover:bg-muted/45"
+                                ? "flex items-stretch gap-0 rounded-lg border border-primary/70 bg-gradient-to-r from-primary/12 to-accent/5 shadow-[0_0_12px_rgba(51,212,255,0.06)]"
+                                : "flex items-stretch gap-0 rounded-lg border border-border/70 bg-card/45 hover:bg-muted/45 hover:-translate-y-0.5 hover:shadow-sm"
                               : selectedPaste?.id === paste.id
-                                ? "flex gap-2 rounded-[1.2rem] border border-primary/50 bg-primary/10 p-3"
-                                : "flex gap-2 rounded-[1.2rem] border border-border bg-muted/40 p-3 hover:bg-muted/60"
+                                ? "flex gap-2 rounded-[1.2rem] border border-primary/70 bg-gradient-to-r from-primary/15 to-accent/5 p-3 shadow-[0_0_18px_rgba(51,212,255,0.12)] scale-[1.01]"
+                                : "flex gap-2 rounded-[1.2rem] border border-border bg-muted/40 p-3 hover:bg-muted/60 hover:-translate-y-0.5 hover:shadow-sm"
                           )}
                         >
                           {!sidebarShowsPublicFeed ? (
@@ -4736,7 +4736,10 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
     return (
       <Card
         className={cn(
-          "flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-[1.75rem] print:h-auto print:min-h-0 print:overflow-visible print:border-0 print:shadow-none",
+          "flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-[1.75rem] print:h-auto print:min-h-0 print:overflow-visible print:border-0 print:shadow-none transition-all duration-500",
+          selectedPaste
+            ? "border-primary/25 bg-card/95 shadow-[0_12px_44px_rgba(59,130,246,0.08)] dark:shadow-[0_18px_48px_rgba(59,130,246,0.14)]"
+            : "",
           !selectedPaste && "print:hidden"
         )}
       >
@@ -4750,7 +4753,11 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden print:overflow-visible">
               <div
                 className={cn(
-                  "z-20 shrink-0 isolate box-border flex flex-col justify-start rounded-[1.35rem] border border-border/80 bg-card/95 px-3 [overflow-anchor:none] print:border-0 print:bg-transparent print:px-0 print:pb-2 print:shadow-none sm:px-4 lg:px-5 xl:px-6",
+                  "z-20 shrink-0 isolate box-border flex flex-col justify-start rounded-[1.35rem] border px-3 [overflow-anchor:none] print:border-0 print:bg-transparent print:px-0 print:pb-2 print:shadow-none sm:px-4 lg:px-5 xl:px-6 transition-all duration-500",
+                  workspaceTone === "default" && "border-border/70 bg-gradient-to-b from-card/95 to-muted/20 backdrop-blur-md",
+                  workspaceTone === "deep" && "border-blue-200/60 bg-gradient-to-b from-blue-50/40 to-card/95 dark:border-blue-500/15 dark:from-blue-950/40 dark:to-card/95 backdrop-blur-md shadow-[0_4px_20px_rgba(59,130,246,0.03)] dark:shadow-[0_4px_20px_rgba(59,130,246,0.02)]",
+                  workspaceTone === "warm" && "border-rose-200/60 bg-gradient-to-b from-rose-50/40 to-card/95 dark:border-rose-500/15 dark:from-rose-950/40 dark:to-card/95 backdrop-blur-md shadow-[0_4px_20px_rgba(220,38,38,0.03)] dark:shadow-[0_4px_20px_rgba(220,38,38,0.02)]",
+                  workspaceTone === "forest" && "border-emerald-200/60 bg-gradient-to-b from-emerald-50/40 to-card/95 dark:border-emerald-500/15 dark:from-emerald-950/40 dark:to-card/95 backdrop-blur-md shadow-[0_4px_20px_rgba(16,185,129,0.03)] dark:shadow-[0_4px_20px_rgba(16,185,129,0.02)]",
                   editorPaneCompact ? "py-2 shadow-md" : "py-3 shadow-none max-lg:py-2 sm:py-4"
                 )}
                 style={{ transition: "box-shadow 180ms ease-out" }}
@@ -5254,7 +5261,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                     <ContextMenu>
                       <ContextMenuTrigger asChild>
                         <div
-                          className="min-h-0 min-w-0 outline-none print:h-auto print:min-h-0 [&:focus]:outline-none"
+                          className="min-h-0 min-w-0 outline-none print:h-auto print:min-h-0 [&:focus]:outline-none rounded-2xl border border-border/60 bg-muted/10 p-2.5 shadow-inner focus-within:border-primary/40 focus-within:shadow-[0_0_20px_rgba(51,212,255,0.06)] transition-all duration-300"
                           data-tutorial="editor-main"
                         >
                           <PrismOverlayEditor
@@ -6613,7 +6620,15 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
       )}
     >
       <div className="flex min-h-0 w-full flex-1 flex-col gap-2 lg:gap-4" style={workspaceViewportStyle}>
-        <header className="glass-panel z-40 shrink-0 border-b border-border px-3 py-2 print:hidden sm:px-4 lg:px-5">
+        <header
+          className={cn(
+            "rounded-[1.5rem] border z-40 shrink-0 px-3 py-2 print:hidden sm:px-4 lg:px-5 transition-all duration-500",
+            workspaceTone === "default" && "border-border bg-card/97 shadow-[0_18px_44px_rgba(0,0,0,0.08)]",
+            workspaceTone === "deep" && "border-blue-200/60 bg-white/75 shadow-[0_4px_30px_rgba(59,130,246,0.04)] dark:border-blue-500/15 dark:bg-[#030712]/80 dark:shadow-[0_4px_30px_rgba(59,130,246,0.03)] backdrop-blur-md",
+            workspaceTone === "warm" && "border-rose-200/60 bg-white/75 shadow-[0_4px_30px_rgba(220,38,38,0.04)] dark:border-rose-500/15 dark:bg-[#080305]/80 dark:shadow-[0_4px_30px_rgba(220,38,38,0.03)] backdrop-blur-md",
+            workspaceTone === "forest" && "border-emerald-200/60 bg-white/75 shadow-[0_4px_30px_rgba(16,185,129,0.04)] dark:border-emerald-500/15 dark:bg-[#020704]/80 dark:shadow-[0_4px_30px_rgba(16,185,129,0.03)] backdrop-blur-md"
+          )}
+        >
           <div className="flex items-center justify-between gap-2 md:hidden">
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
               <Link
