@@ -46,6 +46,14 @@ export const PRIVACY_TOOLS_COPY: Record<UiLanguage, PrivacyToolsCopy> = {
       "/noref": {
         title: "NoRef",
         description: "Generate referrer-hiding outbound links using WOX-Bin's built-in privacy redirect."
+      },
+      "/secret": {
+        title: "Secret link",
+        description: "Create client-side encrypted secret links with sender-side revoke controls."
+      },
+      "/vault": {
+        title: "File vault",
+        description: "Upload client-side encrypted files and share them with fragment-key vault links."
       }
     }
   },
@@ -82,6 +90,14 @@ export const PRIVACY_TOOLS_COPY: Record<UiLanguage, PrivacyToolsCopy> = {
       "/noref": {
         title: "NoRef",
         description: "Gumawa ng outbound links na nagtatago ng referrer gamit ang built-in privacy redirect ng WOX-Bin."
+      },
+      "/secret": {
+        title: "Secret link",
+        description: "Gumawa ng client-side encrypted secret links na may sender-side revoke controls."
+      },
+      "/vault": {
+        title: "File vault",
+        description: "Mag-upload ng client-side encrypted files at ibahagi ang mga ito gamit ang fragment-key vault links."
       }
     }
   },
@@ -118,6 +134,14 @@ export const PRIVACY_TOOLS_COPY: Record<UiLanguage, PrivacyToolsCopy> = {
       "/noref": {
         title: "NoRef",
         description: "WOX-Bin 内蔵の privacy redirect を使って参照元を隠す外部リンクを生成します。"
+      },
+      "/secret": {
+        title: "Secret link",
+        description: "送信者側の取り消しコントロールを備えたクライアント側暗号化のシークレットリンクを作成します。"
+      },
+      "/vault": {
+        title: "File vault",
+        description: "クライアント側で暗号化されたファイルをアップロードし、fragment-key の vault リンクで共有します。"
       }
     }
   },
@@ -154,6 +178,14 @@ export const PRIVACY_TOOLS_COPY: Record<UiLanguage, PrivacyToolsCopy> = {
       "/noref": {
         title: "NoRef",
         description: "Genera enlaces salientes que ocultan el referrer usando el privacy redirect integrado de WOX-Bin."
+      },
+      "/secret": {
+        title: "Secret link",
+        description: "Crea enlaces secretos cifrados del lado del cliente con controles de revocación por parte del remitente."
+      },
+      "/vault": {
+        title: "File vault",
+        description: "Sube archivos cifrados del lado del cliente y compártelos con enlaces de bóveda con fragment-key."
       }
     }
   }

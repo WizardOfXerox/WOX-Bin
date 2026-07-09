@@ -1,11 +1,23 @@
 import Link from "next/link";
-import { ArrowRight, Link as LinkIcon, Link2, MessageCircleMore, ScanSearch, ShieldCheck, ShieldEllipsis, Vote } from "lucide-react";
+import { ArrowRight, Link as LinkIcon, Link2, MessageCircleMore, ScanSearch, ShieldCheck, ShieldEllipsis, Vote, KeyRound } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import type { UiLanguage } from "@/lib/i18n";
 import { PRIVACY_TOOLS_COPY } from "@/lib/privacy-tools-copy";
 
 const TOOLS = [
+  {
+    href: "/secret",
+    title: "Secret link",
+    description: "Create client-side encrypted secret links with sender-side revoke controls.",
+    icon: KeyRound
+  },
+  {
+    href: "/vault",
+    title: "File vault",
+    description: "Upload client-side encrypted files and share them with fragment-key vault links.",
+    icon: ShieldCheck
+  },
   {
     href: "/snapshot",
     title: "Snapshot",

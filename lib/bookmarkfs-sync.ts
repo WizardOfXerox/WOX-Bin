@@ -88,20 +88,32 @@ export function inferVisibleVaultEntries(entries: BookmarkFsVaultEntry[], curren
     if (!rest) {
       continue;
     }
-    const slash = rest.indexOf("/");
-    if (slash >= 0) {
-      const folder = rest.slice(0, slash);
-      if (!needle || folder.toLowerCase().includes(needle)) {
-        folders.add(folder);
+
+    if (needle) {
+      // If there is a search query, search recursively under the current path prefix
+      if (
+        entry.displayName.toLowerCase().includes(needle) ||
+        entry.fullName.toLowerCase().includes(needle)
+      ) {
+        files.push(entry);
       }
-      continue;
-    }
-    if (
-      !needle ||
-      entry.displayName.toLowerCase().includes(needle) ||
-      entry.fullName.toLowerCase().includes(needle)
-    ) {
-      files.push(entry);
+      // Also include matching direct child folders
+      const slash = rest.indexOf("/");
+      if (slash >= 0) {
+        const folder = rest.slice(0, slash);
+        if (folder.toLowerCase().includes(needle)) {
+          folders.add(folder);
+        }
+      }
+    } else {
+      // No search query: standard single-level directory browsing
+      const slash = rest.indexOf("/");
+      if (slash >= 0) {
+        const folder = rest.slice(0, slash);
+        folders.add(folder);
+      } else {
+        files.push(entry);
+      }
     }
   }
 

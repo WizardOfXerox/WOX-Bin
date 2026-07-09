@@ -63,7 +63,14 @@ import {
   WandSparkles,
   X,
   ZoomIn,
-  ZoomOut
+  ZoomOut,
+  ChevronDown,
+  Home,
+  Radio,
+  Archive,
+  HelpCircle,
+  History,
+  LifeBuoy
 } from "lucide-react";
 
 import { PasteLineageBanner } from "@/components/paste-lineage-banner";
@@ -246,6 +253,15 @@ function isShortcutConsumingTarget(target: EventTarget | null) {
 function workspaceHeaderNavClass(active: boolean) {
   return cn(
     "rounded-md px-1.5 py-1 text-[11px] transition-all duration-200 ease-wox-out sm:px-2 sm:text-[13px]",
+    active
+      ? "bg-muted/90 font-medium text-foreground"
+      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground motion-safe:hover:translate-y-px"
+  );
+}
+
+function workspaceTriggerClass(active: boolean) {
+  return cn(
+    "flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-medium transition-all duration-200 ease-wox-out sm:px-2 sm:text-[13px] cursor-pointer group relative",
     active
       ? "bg-muted/90 font-medium text-foreground"
       : "text-muted-foreground hover:bg-muted/60 hover:text-foreground motion-safe:hover:translate-y-px"
@@ -1027,6 +1043,39 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   const pathname = usePathname();
   const router = useRouter();
   const { language, t } = useUiLanguage();
+  const servicesItems = useMemo(() => [
+    { href: "/app", icon: LayoutTemplate, labelKey: "nav.workspace" as const, color: "text-indigo-400" },
+    { href: "/quick", icon: WandSparkles, labelKey: "nav.quickPaste" as const, color: "text-emerald-400" },
+    { href: "/clipboard", icon: ClipboardPaste, labelKey: "nav.clipboard" as const, color: "text-cyan-400" },
+    { href: "/fragment", icon: Link2, labelKey: "nav.fragment" as const, color: "text-amber-400" },
+    { href: "/bookmarkfs", icon: FolderTree, labelKey: "nav.bookmarkfs" as const, color: "text-violet-400" },
+    { href: "/privacy-tools", icon: Shield, labelKey: "nav.privacy" as const, color: "text-rose-400" }
+  ], []);
+
+  const exploreItems = useMemo(() => [
+    { href: "/feed", icon: Radio, labelKey: "nav.feed" as const, color: "text-sky-400" },
+    { href: "/archive", icon: Archive, labelKey: "nav.archive" as const, color: "text-yellow-400" }
+  ], []);
+
+  const resourcesItems = useMemo(() => [
+    { href: "/doc", icon: FileText, labelKey: "nav.docs" as const, color: "text-teal-400" },
+    { href: "/changelog", icon: History, labelKey: "nav.changelog" as const, color: "text-pink-400" },
+    { href: "/help", icon: HelpCircle, labelKey: "nav.help" as const, color: "text-purple-400" },
+    { href: "/support", icon: LifeBuoy, labelKey: "nav.support" as const, color: "text-orange-400" }
+  ], []);
+
+  const isServicesActive = useMemo(() => servicesItems.some(
+    (item) => pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href))
+  ), [pathname, servicesItems]);
+
+  const isExploreActive = useMemo(() => exploreItems.some(
+    (item) => pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href))
+  ), [pathname, exploreItems]);
+
+  const isResourcesActive = useMemo(() => resourcesItems.some(
+    (item) => pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href))
+  ), [pathname, resourcesItems]);
+
   const workspaceCopy = WORKSPACE_UI_COPY[language];
   const [mode, setMode] = useState<WorkspaceMode>(sessionUser ? "account" : "local");
   const [snapshot, setSnapshot] = useState<WorkspaceSnapshot>({
@@ -6618,61 +6667,103 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
           </div>
 
           <div
-            className={cn("border-border pb-1 pt-2 md:hidden", workspaceMobileMenuOpen ? "block border-t" : "hidden")}
+            className={cn("border-border pb-3 pt-2 md:hidden", workspaceMobileMenuOpen ? "block border-t" : "hidden")}
             id="wox-workspace-mobile-nav"
           >
-            <nav aria-label="Site" className="flex flex-col gap-0.5">
-              <Link
-                className={workspaceMobileNavClass(pathname === "/")}
-                href="/"
-                onClick={() => setWorkspaceMobileMenuOpen(false)}
-              >
-                Home
-              </Link>
-              <Link
-                className={workspaceMobileNavClass(pathname === "/feed")}
-                href="/feed"
-                onClick={() => setWorkspaceMobileMenuOpen(false)}
-              >
-                Feed
-              </Link>
-              <Link
-                className={workspaceMobileNavClass(pathname === "/archive")}
-                href="/archive"
-                onClick={() => setWorkspaceMobileMenuOpen(false)}
-              >
-                Archive
-              </Link>
-              <Link
-                className={workspaceMobileNavClass(Boolean(pathname?.startsWith("/app")))}
-                href="/app"
-                onClick={() => setWorkspaceMobileMenuOpen(false)}
-              >
-                Workspace
-              </Link>
-              <Link
-                className={workspaceMobileNavClass(pathname === "/help")}
-                href="/help"
-                onClick={() => setWorkspaceMobileMenuOpen(false)}
-              >
-                Help
-              </Link>
-              <Link
-                className={workspaceMobileNavClass(Boolean(pathname?.startsWith("/support")))}
-                href="/support"
-                onClick={() => setWorkspaceMobileMenuOpen(false)}
-              >
-                Support
-              </Link>
-              {sessionUser ? (
-                <Link
-                  className={workspaceMobileNavClass(Boolean(pathname?.startsWith("/settings")))}
-                  href="/settings/account"
+            <nav aria-label="Site" className="flex flex-col gap-4 overflow-y-auto max-h-[70vh] pr-1 py-1">
+              {/* Category: Services */}
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 px-1">
+                  {t("nav.services")}
+                </p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {servicesItems.map((item) => (
+                    <Button
+                      asChild
+                      key={item.href}
+                      className="h-10 justify-start px-2.5 text-[11px] gap-2 font-medium"
+                      variant={pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href)) ? "secondary" : "outline"}
+                      onClick={() => setWorkspaceMobileMenuOpen(false)}
+                    >
+                      <Link href={item.href}>
+                        <item.icon className={cn("h-3.5 w-3.5 shrink-0", item.color)} />
+                        <span className="truncate">{t(item.labelKey)}</span>
+                      </Link>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Category: Explore */}
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 px-1">
+                  {t("nav.explore")}
+                </p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {exploreItems.map((item) => (
+                    <Button
+                      asChild
+                      key={item.href}
+                      className="h-10 justify-start px-2.5 text-[11px] gap-2 font-medium"
+                      variant={pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href)) ? "secondary" : "outline"}
+                      onClick={() => setWorkspaceMobileMenuOpen(false)}
+                    >
+                      <Link href={item.href}>
+                        <item.icon className={cn("h-3.5 w-3.5 shrink-0", item.color)} />
+                        <span className="truncate">{t(item.labelKey)}</span>
+                      </Link>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Category: Resources */}
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 px-1">
+                  {t("nav.resources")}
+                </p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {resourcesItems.map((item) => (
+                    <Button
+                      asChild
+                      key={item.href}
+                      className="h-10 justify-start px-2.5 text-[11px] gap-2 font-medium"
+                      variant={pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href)) ? "secondary" : "outline"}
+                      onClick={() => setWorkspaceMobileMenuOpen(false)}
+                    >
+                      <Link href={item.href}>
+                        <item.icon className={cn("h-3.5 w-3.5 shrink-0", item.color)} />
+                        <span className="truncate">{t(item.labelKey)}</span>
+                      </Link>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Home & Settings */}
+              <div className="border-t border-border/60 pt-3 flex gap-1.5">
+                <Button
+                  asChild
+                  className="h-10 flex-1 justify-center text-[11px] font-semibold gap-1"
+                  variant={pathname === "/" ? "secondary" : "outline"}
                   onClick={() => setWorkspaceMobileMenuOpen(false)}
                 >
-                  Settings
-                </Link>
-              ) : null}
+                  <Link href="/">
+                    <Home className="h-3.5 w-3.5 text-primary/80" />
+                    {t("nav.home")}
+                  </Link>
+                </Button>
+                {sessionUser ? (
+                  <Button
+                    asChild
+                    className="h-10 flex-1 justify-center text-[11px] font-semibold"
+                    variant={pathname?.startsWith("/settings") ? "secondary" : "outline"}
+                    onClick={() => setWorkspaceMobileMenuOpen(false)}
+                  >
+                    <Link href="/settings/account">{t("settings.title")}</Link>
+                  </Button>
+                ) : null}
+              </div>
             </nav>
             <WorkspaceHeaderAppearance
               appHighContrast={appHighContrast}
@@ -7092,23 +7183,87 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                 data-tutorial="workspace-nav"
               >
                 <Link className={workspaceHeaderNavClass(pathname === "/")} href="/">
-                  Home
+                  <span className="flex items-center gap-1 sm:text-[13px] text-[11px]">
+                    <Home className="h-3.5 w-3.5 text-primary/80" />
+                    {t("nav.home")}
+                  </span>
                 </Link>
-                <Link className={workspaceHeaderNavClass(pathname === "/feed")} href="/feed">
-                  Feed
-                </Link>
-                <Link className={workspaceHeaderNavClass(pathname === "/archive")} href="/archive">
-                  Archive
-                </Link>
-                <Link className={workspaceHeaderNavClass(Boolean(pathname?.startsWith("/app")))} href="/app">
-                  Workspace
-                </Link>
-                <Link className={workspaceHeaderNavClass(pathname === "/help")} href="/help">
-                  {t("nav.help")}
-                </Link>
-                <Link className={workspaceHeaderNavClass(Boolean(pathname?.startsWith("/support")))} href="/support">
-                  {t("nav.support")}
-                </Link>
+
+                {/* Services Dropdown */}
+                <div className="group relative">
+                  <button className={workspaceTriggerClass(isServicesActive)} type="button">
+                    <span>{t("nav.services")}</span>
+                    <ChevronDown className="h-3 w-3 transition-transform duration-200 group-hover:rotate-180" />
+                  </button>
+                  <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 absolute top-full left-0 pt-1.5 transition-all duration-200 z-50 origin-top-left">
+                    <div className="flex w-[200px] flex-col gap-0.5 rounded-xl border border-border/80 bg-card/95 backdrop-blur-md p-1.5 shadow-xl">
+                      {servicesItems.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={cn(
+                            "flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150",
+                            pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href)) ? "bg-muted/50 text-foreground font-semibold" : ""
+                          )}
+                        >
+                          <item.icon className={cn("h-3.5 w-3.5 shrink-0", item.color)} />
+                          <span className="truncate">{t(item.labelKey)}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Explore Dropdown */}
+                <div className="group relative">
+                  <button className={workspaceTriggerClass(isExploreActive)} type="button">
+                    <span>{t("nav.explore")}</span>
+                    <ChevronDown className="h-3 w-3 transition-transform duration-200 group-hover:rotate-180" />
+                  </button>
+                  <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 absolute top-full left-0 pt-1.5 transition-all duration-200 z-50 origin-top-left">
+                    <div className="flex w-[160px] flex-col gap-0.5 rounded-xl border border-border/80 bg-card/95 backdrop-blur-md p-1.5 shadow-xl">
+                      {exploreItems.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={cn(
+                            "flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150",
+                            pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href)) ? "bg-muted/50 text-foreground font-semibold" : ""
+                          )}
+                        >
+                          <item.icon className={cn("h-3.5 w-3.5 shrink-0", item.color)} />
+                          <span className="truncate">{t(item.labelKey)}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Resources Dropdown */}
+                <div className="group relative">
+                  <button className={workspaceTriggerClass(isResourcesActive)} type="button">
+                    <span>{t("nav.resources")}</span>
+                    <ChevronDown className="h-3 w-3 transition-transform duration-200 group-hover:rotate-180" />
+                  </button>
+                  <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 absolute top-full left-0 pt-1.5 transition-all duration-200 z-50 origin-top-left">
+                    <div className="flex w-[160px] flex-col gap-0.5 rounded-xl border border-border/80 bg-card/95 backdrop-blur-md p-1.5 shadow-xl">
+                      {resourcesItems.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={cn(
+                            "flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150",
+                            pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href)) ? "bg-muted/50 text-foreground font-semibold" : ""
+                          )}
+                        >
+                          <item.icon className={cn("h-3.5 w-3.5 shrink-0", item.color)} />
+                          <span className="truncate">{t(item.labelKey)}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
                 {sessionUser ? (
                   <Link
                     className={workspaceHeaderNavClass(Boolean(pathname?.startsWith("/settings")))}

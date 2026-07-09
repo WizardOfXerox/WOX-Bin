@@ -296,6 +296,10 @@ export function BookmarkFsSyncClient() {
       setRenamePath(file.fullName);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Could not read the selected vault file.");
+      setSelectedName(null);
+      setSelectedFile(null);
+      setEditorText("");
+      setRenamePath("");
     } finally {
       setPendingRead(false);
     }
@@ -373,9 +377,13 @@ export function BookmarkFsSyncClient() {
   }
 
   async function createTextFile() {
-    const fullName = joinBookmarkFsPath(currentPath, newFileName);
-    if (!fullName) {
+    if (!newFileName.trim()) {
       setError("File name is required.");
+      return;
+    }
+    const fullName = joinBookmarkFsPath(currentPath, newFileName.trim());
+    const exists = entries.some((entry) => entry.fullName === fullName);
+    if (exists && !window.confirm(`A file named "${fullName}" already exists. Overwrite?`)) {
       return;
     }
     setPendingSave(true);
@@ -404,19 +412,38 @@ export function BookmarkFsSyncClient() {
     if (!files.length) {
       return;
     }
-    setPendingSave(true);
     setError(null);
     setStatus(null);
+
+    const filesToUpload: Array<{ file: File; fullName: string }> = [];
+    for (const file of files) {
+      const fullName = joinBookmarkFsPath(currentPath, file.name);
+      const exists = entries.some((entry) => entry.fullName === fullName);
+      if (exists) {
+        if (window.confirm(`File "${file.name}" already exists in this folder. Overwrite it?`)) {
+          filesToUpload.push({ file, fullName });
+        }
+      } else {
+        filesToUpload.push({ file, fullName });
+      }
+    }
+
+    if (!filesToUpload.length) {
+      event.target.value = "";
+      return;
+    }
+
+    setPendingSave(true);
     try {
-      for (const file of files) {
-        const dataUrl = await readFileAsDataUrl(file);
+      for (const item of filesToUpload) {
+        const dataUrl = await readFileAsDataUrl(item.file);
         await callBridge("vault.writeDataUrl", {
-          fullName: joinBookmarkFsPath(currentPath, file.name),
+          fullName: item.fullName,
           dataUrl,
           passphrase
         });
       }
-      setStatus(`Imported ${files.length} file${files.length === 1 ? "" : "s"} into the local vault.`);
+      setStatus(`Imported ${filesToUpload.length} file${filesToUpload.length === 1 ? "" : "s"} into the local vault.`);
       await refreshVault();
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Could not upload to the local vault.");
@@ -664,6 +691,17 @@ export function BookmarkFsSyncClient() {
                   <RefreshCcw className="h-4 w-4" />
                 </Button>
               </div>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                {passphrase.trim() ? (
+                  <span className="text-emerald-500 font-medium flex items-center gap-1">
+                    🔒 New files/uploads will be encrypted using this passphrase
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    🔓 New files/uploads will be stored in plaintext (no encryption)
+                  </span>
+                )}
+              </p>
             </div>
           </div>
 
@@ -686,22 +724,22 @@ export function BookmarkFsSyncClient() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            <Button disabled={pendingSave} onClick={() => void exportBackup()} type="button" variant="outline">
+          <div className="flex flex-wrap gap-2.5">
+            <Button className="w-full sm:w-auto" disabled={pendingSave} onClick={() => void exportBackup()} type="button" variant="outline">
               <HardDriveDownload className="h-4 w-4" />
               Export backup
             </Button>
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-[1rem] border border-border bg-card px-4 py-2 text-sm">
+            <label className="w-full sm:w-auto inline-flex cursor-pointer items-center justify-center gap-2 rounded-[1rem] border border-border bg-card px-4 py-2 text-sm">
               <HardDriveUpload className="h-4 w-4" />
               Import backup
               <input accept="application/json" className="hidden" onChange={(event) => void importBackup(event)} type="file" />
             </label>
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-[1rem] border border-border bg-card px-4 py-2 text-sm">
+            <label className="w-full sm:w-auto inline-flex cursor-pointer items-center justify-center gap-2 rounded-[1rem] border border-border bg-card px-4 py-2 text-sm">
               <Download className="h-4 w-4" />
               Upload into vault
               <input className="hidden" multiple onChange={(event) => void handleUpload(event)} type="file" />
             </label>
-            <Button disabled={pendingSave} onClick={() => void rebuildIndex()} type="button" variant="outline">
+            <Button className="w-full sm:w-auto" disabled={pendingSave} onClick={() => void rebuildIndex()} type="button" variant="outline">
               <ShieldCheck className="h-4 w-4" />
               Rebuild index
             </Button>
@@ -752,16 +790,16 @@ export function BookmarkFsSyncClient() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex flex-nowrap items-center gap-2 overflow-x-auto pb-2 text-xs text-muted-foreground w-full scrollbar-thin scrollbar-thumb-muted-foreground">
               <span>Path:</span>
-              <button className="rounded-full border border-border px-3 py-1 text-foreground" onClick={() => setCurrentPath("")} type="button">
+              <button className="rounded-full border border-border px-3 py-1 text-foreground shrink-0" onClick={() => setCurrentPath("")} type="button">
                 /
               </button>
               {breadcrumbs.map((segment, index) => {
                 const nextPath = breadcrumbs.slice(0, index + 1).join("/");
                 return (
                   <button
-                    className="rounded-full border border-border px-3 py-1 text-foreground"
+                    className="rounded-full border border-border px-3 py-1 text-foreground shrink-0"
                     key={nextPath}
                     onClick={() => setCurrentPath(nextPath)}
                     type="button"
@@ -812,9 +850,9 @@ export function BookmarkFsSyncClient() {
                           <p className="truncate text-sm font-medium">{entry.displayName}</p>
                           <p className="mt-1 text-xs text-muted-foreground">{entry.type || "application/octet-stream"}</p>
                         </div>
-                        <div className="text-right text-xs text-muted-foreground">
+                        <div className="text-right text-xs text-muted-foreground shrink-0">
                           <p>{formatBookmarkFsBytes(entry.sizeOriginal ?? entry.sizeStored)}</p>
-                          <p>{entry.dateISO ? new Date(entry.dateISO).toLocaleString() : "—"}</p>
+                          <p>{entry.dateISO ? new Date(entry.dateISO).toLocaleDateString() : "—"}</p>
                         </div>
                       </div>
                     </button>
@@ -857,8 +895,9 @@ export function BookmarkFsSyncClient() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-2.5">
                     <Button
+                      className="w-full sm:w-auto"
                       disabled={pendingSave || pendingRead}
                       onClick={() => downloadBookmarkFsFile(selectedFile.displayName, selectedFile.dataBase64, selectedFile.mimeType)}
                       type="button"
@@ -867,11 +906,11 @@ export function BookmarkFsSyncClient() {
                       <Download className="h-4 w-4" />
                       Download
                     </Button>
-                    <Button disabled={pendingSave || pendingRead} onClick={() => void syncSelectedToWorkspace()} type="button">
+                    <Button className="w-full sm:w-auto" disabled={pendingSave || pendingRead} onClick={() => void syncSelectedToWorkspace()} type="button">
                       <Link2 className="h-4 w-4" />
                       Push to workspace
                     </Button>
-                    <Button disabled={pendingSave || pendingRead} onClick={() => void deleteSelectedFile()} type="button" variant="destructive">
+                    <Button className="w-full sm:w-auto" disabled={pendingSave || pendingRead} onClick={() => void deleteSelectedFile()} type="button" variant="destructive">
                       <Trash2 className="h-4 w-4" />
                       Delete
                     </Button>
