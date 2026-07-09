@@ -56,7 +56,9 @@ const config: Config = {
       },
       backgroundImage: {
         "hero-mesh":
-          "radial-gradient(circle at top left, rgba(53,120,255,.22), transparent 30%), radial-gradient(circle at top right, rgba(0,188,212,.18), transparent 28%), linear-gradient(135deg, rgba(255,255,255,.04), transparent)"
+          "radial-gradient(circle at top left, rgba(53,120,255,.22), transparent 30%), radial-gradient(circle at top right, rgba(0,188,212,.18), transparent 28%), linear-gradient(135deg, rgba(255,255,255,.04), transparent)",
+        "hero-glow":
+          "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(56,128,255,.28), transparent 60%), radial-gradient(ellipse 60% 50% at 80% 50%, rgba(0,188,212,.14), transparent 50%), radial-gradient(ellipse 50% 40% at 20% 80%, rgba(139,92,246,.12), transparent 50%)"
       },
       transitionTimingFunction: {
         "wox-out": "cubic-bezier(0.22, 1, 0.36, 1)",
@@ -74,12 +76,27 @@ const config: Config = {
         "wox-shimmer": {
           "0%": { backgroundPosition: "0% 50%" },
           "100%": { backgroundPosition: "100% 50%" }
+        },
+        "wox-pulse-glow": {
+          "0%, 100%": { opacity: "0.5" },
+          "50%": { opacity: "1" }
+        },
+        "wox-float": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-6px)" }
+        },
+        "wox-scale-in": {
+          "0%": { opacity: "0", transform: "scale(0.95)" },
+          "100%": { opacity: "1", transform: "scale(1)" }
         }
       },
       animation: {
         "wox-fade-up": "wox-fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both",
         "wox-fade-in": "wox-fade-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both",
-        "wox-shimmer": "wox-shimmer 8s ease-in-out infinite alternate"
+        "wox-shimmer": "wox-shimmer 8s ease-in-out infinite alternate",
+        "wox-pulse-glow": "wox-pulse-glow 4s ease-in-out infinite",
+        "wox-float": "wox-float 6s ease-in-out infinite",
+        "wox-scale-in": "wox-scale-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both"
       }
     }
   },
