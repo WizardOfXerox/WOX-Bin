@@ -542,10 +542,8 @@ export function PublicPasteShell({
   const downloadCheckHref = `/download-check?to=${encodeURIComponent(rawDownloadPath)}&label=${encodeURIComponent(
     pasteBodyDownloadFilename(paste)
   )}`;
-  const attachmentDownloadHref = (index: number, file: PasteFileDraft) =>
-    `/download-check?to=${encodeURIComponent(`/file/${paste.slug}/${index}?download=1`)}&label=${encodeURIComponent(
-      safeDownloadBasename(file.filename, "attachment")
-    )}`;
+  const attachmentDownloadHref = (index: number, _file: PasteFileDraft) =>
+    `/file/${paste.slug}/${index}?download=1`;
 
   return (
     <main className="wox-public-paste-print-root mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:py-8 md:px-6 md:py-10">

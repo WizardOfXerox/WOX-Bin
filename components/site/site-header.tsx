@@ -113,6 +113,13 @@ export function SiteHeader({ className }: Props) {
       descKey: "nav.bookmarkfs.desc"
     },
     {
+      href: "/file",
+      icon: FileText,
+      color: "bg-emerald-500/10 text-emerald-400 dark:text-emerald-300",
+      labelKey: "nav.fileShare",
+      descKey: "nav.fileShare.desc"
+    },
+    {
       href: "/privacy-tools",
       icon: Shield,
       color: "bg-rose-500/10 text-rose-400 dark:text-rose-300",
@@ -228,7 +235,7 @@ export function SiteHeader({ className }: Props) {
           </Link>
 
           {/* Desktop Nav Items */}
-          <nav className="hidden items-center gap-1 lg:flex">
+          <nav className="hidden items-center gap-1 xl:flex">
             <Link className={navItemClass(pathname === "/")} href="/">
               {t("nav.home")}
             </Link>
@@ -343,13 +350,13 @@ export function SiteHeader({ className }: Props) {
 
         {/* Right Side: Desktop Actions & Mobile Menu trigger */}
         <div className="flex items-center gap-3">
-          <div className="hidden items-center gap-2 lg:flex">{desktopActions}</div>
+          <div className="hidden items-center gap-2 xl:flex">{desktopActions}</div>
 
           <Dialog>
             <DialogTrigger asChild>
               <Button
                 aria-label="Open site navigation"
-                className="shrink-0 lg:hidden"
+                className="shrink-0 xl:hidden"
                 size="icon"
                 type="button"
                 variant="outline"

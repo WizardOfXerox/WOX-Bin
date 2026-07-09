@@ -227,10 +227,7 @@
     }
   });
 
-  if (!isSyncPage()) {
-    return;
-  }
-
+  // Register bridge messaging functions unconditionally to support SPA client-side routing.
   function post(message) {
     window.postMessage(
       {
@@ -291,7 +288,9 @@
     );
   });
 
-  post({
-    type: "bookmarkfs-ready"
-  });
+  if (isSyncPage()) {
+    post({
+      type: "bookmarkfs-ready"
+    });
+  }
 })();

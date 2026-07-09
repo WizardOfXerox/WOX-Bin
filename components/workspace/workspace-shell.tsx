@@ -2854,15 +2854,62 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
   function exportToTxt() {
     if (!selectedPaste) return;
     const ext = getLanguageExtension(selectedPaste.language);
-    const filename = (selectedPaste.title?.trim() || "untitled").replace(/[^a-zA-Z0-9_\\-]/g, "_") + "." + ext;
-    const blob = new Blob([selectedPaste.content], { type: "text/plain;charset=utf-8" });
+    const safeTitle = (selectedPaste.title?.trim() || "untitled").replace(/[^a-zA-Z0-9_\\-]/g, "_");
+
+    /* ── Build main text content, including text-based file attachments ── */
+    const sections: string[] = [selectedPaste.content];
+
+    const mediaFiles: { filename: string; content: string; mimeType: string }[] = [];
+
+    for (const file of selectedPaste.files) {
+      if (file.mediaKind && file.mimeType) {
+        /* Binary media — collect for separate download */
+        mediaFiles.push({ filename: file.filename, content: file.content, mimeType: file.mimeType });
+      } else {
+        /* Text attachment — append as a labeled section */
+        sections.push(
+          `\n${"─".repeat(60)}\n` +
+          `Attachment: ${file.filename} (${file.language})\n` +
+          `${"─".repeat(60)}\n` +
+          file.content
+        );
+      }
+    }
+
+    /* Download the merged text file */
+    const mainFilename = safeTitle + "." + ext;
+    const blob = new Blob([sections.join("\n")], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = filename;
+    anchor.download = mainFilename;
     anchor.click();
     URL.revokeObjectURL(url);
-    setStatus(`Exported paste to ${filename}`);
+
+    /* Download each media attachment as a separate binary file */
+    for (const media of mediaFiles) {
+      try {
+        const raw = atob(media.content);
+        const bytes = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+        const mediaBlob = new Blob([bytes], { type: media.mimeType });
+        const mediaUrl = URL.createObjectURL(mediaBlob);
+        const mediaAnchor = document.createElement("a");
+        mediaAnchor.href = mediaUrl;
+        mediaAnchor.download = media.filename;
+        mediaAnchor.click();
+        URL.revokeObjectURL(mediaUrl);
+      } catch {
+        /* Silently skip corrupt base64 */
+      }
+    }
+
+    const totalFiles = selectedPaste.files.length;
+    setStatus(
+      totalFiles > 0
+        ? `Exported paste + ${totalFiles} attachment${totalFiles > 1 ? "s" : ""}`
+        : `Exported paste to ${mainFilename}`
+    );
   }
 
   function exportToPdf() {

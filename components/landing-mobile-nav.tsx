@@ -96,6 +96,13 @@ export function LandingMobileNav({ initialSession = null }: Props) {
       descKey: "nav.bookmarkfs.desc"
     },
     {
+      href: "/file",
+      icon: FileText,
+      color: "bg-emerald-500/10 text-emerald-400 dark:text-emerald-300",
+      labelKey: "nav.fileShare",
+      descKey: "nav.fileShare.desc"
+    },
+    {
       href: "/privacy-tools",
       icon: Shield,
       color: "bg-rose-500/10 text-rose-400 dark:text-rose-300",
