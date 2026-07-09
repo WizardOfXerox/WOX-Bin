@@ -14,7 +14,14 @@ import {
   RefreshCcw,
   Search,
   ShieldCheck,
-  Trash2
+  Trash2,
+  Lock,
+  Unlock,
+  Plus,
+  Globe,
+  Activity,
+  Check,
+  ArrowRight
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 
@@ -88,6 +95,20 @@ function textDataUrl(value: string, mimeType: string) {
   return `data:${mimeType};base64,${textToBase64(value)}`;
 }
 
+type Profile = {
+  id: string;
+  label: string;
+  baseUrl: string;
+  apiKey?: string;
+  encryptedSecret?: {
+    cipherText: string;
+    salt: string;
+    iv: string;
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export function BookmarkFsSyncClient() {
   const pendingRef = useRef<Map<string, PendingRequest>>(new Map());
   const bridgeReadySeenRef = useRef(false);
@@ -106,6 +127,17 @@ export function BookmarkFsSyncClient() {
   const [newFileName, setNewFileName] = useState("");
   const [newFileContent, setNewFileContent] = useState("");
   const [newFileMime, setNewFileMime] = useState("text/plain;charset=utf-8");
+
+  // Profile Management States
+  const [activeTab, setActiveTab] = useState<"vault" | "profiles">("vault");
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const [profileLabel, setProfileLabel] = useState("");
+  const [profileUrl, setProfileUrl] = useState("");
+  const [profileApiKey, setProfileApiKey] = useState("");
+  const [profilePassphrase, setProfilePassphrase] = useState("");
+  const [unlockPassphraseMap, setUnlockPassphraseMap] = useState<Record<string, string>>({});
+  const [pendingProfileSave, setPendingProfileSave] = useState(false);
   const [loading, setLoading] = useState(false);
   const [pendingRead, setPendingRead] = useState(false);
   const [pendingSave, setPendingSave] = useState(false);
@@ -236,6 +268,18 @@ export function BookmarkFsSyncClient() {
     }
   }, [callBridge, selectedName]);
 
+  const refreshProfiles = useCallback(async () => {
+    try {
+      const result = await callBridge<{ profiles: Profile[]; selectedProfileId: string | null }>("profile.list");
+      if (result) {
+        setProfiles(result.profiles || []);
+        setSelectedProfileId(result.selectedProfileId || null);
+      }
+    } catch (nextError) {
+      console.warn("Could not load companion profiles:", nextError);
+    }
+  }, [callBridge]);
+
   const probeBridge = useCallback(async () => {
     setBridgeState("checking");
     let lastError: unknown = null;
@@ -245,7 +289,7 @@ export function BookmarkFsSyncClient() {
         setBridgeState("ready");
         setBridgeVersion(result.version || null);
         setVaultRootName(result.rootName || "bookmarkfs");
-        await refreshVault();
+        await Promise.all([refreshVault(), refreshProfiles()]);
         return;
       } catch (error) {
         lastError = error;
@@ -259,7 +303,7 @@ export function BookmarkFsSyncClient() {
     if (lastError instanceof Error) {
       setError(lastError.message);
     }
-  }, [callBridge, refreshVault]);
+  }, [callBridge, refreshVault, refreshProfiles]);
 
   useEffect(() => {
     let cancelled = false;
@@ -750,7 +794,36 @@ export function BookmarkFsSyncClient() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(24rem,1.05fr)]">
+      {/* Tab Switcher */}
+      <div className="flex justify-center border-b border-border/40 pb-4">
+        <div className="inline-flex rounded-full bg-muted/30 p-1 border border-border/40 backdrop-blur-sm">
+          <button
+            onClick={() => setActiveTab("vault")}
+            type="button"
+            className={`rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200 ${
+              activeTab === "vault"
+                ? "bg-primary text-primary-foreground shadow-md"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            📂 Local Vault Explorer
+          </button>
+          <button
+            onClick={() => setActiveTab("profiles")}
+            type="button"
+            className={`rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200 ${
+              activeTab === "profiles"
+                ? "bg-primary text-primary-foreground shadow-md"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            ⚡ Companion Profiles
+          </button>
+        </div>
+      </div>
+
+      {activeTab === "vault" ? (
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(24rem,1.05fr)]">
         <Card className="overflow-hidden">
           <CardContent className="space-y-5 p-6">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -1050,6 +1123,273 @@ export function BookmarkFsSyncClient() {
           </Card>
         </div>
       </div>
+      ) : (
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
+          {/* Left Column: Saved Profiles list */}
+          <Card>
+            <CardContent className="space-y-5 p-6">
+              <div>
+                <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Companion Profiles</p>
+                <h2 className="mt-2 text-xl font-semibold">Saved profiles inside your browser companion</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  The extension can connect to multiple different WOX-Bin sites or workspaces. Select which profile is active.
+                </p>
+              </div>
+
+              {!profiles.length ? (
+                <div className="rounded-[1.2rem] border border-dashed border-border/70 bg-background/70 px-4 py-8 text-center text-sm text-muted-foreground">
+                  No saved profiles inside the browser extension yet. Make sure the extension is installed and active.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {profiles.map((prof) => {
+                    const isActive = prof.id === selectedProfileId;
+                    const isLocked = Boolean(prof.encryptedSecret) && !prof.apiKey;
+                    return (
+                      <div
+                        className={`rounded-[1.25rem] border p-5 transition ${
+                          isActive
+                            ? "border-primary bg-primary/5"
+                            : "border-border/70 bg-background/50 hover:bg-card"
+                        }`}
+                        key={prof.id}
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-foreground text-base">{prof.label}</span>
+                              {isActive ? (
+                                <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-400 border border-emerald-500/20">
+                                  Active
+                                </span>
+                              ) : null}
+                              {isLocked ? (
+                                <span className="rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-semibold text-destructive border border-destructive/20">
+                                  Locked
+                                </span>
+                              ) : (
+                                <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary border border-primary/20">
+                                  Ready
+                                </span>
+                              )}
+                            </div>
+                            <p className="font-mono text-xs text-muted-foreground">{prof.baseUrl}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {!isActive ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={async () => {
+                                  await callBridge("profile.select", { profileId: prof.id });
+                                  await refreshProfiles();
+                                }}
+                              >
+                                Use profile
+                              </Button>
+                            ) : null}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:bg-destructive/15"
+                              onClick={async () => {
+                                if (confirm(`Delete the profile "${prof.label}" from the extension?`)) {
+                                  await callBridge("profile.delete", { profileId: prof.id });
+                                  await refreshProfiles();
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {isLocked ? (
+                          <div className="mt-4 rounded-xl bg-muted/20 border border-border/50 p-4 space-y-3">
+                            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                              <Lock className="h-3.5 w-3.5" />
+                              This profile's API key is encrypted. Enter the passphrase to unlock it.
+                            </p>
+                            <div className="flex gap-2">
+                              <Input
+                                type="password"
+                                placeholder="Enter passphrase to unlock"
+                                value={unlockPassphraseMap[prof.id] || ""}
+                                onChange={(e) =>
+                                  setUnlockPassphraseMap({
+                                    ...unlockPassphraseMap,
+                                    [prof.id]: e.target.value
+                                  })
+                                }
+                              />
+                              <Button
+                                size="sm"
+                                onClick={async () => {
+                                  const passphraseInput = unlockPassphraseMap[prof.id]?.trim() || "";
+                                  if (!passphraseInput) {
+                                    alert("Please enter a passphrase.");
+                                    return;
+                                  }
+                                  const res = await callBridge<{ ok: boolean }>("profile.unlock", {
+                                    profileId: prof.id,
+                                    passphrase: passphraseInput
+                                  });
+                                  if (res?.ok) {
+                                    await refreshProfiles();
+                                  } else {
+                                    alert("Wrong passphrase. Try again.");
+                                  }
+                                }}
+                              >
+                                Unlock
+                              </Button>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Right Column: Setup Profile Form & Auto Sync */}
+          <div className="space-y-6">
+            <Card>
+              <CardContent className="space-y-4 p-6">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Setup profile</p>
+                  <h2 className="mt-2 text-xl font-semibold">Add / edit profile manually</h2>
+                </div>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <label className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Label</label>
+                    <Input
+                      placeholder="e.g. Production, Staging, Local"
+                      value={profileLabel}
+                      onChange={(e) => setProfileLabel(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Base URL</label>
+                    <Input
+                      placeholder="e.g. https://wox-bin.vercel.app"
+                      value={profileUrl}
+                      onChange={(e) => setProfileUrl(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs uppercase tracking-[0.24em] text-muted-foreground">API Key</label>
+                    <Input
+                      type="password"
+                      placeholder="Bearer token (optional if editing only label/URL)"
+                      value={profileApiKey}
+                      onChange={(e) => setProfileApiKey(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
+                      Encrypt Key (Device Passphrase)
+                    </label>
+                    <Input
+                      type="password"
+                      placeholder="Optional passphrase to protect key on this device"
+                      value={profilePassphrase}
+                      onChange={(e) => setProfilePassphrase(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2.5">
+                  <Button
+                    disabled={pendingProfileSave}
+                    onClick={async () => {
+                      if (!profileUrl.trim()) {
+                        alert("Base URL is required.");
+                        return;
+                      }
+                      setPendingProfileSave(true);
+                      try {
+                        await callBridge("profile.save", {
+                          label: profileLabel,
+                          baseUrl: profileUrl.trim(),
+                          apiKey: profileApiKey,
+                          passphrase: profilePassphrase.trim()
+                        });
+                        setProfileLabel("");
+                        setProfileUrl("");
+                        setProfileApiKey("");
+                        setProfilePassphrase("");
+                        await refreshProfiles();
+                        alert("Profile saved successfully!");
+                      } catch (err) {
+                        alert(err instanceof Error ? err.message : String(err));
+                      } finally {
+                        setPendingProfileSave(false);
+                      }
+                    }}
+                  >
+                    Save profile
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-primary/20 bg-primary/10">
+              <CardContent className="space-y-4 p-6">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Activity className="h-4 w-4 text-primary" />
+                  One-click Auto-Sync
+                </div>
+                <p className="text-sm leading-7 text-muted-foreground">
+                  Instantly link this active WOX-Bin browser session. It will generate a new API key named "BookmarkFS Companion Sync" and configure the companion extension automatically.
+                </p>
+                <Button
+                  className="w-full justify-center"
+                  disabled={pendingProfileSave}
+                  onClick={async () => {
+                    setPendingProfileSave(true);
+                    try {
+                      const res = await fetch("/api/workspace/keys", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          label: `BookmarkFS Sync Companion (${new Date().toLocaleDateString()})`
+                        })
+                      });
+                      if (!res.ok) {
+                        const errJson = await res.json().catch(() => null);
+                        throw new Error(errJson?.error || `Failed to create API key: HTTP ${res.status}`);
+                      }
+                      const data = await res.json();
+                      const token = data.key?.token;
+                      if (!token) {
+                        throw new Error("No API key token returned from server.");
+                      }
+                      await callBridge("profile.save", {
+                        label: "WOX-Bin (Auto-Synced)",
+                        baseUrl: window.location.origin,
+                        apiKey: token,
+                        passphrase: ""
+                      });
+                      await refreshProfiles();
+                      alert("Successfully created API key and auto-synced session profile to companion extension!");
+                    } catch (err) {
+                      alert(err instanceof Error ? err.message : String(err));
+                    } finally {
+                      setPendingProfileSave(false);
+                    }
+                  }}
+                >
+                  <ArrowRight className="mr-2 h-4 w-4" />
+                  Auto-sync current session
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

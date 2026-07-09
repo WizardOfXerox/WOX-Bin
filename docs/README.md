@@ -8,7 +8,7 @@ These Markdown files live **in the repository**. They are **not** automatically 
 |-----|---------|
 | **[NPM-SCRIPTS.md](./NPM-SCRIPTS.md)** | **All `npm run` commands** — dev/build, `db:*`, codegen (`gen:*`, `fetch:*`), tests, worker, admin |
 | **[PRODUCT-SURFACES.md](./PRODUCT-SURFACES.md)** | Bounded map of the paste product vs the tools platform |
-| **[ROADMAP.md](./ROADMAP.md)** | Current staged roadmap for stability, Discord ops, product polish, and scale hardening |
+| **[ROADMAP.md](./ROADMAP.md)** | Historical completed phases plus the next recommended stages (`v2.1`+, storage, billing, performance, trust) |
 | **[PLATFORM-HARDENING.md](./PLATFORM-HARDENING.md)** | v2 decisions for report workflows, public feed caching, storage boundaries, worker split, and operator incident habits |
 | **[VERCEL-CONVERSIONS.md](./VERCEL-CONVERSIONS.md)** | FFmpeg jobs + S3 on Vercel: env vars, presigned uploads, worker off-platform, CORS |
 | **[VERCEL-READINESS-AUDIT.md](./VERCEL-READINESS-AUDIT.md)** | Current code-level deployment audit for Vercel |
@@ -20,7 +20,8 @@ These Markdown files live **in the repository**. They are **not** automatically 
 | **[MARKDOWN-RENTY-SUBSET.md](./MARKDOWN-RENTY-SUBSET.md)** | Rentry-inspired extras on top of `marked` (preview + Markdown→HTML) |
 | **[LOCAL-DATABASE.md](./LOCAL-DATABASE.md)** | Postgres locally |
 | **[ADMIN.md](./ADMIN.md)** | Admin bootstrap |
-| **[BILLING.md](./BILLING.md)** | Pro/Team upgrade URLs (`NEXT_PUBLIC_*`), PayMongo-first billing setup, alternate providers |
+| **[BILLING.md](./BILLING.md)** | Pro/Team upgrade URLs (`NEXT_PUBLIC_*`), hosted checkout setup, and provider-neutral billing flow |
+| **[BILLING-DECISION.md](./BILLING-DECISION.md)** | Current payment-provider recommendation for WOX-Bin: PayMongo now, Paddle later, Lemon Squeezy as the middle ground |
 | **[PAYMONGO.md](./PAYMONGO.md)** | PayMongo-specific setup for WOX-Bin |
 | **[TOTP-MFA.md](./TOTP-MFA.md)** | Authenticator-app MFA, recovery codes, sign-in challenge flow, and operator notes |
 | **[SHARING-MODES.md](./SHARING-MODES.md)** | What `/app`, `/quick`, `/clipboard`, `/fragment`, `/s/[slug]`, `/out`, and CLI drops are for |
@@ -40,3 +41,4 @@ These Markdown files live **in the repository**. They are **not** automatically 
 | **[LEGAL.md](./LEGAL.md)** | Terms of Service (live at `/terms`) — operator checklist |
 
 To read them from the deployed site you’d need to either link to **GitHub** (raw or blob URL) or add a small Next.js page under e.g. `/docs/...` that imports or duplicates the content.
+

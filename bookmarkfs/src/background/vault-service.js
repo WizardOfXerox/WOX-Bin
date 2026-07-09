@@ -11,6 +11,13 @@ import {
   upsertVaultIndexEntry
 } from "../vault/metadata-cache.js";
 import { summarizeVaultAnalytics } from "../vault/ui.js";
+import {
+  loadProfiles,
+  saveProfile,
+  deleteProfile,
+  setSelectedProfileId,
+  unlockProfile
+} from "../cloud/woxbin-profiles.js";
 
 const ROOT_NAME = "bookmarkfs";
 const MAX_BOOKMARK_SIZE = 9092;
@@ -664,6 +671,24 @@ export async function handleVaultAction(action, payload = {}) {
     case "vault.clearIndex":
       await clearVaultIndex();
       return { ok: true };
+    case "profile.list":
+      return loadProfiles();
+    case "profile.save":
+      return saveProfile({
+        profileId: payload.profileId || null,
+        label: payload.label,
+        baseUrl: payload.baseUrl,
+        apiKey: payload.apiKey,
+        passphrase: payload.passphrase || ""
+      });
+    case "profile.delete":
+      return deleteProfile(payload.profileId);
+    case "profile.select":
+      await setSelectedProfileId(payload.profileId);
+      return { ok: true };
+    case "profile.unlock":
+      const unlockedProfileStatus = await unlockProfile(payload.profileId, payload.passphrase);
+      return { ok: unlockedProfileStatus };
     default:
       throw new Error(`Unsupported BookmarkFS action: ${action}`);
   }

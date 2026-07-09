@@ -2,6 +2,12 @@
 
 WOX-Bin does **not** embed a payment processor SDK. Instead, **public checkout links** open in a new tab (PayMongo, Xendit, Paddle, your own page, etc.). The app reads them from environment variables at build/runtime.
 
+If you are still deciding which processor should become the long-term path, read **[BILLING-DECISION.md](./BILLING-DECISION.md)** first. The short version is:
+
+- **fastest Philippines-first launch:** PayMongo hosted links
+- **strongest long-term global SaaS path:** Paddle
+- **best indie/global middle ground:** Lemon Squeezy
+
 ## Environment variables
 
 | Variable | Used on | Purpose |
@@ -17,7 +23,7 @@ Requirements:
 
 Empty lines in `.env` like `NEXT_PUBLIC_PRO_UPGRADE_URL=` are treated as **unset** (no crash).
 
-## PayMongo (recommended for Philippines)
+## PayMongo (fastest Philippines-first launch)
 
 ### 1. Create hosted checkout links
 
@@ -103,3 +109,4 @@ Any HTTPS URL works: Lemon Squeezy checkout, Paddle pay links, Cal.com, Typeform
 1. Set the vars in `.env.local` (local) or the host’s env (Vercel, etc.).
 2. Open **`/pricing`** or **`/settings/billing`** while signed in.
 3. Click **Buy Pro pass** / **Buy Team pass** — the link should open in a new tab.
+

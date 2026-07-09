@@ -181,6 +181,119 @@ Success looks like:
 - operator workflows stay manageable
 - platform decisions are explicit instead of improvised
 
+## v2.1 — storage runway and worker maturity
+
+Goal: keep growth affordable and stop heavy workloads from quietly bloating the main app runtime.
+
+Status: next recommended phase.
+
+Primary work:
+
+- finish the storage-boundary work that is currently only partially enforced:
+  - move more binary payloads and large generated outputs out of Postgres
+  - tighten retention for browser sessions, temporary shares, and historical artifacts
+  - make quota accounting reflect actual stored bytes, not only the most visible tables
+- deepen the worker split:
+  - make conversion workers feel first-class instead of "optional extra infra"
+  - document queue, retry, and failure-handling expectations more explicitly
+  - separate "browser-only", "thin API on Vercel", and "worker-only" tool paths more sharply
+- add operator visibility for storage and heavy-job pressure:
+  - daily storage reports
+  - top-table / top-feature breakdowns
+  - worker backlog / failure health
+
+Success looks like:
+
+- database growth is predictable
+- large-file and heavy-tool usage stops threatening the core app
+- operator decisions are based on actual storage and worker pressure, not guesswork
+
+## v2.2 — billing maturity and commercial readiness
+
+Goal: make paid plans real without locking WOX-Bin into the wrong processor too early.
+
+Status: next recommended phase.
+
+Primary work:
+
+- keep the current provider-neutral checkout-link architecture for the public UI:
+  - preserve `NEXT_PUBLIC_PRO_UPGRADE_URL`
+  - preserve `NEXT_PUBLIC_TEAM_UPGRADE_URL`
+  - preserve `NEXT_PUBLIC_BILLING_PORTAL_URL`
+- move billing logic toward a provider-neutral internal model:
+  - separate checkout links from entitlement changes
+  - define a generic billing event / customer / subscription mapping layer
+  - stop assuming Stripe is the only automation path even if Stripe code stays available
+- improve operational billing tooling before full automation:
+  - better admin plan overrides
+  - better audit logs for upgrades, downgrades, and manual grants
+  - cleaner "paid but not yet synced" handling
+- choose the processor path in phases instead of all at once:
+  - immediate launch path: hosted checkout links + manual entitlement handling
+  - long-term mature path: hosted checkout + webhook automation + customer portal
+  - see **[BILLING-DECISION.md](./BILLING-DECISION.md)** for the current provider recommendation
+
+Success looks like:
+
+- WOX-Bin can sell Pro and Team cleanly before full billing automation exists
+- provider choice becomes a reversible implementation detail, not a product rewrite
+- billing support work becomes auditable and less manual over time
+
+## v2.3 — performance, search, and API hardening
+
+Goal: make the app faster to use, easier to navigate, and safer to integrate against.
+
+Status: next recommended phase.
+
+Primary work:
+
+- performance:
+  - trim initial client hydration on the heaviest surfaces
+  - keep pushing optional UI into lazy-loaded islands
+  - expand cache decisions carefully for high-traffic public views
+- search and navigation:
+  - improve paste search and filtering in workspace and admin
+  - add better cross-surface search ergonomics for users, staff, and operators
+  - improve large-library handling before account usage grows much further
+- API maturity:
+  - strengthen external API guarantees
+  - improve docs and examples
+  - harden per-route limits and error semantics
+  - make integration support less ad hoc
+
+Success looks like:
+
+- users feel the app getting faster instead of wider
+- larger libraries and admin queues stay usable
+- external integrations become safer and easier to support
+
+## v3 — trust, accessibility, and ecosystem polish
+
+Goal: make WOX-Bin feel finished, trustworthy, and easier to build around.
+
+Status: later phase after the storage/billing/platform work above.
+
+Primary work:
+
+- accessibility:
+  - keyboard navigation audits
+  - screen-reader status and error announcements
+  - destructive-action safety and recovery improvements
+- trust polish:
+  - clearer empty states and user guidance
+  - better export/recovery/account-data flows
+  - stronger "what happens to my data?" explanations across product surfaces
+- ecosystem polish:
+  - more stable public API docs
+  - extension/app interoperability cleanup
+  - clearer boundaries between workspace, quick-share, privacy suite, tools, and extension-only features
+
+Success looks like:
+
+- the product feels intentional instead of merely feature-rich
+- support burden drops because the UI explains itself better
+- ecosystem features feel like a coherent platform, not a collection of side projects
+
 ## Things that should stay ongoing
 
 These are not one-time milestones:
@@ -199,5 +312,10 @@ If working sequentially, the best order is:
 2. `v1.2 Discord and operator depth`
 3. `v1.3 product polish and language depth`
 4. `v2 scale and platform hardening`
+5. `v2.1 storage runway and worker maturity`
+6. `v2.2 billing maturity and commercial readiness`
+7. `v2.3 performance, search, and API hardening`
+8. `v3 trust, accessibility, and ecosystem polish`
 
 That order keeps the product from getting wider faster than it gets safer.
+
