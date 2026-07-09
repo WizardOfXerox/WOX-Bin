@@ -12,6 +12,16 @@ type ToolsPageCopy = {
   title: string;
   description: string;
   liveLabel: string;
+  searchPlaceholder: string;
+  allTools: string;
+  pdfSuite: string;
+  converters: string;
+  dataDev: string;
+  privacy: string;
+  noResults: string;
+  clearSearch: string;
+  localExecution: string;
+  serverHandoff: string;
   featured: Record<string, ToolCardCopy>;
 };
 
@@ -24,6 +34,16 @@ export const TOOLS_PAGE_COPY: Record<UiLanguage, ToolsPageCopy> = {
     description:
       "WOX Tools is intentionally separate from the paste workspace at /app. Most tools are browser-only and do not touch your paste library unless you explicitly import or export data. Heavy image pairs (TIFF/RAW→WebP, etc.) use a server sharp endpoint (POST /api/convert/image) and are processed in memory for that request only. {liveCount} conversion-related tool{suffix} are currently marked live in the registry.",
     liveLabel: "live",
+    searchPlaceholder: "Search tools...",
+    allTools: "All Utilities",
+    pdfSuite: "PDF Suite",
+    converters: "Converters",
+    dataDev: "Data & Dev",
+    privacy: "Privacy & Security",
+    noResults: "No tools found",
+    clearSearch: "Clear search",
+    localExecution: "Local browser execution",
+    serverHandoff: "Server processing",
     featured: {
       "/tools/pdf-extract": {
         title: "PDF page extractor",
@@ -87,6 +107,16 @@ export const TOOLS_PAGE_COPY: Record<UiLanguage, ToolsPageCopy> = {
     description:
       "Sadyang hiwalay ang WOX Tools sa paste workspace na nasa /app. Karamihan sa tools ay browser-only at hindi gagalaw sa paste library mo maliban kung kusa kang mag-import o mag-export ng data. Ang mabibigat na image pairs (TIFF/RAW→WebP atbp.) ay gumagamit ng server sharp endpoint (POST /api/convert/image) at pinoproseso lang sa memory para sa request na iyon. Sa ngayon, may {liveCount} conversion-related tool{suffix} na may markang live sa registry.",
     liveLabel: "live",
+    searchPlaceholder: "Maghanap ng mga tool...",
+    allTools: "Lahat ng Utilities",
+    pdfSuite: "PDF Suite",
+    converters: "Converters",
+    dataDev: "Data at Dev",
+    privacy: "Privacy at Security",
+    noResults: "Walang nahanap na tool",
+    clearSearch: "I-clear ang paghahanap",
+    localExecution: "Lokal na pagtakbo sa browser",
+    serverHandoff: "Pagproseso sa server",
     featured: {
       "/tools/pdf-extract": {
         title: "PDF page extractor",
@@ -150,6 +180,16 @@ export const TOOLS_PAGE_COPY: Record<UiLanguage, ToolsPageCopy> = {
     description:
       "WOX Tools は /app のペーストワークスペースとは意図的に分けられています。ほとんどのツールはブラウザ内だけで動作し、明示的に入出力しない限りペーストライブラリには触れません。重い画像変換ペア (TIFF/RAW→WebP など) は server sharp endpoint (POST /api/convert/image) を使い、そのリクエストのメモリ内だけで処理されます。現在レジストリで live とされている conversion-related tool は {liveCount} 件です。",
     liveLabel: "live",
+    searchPlaceholder: "ツールを検索...",
+    allTools: "すべてのユーティリティ",
+    pdfSuite: "PDF スイート",
+    converters: "コンバーター",
+    dataDev: "データ＆開発",
+    privacy: "プライバシー＆セキュリティ",
+    noResults: "ツールが見つかりません",
+    clearSearch: "検索をクリア",
+    localExecution: "ローカルブラウザ実行",
+    serverHandoff: "サーバー処理",
     featured: {
       "/tools/pdf-extract": {
         title: "PDF ページ抽出",
@@ -213,6 +253,16 @@ export const TOOLS_PAGE_COPY: Record<UiLanguage, ToolsPageCopy> = {
     description:
       "WOX Tools está separado intencionalmente del paste workspace en /app. La mayoría de los tools viven solo en el navegador y no tocan tu biblioteca de pastes salvo que importes o exportes datos de forma explícita. Los pares de imagen pesados (TIFF/RAW→WebP, etc.) usan un server sharp endpoint (POST /api/convert/image) y se procesan solo en memoria para esa solicitud. Ahora mismo hay {liveCount} conversion-related tool{suffix} marcados como live en el registro.",
     liveLabel: "live",
+    searchPlaceholder: "Buscar herramientas...",
+    allTools: "Todas las utilidades",
+    pdfSuite: "PDF Suite",
+    converters: "Convertidores",
+    dataDev: "Datos y desarrollo",
+    privacy: "Privacidad y seguridad",
+    noResults: "No se encontraron herramientas",
+    clearSearch: "Limpiar búsqueda",
+    localExecution: "Ejecución local en el navegador",
+    serverHandoff: "Procesamiento en servidor",
     featured: {
       "/tools/pdf-extract": {
         title: "Extractor de páginas PDF",

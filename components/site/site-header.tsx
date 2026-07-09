@@ -20,7 +20,8 @@ import {
   FileText,
   History,
   HelpCircle,
-  LifeBuoy
+  LifeBuoy,
+  Wrench
 } from "lucide-react";
 
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
@@ -118,6 +119,13 @@ export function SiteHeader({ className }: Props) {
       color: "bg-emerald-500/10 text-emerald-400 dark:text-emerald-300",
       labelKey: "nav.fileShare",
       descKey: "nav.fileShare.desc"
+    },
+    {
+      href: "/tools",
+      icon: Wrench,
+      color: "bg-blue-500/10 text-blue-400 dark:text-blue-300",
+      labelKey: "nav.tools",
+      descKey: "nav.tools.desc"
     },
     {
       href: "/privacy-tools",

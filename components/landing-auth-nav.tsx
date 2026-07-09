@@ -18,7 +18,8 @@ import {
   FileText,
   History,
   HelpCircle,
-  LifeBuoy
+  LifeBuoy,
+  Wrench
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -95,6 +96,13 @@ export function LandingDesktopAuthNav({ initialSession = null }: Props) {
       color: "bg-emerald-500/10 text-emerald-400 dark:text-emerald-300",
       labelKey: "nav.fileShare",
       descKey: "nav.fileShare.desc"
+    },
+    {
+      href: "/tools",
+      icon: Wrench,
+      color: "bg-blue-500/10 text-blue-400 dark:text-blue-300",
+      labelKey: "nav.tools",
+      descKey: "nav.tools.desc"
     },
     {
       href: "/privacy-tools",
