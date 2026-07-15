@@ -82,7 +82,7 @@
     "react-hook-form": "latest",
     "sharp": "^0.34.5",
     "sql.js": "latest",
-    "stripe": "^17.7.0",
+    "stripe": "^22.0.0",
     "tailwind-merge": "latest",
     "zod": "latest"
   },
