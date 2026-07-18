@@ -104,6 +104,7 @@ function SignInPageContent() {
     setIdentifier(nextIdentifier);
     setRecoverIdentifier(nextIdentifier);
     setMagicEmail(account.email?.trim() || "");
+    setPassword("");
     setError(null);
     setMagicStatus(null);
     setRecoverError(null);
