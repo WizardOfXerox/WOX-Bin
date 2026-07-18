@@ -7,6 +7,7 @@ import { Suspense, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
@@ -94,22 +95,20 @@ function ResetPasswordForm() {
           <h1 className="mt-2 text-3xl font-semibold">Choose a new password</h1>
         </div>
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <Input
+          <PasswordInput
             autoComplete="new-password"
             minLength={8}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="New password (min 8 characters)"
             required
-            type="password"
             value={password}
           />
-          <Input
+          <PasswordInput
             autoComplete="new-password"
             minLength={8}
             onChange={(e) => setConfirm(e.target.value)}
             placeholder="Confirm new password"
             required
-            type="password"
             value={confirm}
           />
           {error ? <p className="text-sm text-destructive">{error}</p> : null}

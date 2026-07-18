@@ -10,6 +10,7 @@ import { Suspense, useEffect, useMemo, useRef, useState, type FormEvent } from "
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { useUiLanguage } from "@/components/providers/ui-language-provider";
@@ -293,12 +294,11 @@ function SignInPageContent() {
               required
             />
             <div className="space-y-2">
-              <Input
+              <PasswordInput
                 ref={passwordInputRef}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder={t("auth.signIn.password")}
-                type="password"
                 autoComplete="current-password"
                 required
               />
@@ -360,13 +360,12 @@ function SignInPageContent() {
                   placeholder={t("auth.signIn.identifier")}
                   value={recoverIdentifier}
                 />
-                <Input
-                  autoComplete="current-password"
-                  onChange={(event) => setRecoverPassword(event.target.value)}
-                  placeholder={t("auth.signIn.password")}
-                  type="password"
-                  value={recoverPassword}
-                />
+                 <PasswordInput
+                   autoComplete="current-password"
+                   onChange={(event) => setRecoverPassword(event.target.value)}
+                   placeholder={t("auth.signIn.password")}
+                   value={recoverPassword}
+                 />
                 <Input
                   autoComplete="email"
                   onChange={(event) => setRecoverEmail(event.target.value)}

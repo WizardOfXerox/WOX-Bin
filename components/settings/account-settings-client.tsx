@@ -8,6 +8,7 @@ import { Eye, EyeOff, Copy, KeyRound, Eraser, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Badge } from "@/components/ui/badge";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { UserAvatar } from "@/components/ui/user-avatar";
@@ -1194,11 +1195,10 @@ export function AccountSettingsClient({ initial }: Props) {
                     <label className="text-sm font-medium text-foreground" htmlFor="account-password-current">
                       Current password
                     </label>
-                    <Input
+                    <PasswordInput
                       autoComplete="current-password"
                       id="account-password-current"
                       onChange={(e) => setPasswordCurrent(e.target.value)}
-                      type="password"
                       value={passwordCurrent}
                     />
                   </div>
@@ -1208,11 +1208,10 @@ export function AccountSettingsClient({ initial }: Props) {
                   <label className="text-sm font-medium text-foreground" htmlFor="account-password-next">
                     {hasPassword ? "New password" : "Create password"}
                   </label>
-                  <Input
+                  <PasswordInput
                     autoComplete="new-password"
                     id="account-password-next"
                     onChange={(e) => setPasswordNext(e.target.value)}
-                    type="password"
                     value={passwordNext}
                   />
                 </div>
@@ -1221,11 +1220,10 @@ export function AccountSettingsClient({ initial }: Props) {
                   <label className="text-sm font-medium text-foreground" htmlFor="account-password-confirm">
                     Confirm password
                   </label>
-                  <Input
+                  <PasswordInput
                     autoComplete="new-password"
                     id="account-password-confirm"
                     onChange={(e) => setPasswordConfirm(e.target.value)}
-                    type="password"
                     value={passwordConfirm}
                   />
                 </div>
@@ -1474,11 +1472,10 @@ export function AccountSettingsClient({ initial }: Props) {
                         <label className="text-sm font-medium text-foreground" htmlFor="totp-password">
                           Current password
                         </label>
-                        <Input
+                        <PasswordInput
                           autoComplete="current-password"
                           id="totp-password"
                           onChange={(event) => setTotpPassword(event.target.value)}
-                          type="password"
                           value={totpPassword}
                         />
                       </div>
@@ -1619,11 +1616,10 @@ export function AccountSettingsClient({ initial }: Props) {
                 <label className="text-sm font-medium" htmlFor="delete-password">
                   Account password
                 </label>
-                <Input
+                <PasswordInput
                   autoComplete="current-password"
                   id="delete-password"
                   onChange={(e) => setDeletePassword(e.target.value)}
-                  type="password"
                   value={deletePassword}
                 />
               </div>

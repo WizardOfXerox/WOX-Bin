@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { useUiLanguage } from "@/components/providers/ui-language-provider";
 import { readTurnstileToken, resetTurnstileFields, TurnstileField } from "@/components/turnstile-field";
@@ -67,7 +68,7 @@ export default function SignUpPage() {
             <p className="-mt-2 text-xs text-muted-foreground">
               {t("auth.signUp.verifyHint")}
             </p>
-            <Input autoComplete="new-password" name="password" placeholder={t("auth.signUp.password")} type="password" required />
+            <PasswordInput autoComplete="new-password" name="password" placeholder={t("auth.signUp.password")} required />
             <label className="flex cursor-pointer items-start gap-3 text-sm leading-snug text-muted-foreground">
               <input
                 required
