@@ -4,7 +4,7 @@ import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { Clock3, Trash2 } from "lucide-react";
+import { ChevronDown, Clock3, Trash2 } from "lucide-react";
 import { Suspense, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -215,77 +215,89 @@ function SignInPageContent() {
     setRecoverPassword("");
   }
 
+  const hasAlternativeAuth = googleOAuthAvailable || magicLinkAvailable;
+
   return (
-    <main className="flex min-h-screen items-center justify-center px-6 py-16">
-      <Card className="w-full max-w-lg">
-        <CardContent className="space-y-6">
+    <main className="flex min-h-screen items-center justify-center px-4 py-10 sm:px-6">
+      <Card className="w-full max-w-md">
+        <CardContent className="space-y-5 p-5 sm:p-6">
+          {/* ── Header ─────────────────────────────────────────── */}
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">{t("auth.signIn.eyebrow")}</p>
-              <h1 className="mt-2 text-3xl font-semibold">{t("auth.signIn.title")}</h1>
+              <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">{t("auth.signIn.eyebrow")}</p>
+              <h1 className="mt-1.5 text-2xl font-semibold">{t("auth.signIn.title")}</h1>
             </div>
             <LanguageSwitcher compact />
           </div>
+
+          {/* ── Remembered Accounts (compact rows) ─────────────── */}
           {rememberedAccounts.length ? (
-            <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-4">
-              <div>
-                <p className="text-sm font-medium text-foreground">{t("auth.signIn.recentTitle")}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{t("auth.signIn.recentDescription")}</p>
-              </div>
-              <div className="grid gap-3">
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground">{t("auth.signIn.recentTitle")}</p>
+              <div className="space-y-1">
                 {rememberedAccounts.map((account) => {
                   const accountLabel =
                     account.displayName?.trim() || account.username?.trim() || account.email?.trim() || account.name?.trim() || "Account";
-                  const accountDetail = account.email?.trim() || account.username?.trim() || "Saved on this browser";
+                  const accountDetail = account.email?.trim() || account.username?.trim() || "";
                   return (
-                    <div className="rounded-2xl border border-border bg-card/70 p-3" key={account.id}>
-                      <div className="flex items-start gap-3">
-                        <UserAvatar
-                          image={account.image}
-                          label={account.displayName || account.name || account.email}
-                          size="md"
-                          username={account.username}
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-medium text-foreground">{accountLabel}</p>
-                              <p className="truncate text-xs text-muted-foreground">{accountDetail}</p>
-                            </div>
-                            <Button
-                              className="shrink-0"
-                              onClick={() => removeRememberedAccount(account.id)}
-                              size="icon"
-                              type="button"
-                              variant="ghost"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              <span className="sr-only">{t("auth.signIn.forgetAccount")}</span>
-                            </Button>
-                          </div>
-                          <div className="mt-3 flex flex-wrap items-center gap-2">
-                            <Button onClick={() => chooseRememberedAccount(account)} size="sm" type="button" variant="outline">
-                              {t("auth.signIn.useAccount")}
-                            </Button>
-                            {googleOAuthAvailable && account.preferredProvider === "google" ? (
-                              <Button onClick={() => void handleGoogleSignIn()} size="sm" type="button" variant="secondary">
-                                {t("auth.signIn.useGoogle")}
-                              </Button>
-                            ) : null}
-                            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                              <Clock3 className="h-3.5 w-3.5" />
-                              {t("auth.signIn.lastUsed")} {formatDistanceToNow(new Date(account.lastUsedAt), { addSuffix: true })}
-                            </span>
-                          </div>
-                        </div>
+                    <div
+                      className="group flex cursor-pointer items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 transition-colors hover:border-border hover:bg-muted/40"
+                      key={account.id}
+                      onClick={() => chooseRememberedAccount(account)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") chooseRememberedAccount(account); }}
+                    >
+                      <UserAvatar
+                        image={account.image}
+                        label={account.displayName || account.name || account.email}
+                        size="sm"
+                        username={account.username}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-foreground leading-tight">{accountLabel}</p>
+                        {accountDetail ? (
+                          <p className="truncate text-[11px] text-muted-foreground leading-tight">{accountDetail}</p>
+                        ) : null}
                       </div>
+                      <span className="hidden items-center gap-1 text-[10px] text-muted-foreground/60 sm:inline-flex">
+                        <Clock3 className="h-3 w-3" />
+                        {formatDistanceToNow(new Date(account.lastUsedAt), { addSuffix: true })}
+                      </span>
+                      <Button
+                        className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                        onClick={(e) => { e.stopPropagation(); removeRememberedAccount(account.id); }}
+                        size="icon"
+                        type="button"
+                        variant="ghost"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        <span className="sr-only">{t("auth.signIn.forgetAccount")}</span>
+                      </Button>
                     </div>
                   );
                 })}
               </div>
             </div>
           ) : null}
-          <form className="space-y-4" onSubmit={handleSubmit}>
+
+          {/* ── Notices ─────────────────────────────────────────── */}
+          {sessionNotice ? <p className="text-sm text-amber-500 dark:text-amber-300">{sessionNotice}</p> : null}
+          {emailVerifyNotice ? (
+            <p
+              className={
+                emailVerifyNotice.tone === "ok"
+                  ? "text-sm text-emerald-500 dark:text-emerald-400"
+                  : "text-sm text-amber-500 dark:text-amber-300"
+              }
+            >
+              {emailVerifyNotice.text}
+            </p>
+          ) : null}
+          {authErrorNotice ? <p className="text-sm text-amber-500 dark:text-amber-300">{authErrorNotice}</p> : null}
+
+          {/* ── Login Form ──────────────────────────────────────── */}
+          <form className="space-y-3" onSubmit={handleSubmit}>
             <Input
               value={identifier}
               onChange={(event) => setIdentifier(event.target.value)}
@@ -293,135 +305,133 @@ function SignInPageContent() {
               autoComplete="username"
               required
             />
-            <div className="space-y-2">
-              <PasswordInput
-                ref={passwordInputRef}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder={t("auth.signIn.password")}
-                autoComplete="current-password"
-                required
-              />
-              <p className="text-right text-xs">
-                <Link className="text-primary underline-offset-4 hover:underline" href="/forgot-password">
-                  {t("auth.signIn.forgotPassword")}
-                </Link>
-              </p>
+            <PasswordInput
+              ref={passwordInputRef}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder={t("auth.signIn.password")}
+              autoComplete="current-password"
+              required
+            />
+            {/* Inline row: remember-me + forgot password */}
+            <div className="flex items-center justify-between gap-4">
+              <label className="flex items-center gap-2 text-xs text-muted-foreground select-none cursor-pointer">
+                <input
+                  checked={rememberAccount}
+                  className="size-3.5 rounded border border-input accent-primary"
+                  onChange={(event) => handleRememberPreferenceChange(event.target.checked)}
+                  type="checkbox"
+                />
+                {t("auth.signIn.rememberLabel")}
+              </label>
+              <Link className="text-xs text-primary underline-offset-4 hover:underline whitespace-nowrap" href="/forgot-password">
+                {t("auth.signIn.forgotPassword")}
+              </Link>
             </div>
-            <label className="flex items-start gap-3 rounded-xl border border-border bg-muted/20 px-4 py-3 text-sm">
-              <input
-                checked={rememberAccount}
-                className="mt-0.5 size-4 shrink-0 rounded border border-input accent-primary"
-                onChange={(event) => handleRememberPreferenceChange(event.target.checked)}
-                type="checkbox"
-              />
-              <span className="min-w-0">
-                <span className="font-medium text-foreground">{t("auth.signIn.rememberLabel")}</span>
-                <span className="mt-1 block text-xs text-muted-foreground">{t("auth.signIn.rememberDescription")}</span>
-              </span>
-            </label>
-            {sessionNotice ? <p className="text-sm text-amber-200/90">{sessionNotice}</p> : null}
-            {emailVerifyNotice ? (
-              <p
-                className={
-                  emailVerifyNotice.tone === "ok"
-                    ? "text-sm text-emerald-500 dark:text-emerald-400"
-                    : "text-sm text-amber-200/90"
-                }
-              >
-                {emailVerifyNotice.text}
-              </p>
-            ) : null}
-            {authErrorNotice ? <p className="text-sm text-amber-200/90">{authErrorNotice}</p> : null}
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
             <Button className="w-full" disabled={loading} type="submit">
               {loading ? t("auth.signIn.submitting") : t("auth.signIn.submit")}
             </Button>
           </form>
-          <div className="rounded-xl border border-border bg-muted/20 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium text-foreground">{t("auth.signIn.verificationHelpTitle")}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {t("auth.signIn.verificationHelpDescription")}
-                </p>
+
+          {/* ── OR Divider + Alternative Auth ───────────────────── */}
+          {hasAlternativeAuth ? (
+            <>
+              <div className="relative flex items-center gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-[11px] uppercase tracking-widest text-muted-foreground/60">{t("auth.signIn.orContinueWith") || "or"}</span>
+                <div className="h-px flex-1 bg-border" />
               </div>
-              {authError === "emailNotVerified" ? null : (
-                <Button onClick={() => setRecoverOpen((open) => !open)} size="sm" type="button" variant="ghost">
-                  {recoverOpen ? t("auth.signIn.hide") : t("auth.signIn.open")}
-                </Button>
-              )}
-            </div>
-            {recoverOpen || authError === "emailNotVerified" ? (
-              <form className="mt-4 space-y-3" onSubmit={handleVerificationRecovery}>
+              <div className="flex flex-col gap-2">
+                {googleOAuthAvailable ? (
+                  <Button className="w-full" type="button" variant="outline" onClick={() => void handleGoogleSignIn()}>
+                    <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.96 10.96 0 0 0 1 12c0 1.77.42 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                    {t("auth.signIn.google")}
+                  </Button>
+                ) : null}
+                {magicLinkAvailable ? (
+                  <form className="flex gap-2" onSubmit={(e) => void handleMagicLink(e)}>
+                    <Input
+                      autoComplete="email"
+                      className="flex-1 text-sm"
+                      onChange={(e) => setMagicEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      type="email"
+                      value={magicEmail}
+                    />
+                    <Button className="shrink-0" disabled={magicLoading || !magicEmail.trim()} type="submit" variant="secondary">
+                      {magicLoading ? t("auth.signIn.magicLinkSending") : t("auth.signIn.magicLink")}
+                    </Button>
+                  </form>
+                ) : null}
+                {magicStatus ? <p className="text-xs text-muted-foreground">{magicStatus}</p> : null}
+              </div>
+            </>
+          ) : null}
+
+          {/* ── Verification Help (collapsible disclosure) ──────── */}
+          <details className="group" open={recoverOpen || authError === "emailNotVerified" || undefined}>
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs text-muted-foreground select-none [&::-webkit-details-marker]:hidden">
+              <ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-180" />
+              {t("auth.signIn.verificationHelpTitle")}
+            </summary>
+            <div className="mt-3 rounded-lg border border-border bg-muted/20 p-3">
+              <p className="mb-3 text-[11px] text-muted-foreground leading-relaxed">
+                {t("auth.signIn.verificationHelpDescription")}
+              </p>
+              <form className="space-y-2.5" onSubmit={handleVerificationRecovery}>
                 <Input
                   autoComplete="username"
+                  className="text-sm"
                   onChange={(event) => setRecoverIdentifier(event.target.value)}
                   placeholder={t("auth.signIn.identifier")}
                   value={recoverIdentifier}
                 />
-                 <PasswordInput
-                   autoComplete="current-password"
-                   onChange={(event) => setRecoverPassword(event.target.value)}
-                   placeholder={t("auth.signIn.password")}
-                   value={recoverPassword}
-                 />
+                <PasswordInput
+                  autoComplete="current-password"
+                  className="text-sm"
+                  onChange={(event) => setRecoverPassword(event.target.value)}
+                  placeholder={t("auth.signIn.password")}
+                  value={recoverPassword}
+                />
                 <Input
                   autoComplete="email"
+                  className="text-sm"
                   onChange={(event) => setRecoverEmail(event.target.value)}
                   placeholder={t("auth.signIn.correctedEmail")}
                   type="email"
                   value={recoverEmail}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[11px] text-muted-foreground">
                   {t("auth.signIn.correctedEmailHint")}
                 </p>
-                {recoverError ? <p className="text-sm text-destructive">{recoverError}</p> : null}
-                {recoverMessage ? <p className="text-sm text-emerald-500 dark:text-emerald-400">{recoverMessage}</p> : null}
-                <Button className="w-full" disabled={recoverLoading} type="submit" variant="secondary">
+                {recoverError ? <p className="text-xs text-destructive">{recoverError}</p> : null}
+                {recoverMessage ? <p className="text-xs text-emerald-500 dark:text-emerald-400">{recoverMessage}</p> : null}
+                <Button className="w-full" disabled={recoverLoading} size="sm" type="submit" variant="secondary">
                   {recoverLoading ? t("auth.signIn.sending") : t("auth.signIn.resendVerification")}
                 </Button>
               </form>
-            ) : null}
-          </div>
-          <div className="space-y-3">
-            {googleOAuthAvailable ? (
-              <Button className="w-full" type="button" variant="outline" onClick={() => void handleGoogleSignIn()}>
-                {t("auth.signIn.google")}
-              </Button>
-            ) : null}
-            {magicLinkAvailable ? (
-              <form className="space-y-2 rounded-xl border border-border bg-muted/20 p-4" onSubmit={(e) => void handleMagicLink(e)}>
-                <p className="text-xs font-medium text-muted-foreground">{t("auth.signIn.magicLinkTitle")}</p>
-                <Input
-                  autoComplete="email"
-                  onChange={(e) => setMagicEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  type="email"
-                  value={magicEmail}
-                />
-                <Button className="w-full" disabled={magicLoading || !magicEmail.trim()} type="submit" variant="secondary">
-                  {magicLoading ? t("auth.signIn.magicLinkSending") : t("auth.signIn.magicLink")}
-                </Button>
-                {magicStatus ? <p className="text-xs text-muted-foreground">{magicStatus}</p> : null}
-              </form>
-            ) : null}
-            <p className="text-center text-xs text-muted-foreground">
+            </div>
+          </details>
+
+          {/* ── Footer ──────────────────────────────────────────── */}
+          <div className="flex flex-col items-center gap-1.5 pt-1">
+            <p className="text-sm text-muted-foreground">
+              {t("auth.signIn.newHere")}{" "}
+              <Link className="text-primary font-medium hover:underline underline-offset-4" href="/sign-up">
+                {t("auth.signIn.createAccount")}
+              </Link>
+            </p>
+            <p className="text-center text-[10px] text-muted-foreground/50">
               {authCopy.legalPrefix}{" "}
-              <Link className="text-primary underline-offset-4 hover:underline" href="/terms">
+              <Link className="underline-offset-2 hover:underline" href="/terms">
                 {t("common.terms")}
               </Link>{" "}
               {authCopy.legalConnector}{" "}
-              <Link className="text-primary underline-offset-4 hover:underline" href="/privacy">
+              <Link className="underline-offset-2 hover:underline" href="/privacy">
                 {t("common.privacy")}
               </Link>
               .
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {t("auth.signIn.newHere")}{" "}
-              <Link className="text-primary" href="/sign-up">
-                {t("auth.signIn.createAccount")}
-              </Link>
             </p>
           </div>
         </CardContent>
@@ -434,9 +444,9 @@ export default function SignInPage() {
   return (
     <Suspense
       fallback={
-        <main className="flex min-h-screen items-center justify-center px-6 py-16">
-          <Card className="w-full max-w-lg">
-            <CardContent className="p-6 text-sm text-muted-foreground">Loading…</CardContent>
+        <main className="flex min-h-screen items-center justify-center px-4 py-10 sm:px-6">
+          <Card className="w-full max-w-md">
+            <CardContent className="p-5 text-sm text-muted-foreground sm:p-6">Loading…</CardContent>
           </Card>
         </main>
       }
