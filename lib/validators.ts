@@ -56,11 +56,11 @@ export const pasteFileSchema = z
     filename: z.string().trim().min(1).max(255),
     content: z.string().max(FILE_MEDIA_BASE64_MAX),
     language: z.string().trim().refine((value) => LANGUAGES.includes(value as (typeof LANGUAGES)[number])),
-    mediaKind: z.enum(["image", "video"]).optional().nullable(),
+    mediaKind: z.enum(["image", "video", "file"]).optional().nullable(),
     mimeType: z.string().trim().max(120).optional().nullable()
   })
   .superRefine((data, ctx) => {
-    const isMedia = data.mediaKind === "image" || data.mediaKind === "video";
+    const isMedia = data.mediaKind === "image" || data.mediaKind === "video" || data.mediaKind === "file";
     if (isMedia) {
       if (data.language !== "none") {
         ctx.addIssue({

@@ -16,12 +16,11 @@ describe("parseDataUrl", () => {
 });
 
 describe("isAllowedPasteMediaMime", () => {
-  it("allows png and mp4", () => {
+  it("allows png, mp4, and other formats", () => {
     expect(isAllowedPasteMediaMime("image/png")).toBe(true);
     expect(isAllowedPasteMediaMime("video/mp4")).toBe(true);
-  });
-  it("rejects svg", () => {
-    expect(isAllowedPasteMediaMime("image/svg+xml")).toBe(false);
+    expect(isAllowedPasteMediaMime("image/svg+xml")).toBe(true);
+    expect(isAllowedPasteMediaMime("application/zip")).toBe(true);
   });
 });
 
@@ -29,7 +28,8 @@ describe("mediaKindFromMime", () => {
   it("classifies types", () => {
     expect(mediaKindFromMime("image/jpeg")).toBe("image");
     expect(mediaKindFromMime("video/webm")).toBe("video");
-    expect(mediaKindFromMime("text/plain")).toBe(null);
+    expect(mediaKindFromMime("text/plain")).toBe("file");
+    expect(mediaKindFromMime("application/zip")).toBe("file");
   });
 });
 

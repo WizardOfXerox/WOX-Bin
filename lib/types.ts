@@ -2,7 +2,7 @@ import type { VISIBILITY_OPTIONS } from "@/lib/constants";
 
 export type Visibility = (typeof VISIBILITY_OPTIONS)[number]["value"];
 
-export type PasteFileMediaKind = "image" | "video";
+export type PasteFileMediaKind = "image" | "video" | "file";
 
 export type PasteFileDraft = {
   filename: string;

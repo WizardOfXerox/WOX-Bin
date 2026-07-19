@@ -893,7 +893,21 @@ export function PublicPasteShell({
                             </Link>
                           </Button>
                         </div>
-                        {isMedia && mediaSrc ? (
+                        {file.mediaKind === "file" ? (
+                          <div className="flex flex-col items-center justify-center rounded-[1.25rem] border border-dashed border-border bg-muted/10 p-8 text-center">
+                            <FileDown className="h-12 w-12 text-primary/75 mb-3" />
+                            <h3 className="text-sm font-semibold">{file.filename}</h3>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Binary Attachment ({file.mimeType || "application/octet-stream"})
+                            </p>
+                            <Button asChild className="mt-4" size="sm" variant="secondary">
+                              <Link href={attachmentDownloadHref(index, file)} prefetch={false}>
+                                <Download className="h-4 w-4 mr-2" />
+                                Download File
+                              </Link>
+                            </Button>
+                          </div>
+                        ) : isMedia && mediaSrc ? (
                           <div className="overflow-hidden rounded-[1rem] border border-border bg-muted/30">
                             {file.mediaKind === "image" ? (
                               // eslint-disable-next-line @next/next/no-img-element

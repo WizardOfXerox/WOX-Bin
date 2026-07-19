@@ -1,29 +1,21 @@
 import type { PasteFileDraft, PasteFileMediaKind } from "@/lib/types";
 
-/** MIME types allowed for paste attachments (no SVG — script risk in some viewers). */
-const ALLOWED_MIME = new Set([
-  "image/png",
-  "image/jpeg",
-  "image/gif",
-  "image/webp",
-  "image/avif",
-  "image/bmp",
-  "video/mp4",
-  "video/webm",
-  "video/quicktime",
-  "video/ogg"
-]);
+const ALLOWED_MIME = new Set<string>();
 
 export function normalizeAttachmentMimeType(mime: string): string {
+  if (!mime || !mime.trim()) {
+    return "application/octet-stream";
+  }
   const base = mime.split(";")[0]?.trim().toLowerCase() ?? "";
   if (base === "image/jpg") {
     return "image/jpeg";
   }
-  return base;
+  return base || "application/octet-stream";
 }
 
 export function isAllowedPasteMediaMime(mime: string): boolean {
-  return ALLOWED_MIME.has(normalizeAttachmentMimeType(mime));
+  // Allow all MIME types since we want to support any file format!
+  return true;
 }
 
 export function mediaKindFromMime(mime: string): PasteFileMediaKind | null {
@@ -34,7 +26,7 @@ export function mediaKindFromMime(mime: string): PasteFileMediaKind | null {
   if (n.startsWith("video/")) {
     return "video";
   }
-  return null;
+  return "file";
 }
 
 export function parseDataUrl(dataUrl: string): { mimeType: string; base64: string } | null {

@@ -17,6 +17,7 @@ import {
   Paperclip,
   Trash2,
   Check,
+  FileDown,
 } from "lucide-react";
 
 import { readTurnstileToken, resetTurnstileFields, TurnstileField } from "@/components/turnstile-field";
@@ -26,12 +27,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SiteHeader } from "@/components/site/site-header";
 import { useUiLanguage } from "@/components/providers/ui-language-provider";
+import { cn } from "@/lib/utils";
 
 type UploadedFile = {
   filename: string;
   content: string; // base64 string
   mimeType: string;
-  mediaKind: "image" | "video" | null;
+  mediaKind: "image" | "video" | "file" | null;
   sizeBytes: number;
 };
 
@@ -59,8 +61,9 @@ export default function FileSharePage() {
   const [successData, setSuccessData] = useState<{ slug: string; secretMode: boolean } | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [copiedAll, setCopiedAll] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
-  function readFileAsBase64(file: File): Promise<{ content: string; mimeType: string; mediaKind: "image" | "video" | null }> {
+  function readFileAsBase64(file: File): Promise<{ content: string; mimeType: string; mediaKind: "image" | "video" | "file" }> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => {
@@ -71,7 +74,7 @@ export default function FileSharePage() {
           return;
         }
         const mimeType = file.type || "application/octet-stream";
-        let mediaKind: "image" | "video" | null = null;
+        let mediaKind: "image" | "video" | "file" = "file";
         if (mimeType.startsWith("image/")) {
           mediaKind = "image";
         } else if (mimeType.startsWith("video/")) {
@@ -85,8 +88,7 @@ export default function FileSharePage() {
     });
   }
 
-  async function handleFileSelect(event: ChangeEvent<HTMLInputElement>) {
-    const selected = Array.from(event.target.files || []);
+  async function handleFiles(selected: File[]) {
     if (!selected.length) return;
     setError(null);
 
@@ -112,7 +114,28 @@ export default function FileSharePage() {
     if (!title && nextFiles.length > 0) {
       setTitle(nextFiles[0].filename);
     }
+  }
+
+  async function handleFileSelect(event: ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(event.target.files || []);
+    await handleFiles(selected);
     event.target.value = "";
+  }
+
+  function handleDragOver(event: React.DragEvent<HTMLElement>) {
+    event.preventDefault();
+    setIsDragging(true);
+  }
+
+  function handleDragLeave() {
+    setIsDragging(false);
+  }
+
+  async function handleDrop(event: React.DragEvent<HTMLElement>) {
+    event.preventDefault();
+    setIsDragging(false);
+    const selected = Array.from(event.dataTransfer.files || []);
+    await handleFiles(selected);
   }
 
   function handleRemoveFile(index: number) {
@@ -221,7 +244,17 @@ export default function FileSharePage() {
                 {/* Drag-and-Drop Zone */}
                 <div className="space-y-2">
                   <label className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Files</label>
-                  <label className="flex min-h-[12rem] cursor-pointer flex-col items-center justify-center rounded-[1.25rem] border border-dashed border-border bg-muted/10 px-4 py-6 text-center hover:bg-muted/20 transition-all duration-300">
+                  <label
+                    className={cn(
+                      "flex min-h-[12rem] cursor-pointer flex-col items-center justify-center rounded-[1.25rem] border border-dashed px-4 py-6 text-center transition-all duration-300",
+                      isDragging
+                        ? "border-primary bg-primary/10 scale-[1.01]"
+                        : "border-border bg-muted/10 hover:bg-muted/20"
+                    )}
+                    onDragLeave={handleDragLeave}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                  >
                     <Paperclip className="h-10 w-10 text-muted-foreground/60 mb-3" />
                     <span className="text-sm font-medium">Click to select or drag and drop files</span>
                     <span className="text-xs text-muted-foreground mt-1">Images, videos, text, and other documents</span>

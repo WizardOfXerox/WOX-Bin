@@ -71,7 +71,9 @@ import {
   HelpCircle,
   History,
   LifeBuoy,
-  Wrench
+  Wrench,
+  Paperclip,
+  FileDown
 } from "lucide-react";
 
 import { PasteLineageBanner } from "@/components/paste-lineage-banner";
@@ -5602,7 +5604,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                                   placeholder="Filename"
                                   value={file.filename}
                                 />
-                                {isMedia ? (
+                                {file.mediaKind ? (
                                   <div className="flex h-11 items-center">
                                     <Badge className="capitalize border-border bg-muted text-foreground">
                                       {file.mediaKind}
@@ -5640,7 +5642,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                                   </select>
                                 )}
                                 <div className="flex flex-wrap items-center gap-1">
-                                  {isMedia ? (
+                                  {file.mediaKind ? (
                                     <Button
                                       disabled={!selectedPasteInWorkspace}
                                       onClick={() => {
@@ -5671,24 +5673,55 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                                   </Button>
                                 </div>
                               </div>
-                              {isMedia && mediaSrc ? (
+                              {file.mediaKind && mediaSrc ? (
                                 <ContextMenu>
                                   <ContextMenuTrigger asChild>
-                                    <div className="mt-3 overflow-hidden rounded-[1rem] border border-border bg-black/20">
-                                      {file.mediaKind === "image" ? (
-                                        // eslint-disable-next-line @next/next/no-img-element
-                                        <img
-                                          alt=""
-                                          className="max-h-[min(70vh,520px)] w-full object-contain"
-                                          src={mediaSrc}
-                                        />
+                                    <div>
+                                      {file.mediaKind === "image" || file.mediaKind === "video" ? (
+                                        <div className="mt-3 overflow-hidden rounded-[1rem] border border-border bg-black/20">
+                                          {file.mediaKind === "image" ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img
+                                              alt=""
+                                              className="max-h-[min(70vh,520px)] w-full object-contain"
+                                              src={mediaSrc}
+                                            />
+                                          ) : (
+                                            <video
+                                              className="max-h-[min(70vh,520px)] w-full"
+                                              controls
+                                              preload="metadata"
+                                              src={mediaSrc}
+                                            />
+                                          )}
+                                        </div>
                                       ) : (
-                                        <video
-                                          className="max-h-[min(70vh,520px)] w-full"
-                                          controls
-                                          preload="metadata"
-                                          src={mediaSrc}
-                                        />
+                                        <div className="mt-3 flex items-center justify-between rounded-[1rem] border border-border bg-black/25 p-4">
+                                          <div className="flex items-center gap-3">
+                                            <div className="rounded-lg bg-primary/10 p-2.5 text-primary">
+                                              <FileDown className="h-6 w-6" />
+                                            </div>
+                                            <div className="min-w-0">
+                                              <p className="truncate text-sm font-semibold">{file.filename}</p>
+                                              <p className="truncate text-xs text-muted-foreground">
+                                                Binary File ({file.mimeType || "application/octet-stream"})
+                                              </p>
+                                            </div>
+                                          </div>
+                                          <Button
+                                            size="sm"
+                                            variant="secondary"
+                                            onClick={() => {
+                                              const anchor = document.createElement("a");
+                                              anchor.href = mediaSrc;
+                                              anchor.download = file.filename;
+                                              anchor.click();
+                                            }}
+                                          >
+                                            <Download className="h-4 w-4 mr-2" />
+                                            Download
+                                          </Button>
+                                        </div>
                                       )}
                                     </div>
                                   </ContextMenuTrigger>
@@ -5731,7 +5764,7 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                                   </ContextMenuContent>
                                 </ContextMenu>
                               ) : null}
-                              {!isMedia ? (
+                              {!file.mediaKind ? (
                                 <ContextMenu>
                                   <ContextMenuTrigger asChild>
                                     <div className="mt-3 min-h-0 outline-none [&:focus]:outline-none">

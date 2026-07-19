@@ -66,7 +66,7 @@ type SavePasteInput = {
     filename: string;
     content: string;
     language: string;
-    mediaKind?: "image" | "video" | null;
+    mediaKind?: "image" | "video" | "file" | null;
     mimeType?: string | null;
   }>;
 };
@@ -350,7 +350,7 @@ async function hydratePaste(
     mimeType?: string | null;
   }): PasteFileDraft {
     const mk = f.mediaKind ?? null;
-    const mediaKind: PasteFileMediaKind | null = mk === "image" || mk === "video" ? mk : null;
+    const mediaKind: PasteFileMediaKind | null = mk === "image" || mk === "video" || mk === "file" ? mk : null;
     return {
       filename: f.filename,
       content: f.content,

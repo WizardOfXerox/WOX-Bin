@@ -88,8 +88,27 @@ export async function GET(request: Request, { params }: Params) {
   };
 
   if (file.mediaKind && file.mimeType) {
+    const mime = file.mimeType.split(";")[0]?.trim().toLowerCase() ?? "";
+    const safeInlineMimes = new Set([
+      "image/png",
+      "image/jpeg",
+      "image/gif",
+      "image/webp",
+      "image/avif",
+      "image/bmp",
+      "video/mp4",
+      "video/webm",
+      "video/quicktime",
+      "video/ogg",
+      "audio/mpeg",
+      "audio/ogg",
+      "audio/wav",
+      "audio/webm"
+    ]);
+    const isSafeInline = safeInlineMimes.has(mime);
+
     headers["Content-Type"] = file.mimeType;
-    if (wantDownload) {
+    if (wantDownload || !isSafeInline) {
       headers["Content-Disposition"] = `attachment; filename="${asciiContentDispositionFilename(
         safeDownloadBasename(file.filename, "attachment")
       )}"`;
