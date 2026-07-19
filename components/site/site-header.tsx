@@ -210,12 +210,12 @@ export function SiteHeader({ className }: Props) {
                 size="sm"
                 username={sessionUser.username}
               />
-              <span>{accountLabelFromSession(session)}</span>
+              <span className="hidden 2xl:inline">{accountLabelFromSession(session)}</span>
             </Link>
           </Button>
-          <Button className="whitespace-nowrap" onClick={() => void signOut({ callbackUrl: "/" })} type="button" variant="outline">
+          <Button className="inline-flex items-center gap-2 whitespace-nowrap" onClick={() => void signOut({ callbackUrl: "/" })} type="button" variant="outline">
             <LogOut className="h-4 w-4" />
-            {t("nav.signOut")}
+            <span className="hidden 2xl:inline">{t("nav.signOut")}</span>
           </Button>
         </>
       ) : (

@@ -21,7 +21,7 @@ export function PwaInstallButton({
   const { canInstall, installed, promptInstall } = usePwa();
   const [pending, setPending] = useState(false);
 
-  if (!canInstall && !installed) {
+  if (!canInstall || installed) {
     return null;
   }
 
