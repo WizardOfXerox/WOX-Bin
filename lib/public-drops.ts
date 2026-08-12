@@ -631,11 +631,29 @@ export async function buildDropResponse(
     "Content-Type": row.kind === "text" ? row.mimeType : normalizeMime(row.mimeType, "application/octet-stream")
   });
 
-  if (options?.download) {
-    const asciiName = asciiContentDispositionFilename(filename);
+  const asciiName = asciiContentDispositionFilename(filename);
+  const mime = (row.mimeType ?? "").split(";")[0]?.trim().toLowerCase();
+  const safeInlineMimes = new Set([
+    "image/png",
+    "image/jpeg",
+    "image/gif",
+    "image/webp",
+    "image/avif",
+    "image/bmp",
+    "video/mp4",
+    "video/webm",
+    "video/quicktime",
+    "video/ogg",
+    "audio/mpeg",
+    "audio/ogg",
+    "audio/wav",
+    "audio/webm"
+  ]);
+  const isSafeInline = safeInlineMimes.has(mime);
+
+  if (options?.download || !isSafeInline) {
     headers.set("Content-Disposition", `attachment; filename="${asciiName}"`);
   } else if (row.kind === "file") {
-    const asciiName = asciiContentDispositionFilename(filename);
     headers.set("Content-Disposition", `inline; filename="${asciiName}"`);
   }
 

@@ -239,8 +239,17 @@
     );
   }
 
+  function isTrustedOrigin() {
+    const host = (window.location.hostname || "").toLowerCase();
+    return host === "wox-bin.vercel.app" || host === "localhost" || host === "127.0.0.1";
+  }
+
   window.addEventListener("message", (event) => {
     if (event.source !== window || event.origin !== window.location.origin) {
+      return;
+    }
+
+    if (!isTrustedOrigin()) {
       return;
     }
 
