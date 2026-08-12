@@ -243,7 +243,7 @@ export function SiteHeader({ className }: Props) {
           </Link>
 
           {/* Desktop Nav Items */}
-          <nav className="hidden items-center gap-1 xl:flex">
+          <nav className="hidden items-center gap-1 2xl:flex">
             <Link className={navItemClass(pathname === "/")} href="/">
               {t("nav.home")}
             </Link>
@@ -358,13 +358,13 @@ export function SiteHeader({ className }: Props) {
 
         {/* Right Side: Desktop Actions & Mobile Menu trigger */}
         <div className="flex shrink-0 items-center gap-3">
-          <div className="hidden items-center gap-2 xl:flex">{desktopActions}</div>
+          <div className="hidden items-center gap-2 2xl:flex">{desktopActions}</div>
 
           <Dialog>
             <DialogTrigger asChild>
               <Button
                 aria-label="Open site navigation"
-                className="shrink-0 xl:hidden"
+                className="shrink-0 2xl:hidden"
                 size="icon"
                 type="button"
                 variant="outline"
