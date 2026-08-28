@@ -72,7 +72,7 @@
     "next-auth": "latest",
     "nodemailer": "^8.0.4",
     "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^5.5.207",
+    "pdfjs-dist": "^5.6.205",
     "playwright": "^1.58.2",
     "postgres": "latest",
     "prismjs": "^1.30.0",
