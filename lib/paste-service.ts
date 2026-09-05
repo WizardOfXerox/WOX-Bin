@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, ilike, inArray, isNull, ne, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import {
@@ -1042,15 +1042,16 @@ export async function getPasteForViewer(options: {
   }
 
   if (options.trackView && !owner) {
-    const nextViews = row.viewCount + 1;
-    await db
+    const [updatedRow] = await db
       .update(pastes)
       .set({
-        viewCount: nextViews,
+        viewCount: sql`${pastes.viewCount} + 1`,
         updatedAt: new Date()
       })
-      .where(eq(pastes.id, row.id));
+      .where(eq(pastes.id, row.id))
+      .returning({ viewCount: pastes.viewCount });
 
+    const nextViews = updatedRow?.viewCount ?? (row.viewCount + 1);
     row.viewCount = nextViews;
 
     if (row.burnAfterRead || (row.burnAfterViews > 0 && nextViews >= row.burnAfterViews)) {
@@ -1160,11 +1161,25 @@ export async function createCommentForPaste(options: {
     return null;
   }
 
+  let validParentId: number | null = null;
+  if (options.parentId) {
+    const [parentComment] = await db
+      .select({ id: comments.id, pasteId: comments.pasteId, status: comments.status })
+      .from(comments)
+      .where(eq(comments.id, options.parentId))
+      .limit(1);
+
+    if (!parentComment || parentComment.pasteId !== access.paste.id || parentComment.status !== "active") {
+      return null;
+    }
+    validParentId = parentComment.id;
+  }
+
   const [row] = await db.insert(comments).values({
     pasteId: access.paste.id,
     userId: options.userId,
     content: options.content,
-    parentId: options.parentId ?? null,
+    parentId: validParentId,
     createdAt: new Date(),
     updatedAt: new Date()
   }).returning();

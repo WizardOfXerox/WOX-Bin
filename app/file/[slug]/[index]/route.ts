@@ -52,7 +52,7 @@ export async function GET(request: Request, { params }: Params) {
     viewer,
     accessGrant,
     captchaGrant,
-    trackView: true
+    trackView: false
   });
 
   if (!result.paste) {

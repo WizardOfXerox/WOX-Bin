@@ -361,25 +361,31 @@ export async function voteInPrivacyPoll(input: {
     });
     const previousIds = previousVotes.map((vote) => vote.optionId);
 
-    if (previousVotes.length) {
+    const toRemove = previousIds.filter((id) => !nextIds.includes(id));
+    const toAdd = nextIds.filter((id) => !previousIds.includes(id));
+
+    if (toRemove.length) {
       await tx
         .delete(schema.privacyPollVotes)
-        .where(and(eq(schema.privacyPollVotes.pollId, row.id), eq(schema.privacyPollVotes.voterHash, voterHash)));
+        .where(
+          and(
+            eq(schema.privacyPollVotes.pollId, row.id),
+            eq(schema.privacyPollVotes.voterHash, voterHash),
+            inArray(schema.privacyPollVotes.optionId, toRemove)
+          )
+        );
 
-      if (previousIds.length) {
-        await tx
-          .update(schema.privacyPollOptions)
-          .set({
-            voteCount: sql`greatest(${schema.privacyPollOptions.voteCount} - 1, 0)`
-          })
-          .where(and(eq(schema.privacyPollOptions.pollId, row.id), inArray(schema.privacyPollOptions.id, previousIds)));
-      }
+      await tx
+        .update(schema.privacyPollOptions)
+        .set({
+          voteCount: sql`greatest(${schema.privacyPollOptions.voteCount} - 1, 0)`
+        })
+        .where(and(eq(schema.privacyPollOptions.pollId, row.id), inArray(schema.privacyPollOptions.id, toRemove)));
     }
 
-    const newIds = nextIds.filter((optionId) => !previousIds.includes(optionId));
-    if (newIds.length) {
+    if (toAdd.length) {
       await tx.insert(schema.privacyPollVotes).values(
-        newIds.map((optionId) => ({
+        toAdd.map((optionId) => ({
           pollId: row.id,
           optionId,
           voterHash
@@ -391,7 +397,7 @@ export async function voteInPrivacyPoll(input: {
         .set({
           voteCount: sql`${schema.privacyPollOptions.voteCount} + 1`
         })
-        .where(and(eq(schema.privacyPollOptions.pollId, row.id), inArray(schema.privacyPollOptions.id, newIds)));
+        .where(and(eq(schema.privacyPollOptions.pollId, row.id), inArray(schema.privacyPollOptions.id, toAdd)));
     }
 
     const totalVotes = await tx.query.privacyPollVotes.findMany({

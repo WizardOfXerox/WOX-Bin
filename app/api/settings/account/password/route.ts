@@ -8,12 +8,18 @@ import { browserSessions, users } from "@/lib/db/schema";
 import { jsonError } from "@/lib/http";
 import { logAudit } from "@/lib/audit";
 import { getRequestIp } from "@/lib/request";
+import { rateLimit } from "@/lib/rate-limit";
 import { accountPasswordSchema } from "@/lib/validators";
 
 export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return jsonError("Not signed in.", 401);
+  }
+
+  const limit = await rateLimit("account-password-change", session.user.id);
+  if (!limit.success) {
+    return jsonError("Too many password change attempts. Try again later.", 429);
   }
 
   const body = await request.json().catch(() => null);

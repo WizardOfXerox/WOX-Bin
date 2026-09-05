@@ -10,6 +10,7 @@ import { verifyTurnstile } from "@/lib/turnstile";
 import { viewerFromSession } from "@/lib/session";
 import { getPasteAccessCookieName, getPasteCaptchaCookieName } from "@/lib/paste-access";
 import { getRequestIp } from "@/lib/request";
+import { rateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({
   password: z.string().min(1).max(128).optional(),
@@ -28,6 +29,13 @@ export async function POST(request: Request, { params }: Params) {
   const session = await auth();
   const viewer = viewerFromSession(session);
   const { slug } = await params;
+
+  const ip = getRequestIp(request) ?? "anonymous";
+  const limit = await rateLimit("paste-unlock", `${ip}:${slug}`);
+  if (!limit.success) {
+    return jsonError("Too many unlock attempts. Try again later.", 429);
+  }
+
   const body = await request.json().catch(() => null);
   const parsed = schema.safeParse(body);
 

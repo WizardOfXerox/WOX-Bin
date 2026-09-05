@@ -43,13 +43,18 @@ export async function POST(request: Request) {
     return new NextResponse("Invalid Discord request signature.", { status: 401 });
   }
 
-  const interaction = JSON.parse(body) as {
+  let interaction: {
     id: string;
     type: number;
     token: string;
     application_id: string;
     guild_id?: string;
   };
+  try {
+    interaction = JSON.parse(body);
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload." }, { status: 400 });
+  }
 
   if (interaction.type === DISCORD_INTERACTION_TYPE.ping) {
     return NextResponse.json({

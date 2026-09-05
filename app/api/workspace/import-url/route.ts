@@ -4,6 +4,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { extractGithubGistId, normalizeRawPasteFetchUrl } from "@/lib/import-paste-url";
 import { jsonError } from "@/lib/http";
+import { rateLimit } from "@/lib/rate-limit";
 import {
   assertSafePublicUrl,
   readResponseTextCapped,
@@ -32,6 +33,11 @@ export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return jsonError("Sign in required.", 401);
+  }
+
+  const limit = await rateLimit("workspace-import-url", session.user.id);
+  if (!limit.success) {
+    return jsonError("Too many import requests. Please try again later.", 429);
   }
 
   const json = await request.json().catch(() => null);
