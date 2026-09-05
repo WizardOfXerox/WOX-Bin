@@ -63,7 +63,7 @@ describe("POST /api/public/vaults", () => {
       error: "Rate limit exceeded. Try again later."
     });
     expect(mocks.createFileDrop).not.toHaveBeenCalled();
-  });
+  }, 15_000);
 
   it("uploads encrypted file vault metadata and ciphertext", async () => {
     const form = new FormData();

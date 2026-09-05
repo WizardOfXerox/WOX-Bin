@@ -2,6 +2,7 @@ import { and, eq, isNull, ne } from "drizzle-orm";
 
 import { publicDropObjectStorageFlag } from "@/flags";
 import { logAudit } from "@/lib/audit";
+import { CORS_HEADERS, isSafeInlineMime } from "@/lib/cors";
 import { randomToken, hashToken } from "@/lib/crypto";
 import { db } from "@/lib/db";
 import { publicDrops } from "@/lib/db/schema";
@@ -631,25 +632,11 @@ export async function buildDropResponse(
     "Content-Type": row.kind === "text" ? row.mimeType : normalizeMime(row.mimeType, "application/octet-stream")
   });
 
+  Object.entries(CORS_HEADERS).forEach(([k, v]) => headers.set(k, v));
+
   const asciiName = asciiContentDispositionFilename(filename);
   const mime = (row.mimeType ?? "").split(";")[0]?.trim().toLowerCase();
-  const safeInlineMimes = new Set([
-    "image/png",
-    "image/jpeg",
-    "image/gif",
-    "image/webp",
-    "image/avif",
-    "image/bmp",
-    "video/mp4",
-    "video/webm",
-    "video/quicktime",
-    "video/ogg",
-    "audio/mpeg",
-    "audio/ogg",
-    "audio/wav",
-    "audio/webm"
-  ]);
-  const isSafeInline = safeInlineMimes.has(mime);
+  const isSafeInline = isSafeInlineMime(mime);
 
   if (options?.download || !isSafeInline) {
     headers.set("Content-Disposition", `attachment; filename="${asciiName}"`);

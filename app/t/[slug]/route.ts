@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { CORS_HEADERS, handleCorsPreflight } from "@/lib/cors";
 import { buildDropResponse, getDropForServe, incrementDropView } from "@/lib/public-drops";
 
 type Params = {
@@ -8,6 +9,10 @@ type Params = {
   }>;
 };
 
+export async function OPTIONS() {
+  return handleCorsPreflight();
+}
+
 export async function GET(request: Request, { params }: Params) {
   const { slug } = await params;
   const row = await getDropForServe(slug);
@@ -15,6 +20,7 @@ export async function GET(request: Request, { params }: Params) {
     return new NextResponse("Paste not found.\n", {
       status: 404,
       headers: {
+        ...CORS_HEADERS,
         "Content-Type": "text/plain; charset=utf-8"
       }
     });

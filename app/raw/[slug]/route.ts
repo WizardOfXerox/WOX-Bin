@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import { CORS_HEADERS, handleCorsPreflight, inferRawPasteMimeType } from "@/lib/cors";
 import { getPasteAccessCookieName, getPasteCaptchaCookieName } from "@/lib/paste-access";
 import { getPasteForViewer } from "@/lib/paste-service";
 import { publicScrapeRateGate } from "@/lib/public-scrape";
@@ -19,15 +20,21 @@ type Params = {
   }>;
 };
 
+export async function OPTIONS() {
+  return handleCorsPreflight();
+}
+
 export async function GET(request: Request, { params }: Params) {
   const gate = await publicScrapeRateGate(request);
   if (!gate.ok) {
-    return gate.textResponse;
+    const res = gate.textResponse;
+    Object.entries(CORS_HEADERS).forEach(([k, v]) => res.headers.set(k, v));
+    return res;
   }
 
-  const { slug } = await params;
+  let { slug } = await params;
   const url = new URL(request.url);
-  const format = url.searchParams.get("format")?.toLowerCase() ?? "text";
+  const format = url.searchParams.get("format")?.toLowerCase() ?? null;
   const wantDownload =
     url.searchParams.get("download") === "1" || url.searchParams.get("disposition") === "attachment";
   const session = await auth();
@@ -36,7 +43,7 @@ export async function GET(request: Request, { params }: Params) {
   const accessGrant = cookieStore.get(getPasteAccessCookieName(slug))?.value ?? null;
   const captchaGrant = cookieStore.get(getPasteCaptchaCookieName(slug))?.value ?? null;
 
-  const result = await getPasteForViewer({
+  let result = await getPasteForViewer({
     slug,
     viewer,
     accessGrant,
@@ -44,7 +51,30 @@ export async function GET(request: Request, { params }: Params) {
     trackView: true
   });
 
+  let extensionOverride: string | null = null;
+  // If not found and slug has an extension (e.g. christmas_theme.css), try resolving base slug
+  if (!result.paste) {
+    const extMatch = slug.match(/^(.+?)\.([a-z0-9]{1,10})$/i);
+    if (extMatch && extMatch[1] && extMatch[2]) {
+      const baseSlug = extMatch[1];
+      const ext = extMatch[2];
+      const fallbackResult = await getPasteForViewer({
+        slug: baseSlug,
+        viewer,
+        accessGrant: cookieStore.get(getPasteAccessCookieName(baseSlug))?.value ?? null,
+        captchaGrant: cookieStore.get(getPasteCaptchaCookieName(baseSlug))?.value ?? null,
+        trackView: true
+      });
+      if (fallbackResult.paste) {
+        result = fallbackResult;
+        slug = baseSlug;
+        extensionOverride = ext;
+      }
+    }
+  }
+
   const rateMeta: Record<string, string> = {
+    ...CORS_HEADERS,
     ...gate.rateHeaders,
     "X-Wox-Scrape-Tier": gate.ctx.tier
   };
@@ -53,6 +83,7 @@ export async function GET(request: Request, { params }: Params) {
     return new NextResponse("Paste not found.", {
       status: 404,
       headers: {
+        ...CORS_HEADERS,
         "Content-Type": "text/plain; charset=utf-8",
         ...rateMeta
       }
@@ -65,6 +96,7 @@ export async function GET(request: Request, { params }: Params) {
       {
         status: 423,
         headers: {
+          ...CORS_HEADERS,
           "Content-Type": "text/plain; charset=utf-8",
           ...rateMeta
         }
@@ -76,6 +108,7 @@ export async function GET(request: Request, { params }: Params) {
     return new NextResponse("Encrypted secret links do not expose a raw server-side body. Open the secret link with its fragment key instead.", {
       status: 423,
       headers: {
+        ...CORS_HEADERS,
         "Content-Type": "text/plain; charset=utf-8",
         ...rateMeta
       }
@@ -103,6 +136,7 @@ export async function GET(request: Request, { params }: Params) {
 </body>
 </html>`;
     const htmlHeaders: Record<string, string> = {
+      ...CORS_HEADERS,
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "private, no-store",
       ...rateMeta
@@ -116,8 +150,16 @@ export async function GET(request: Request, { params }: Params) {
     return new NextResponse(doc, { headers: htmlHeaders });
   }
 
+  const mimeType = inferRawPasteMimeType({
+    format,
+    title: result.paste.title,
+    slug: extensionOverride ? `${slug}.${extensionOverride}` : slug,
+    language: result.paste.language
+  });
+
   const textHeaders: Record<string, string> = {
-    "Content-Type": "text/plain; charset=utf-8",
+    ...CORS_HEADERS,
+    "Content-Type": mimeType,
     "Cache-Control": "private, no-store",
     ...rateMeta
   };

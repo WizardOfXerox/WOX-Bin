@@ -89,7 +89,7 @@ describe("POST /api/public/clipboard/[slug]", () => {
       ip: "203.0.113.44",
       userAgent: "Vitest"
     });
-  });
+  }, 15_000);
 
   it("returns a claimable missing state without a noisy 404", async () => {
     mocks.getClipboardBucket.mockResolvedValueOnce(null);

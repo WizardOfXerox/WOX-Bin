@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { CORS_HEADERS, handleCorsPreflight } from "@/lib/cors";
 import { checkEdgeRateLimit } from "@/lib/firewall";
 import {
   buildDropResponse,
@@ -19,10 +20,15 @@ type Params = {
   }>;
 };
 
+export async function OPTIONS() {
+  return handleCorsPreflight();
+}
+
 function textError(message: string, status = 400) {
   return new NextResponse(`${message}\n`, {
     status,
     headers: {
+      ...CORS_HEADERS,
       "Content-Type": "text/plain; charset=utf-8"
     }
   });

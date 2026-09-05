@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import { CORS_HEADERS, handleCorsPreflight, inferAttachmentMimeType, isSafeInlineMime } from "@/lib/cors";
 import { getPasteAccessCookieName, getPasteCaptchaCookieName } from "@/lib/paste-access";
 import { safeDownloadBasename, asciiContentDispositionFilename } from "@/lib/paste-download";
 import { getPasteForViewer } from "@/lib/paste-service";
@@ -15,10 +16,16 @@ type Params = {
   }>;
 };
 
+export async function OPTIONS() {
+  return handleCorsPreflight();
+}
+
 export async function GET(request: Request, { params }: Params) {
   const gate = await publicScrapeRateGate(request);
   if (!gate.ok) {
-    return gate.textResponse;
+    const res = gate.textResponse;
+    Object.entries(CORS_HEADERS).forEach(([k, v]) => res.headers.set(k, v));
+    return res;
   }
 
   const { slug, index } = await params;
@@ -27,6 +34,7 @@ export async function GET(request: Request, { params }: Params) {
     return new NextResponse("Attachment not found.", {
       status: 404,
       headers: {
+        ...CORS_HEADERS,
         "Content-Type": "text/plain; charset=utf-8",
         ...gate.rateHeaders
       }
@@ -51,6 +59,7 @@ export async function GET(request: Request, { params }: Params) {
     return new NextResponse("Paste not found.", {
       status: 404,
       headers: {
+        ...CORS_HEADERS,
         "Content-Type": "text/plain; charset=utf-8",
         ...gate.rateHeaders
       }
@@ -63,6 +72,7 @@ export async function GET(request: Request, { params }: Params) {
       {
         status: 423,
         headers: {
+          ...CORS_HEADERS,
           "Content-Type": "text/plain; charset=utf-8",
           ...gate.rateHeaders
         }
@@ -75,6 +85,7 @@ export async function GET(request: Request, { params }: Params) {
     return new NextResponse("Attachment not found.", {
       status: 404,
       headers: {
+        ...CORS_HEADERS,
         "Content-Type": "text/plain; charset=utf-8",
         ...gate.rateHeaders
       }
@@ -83,31 +94,20 @@ export async function GET(request: Request, { params }: Params) {
 
   const wantDownload = new URL(request.url).searchParams.get("download") === "1";
   const headers: Record<string, string> = {
+    ...CORS_HEADERS,
     "Cache-Control": "private, no-store",
     ...gate.rateHeaders
   };
 
-  if (file.mediaKind && file.mimeType) {
-    const mime = file.mimeType.split(";")[0]?.trim().toLowerCase() ?? "";
-    const safeInlineMimes = new Set([
-      "image/png",
-      "image/jpeg",
-      "image/gif",
-      "image/webp",
-      "image/avif",
-      "image/bmp",
-      "video/mp4",
-      "video/webm",
-      "video/quicktime",
-      "video/ogg",
-      "audio/mpeg",
-      "audio/ogg",
-      "audio/wav",
-      "audio/webm"
-    ]);
-    const isSafeInline = safeInlineMimes.has(mime);
+  const resolvedMime = inferAttachmentMimeType({
+    filename: file.filename,
+    mimeType: file.mimeType,
+    language: file.language
+  });
+  const isSafeInline = isSafeInlineMime(resolvedMime);
 
-    headers["Content-Type"] = file.mimeType;
+  if (file.mediaKind && file.mimeType) {
+    headers["Content-Type"] = resolvedMime;
     if (wantDownload || !isSafeInline) {
       headers["Content-Disposition"] = `attachment; filename="${asciiContentDispositionFilename(
         safeDownloadBasename(file.filename, "attachment")
@@ -119,8 +119,8 @@ export async function GET(request: Request, { params }: Params) {
     });
   }
 
-  headers["Content-Type"] = "text/plain; charset=utf-8";
-  if (wantDownload) {
+  headers["Content-Type"] = resolvedMime.includes("charset") ? resolvedMime : `${resolvedMime}; charset=utf-8`;
+  if (wantDownload || !isSafeInline) {
     headers["Content-Disposition"] = `attachment; filename="${asciiContentDispositionFilename(
       safeDownloadBasename(file.filename, "attachment.txt")
     )}"`;
