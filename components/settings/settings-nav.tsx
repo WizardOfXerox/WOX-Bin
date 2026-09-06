@@ -38,7 +38,10 @@ export function SettingsNav({ plan, currentPath }: Props) {
     },
     {
       title: t("settings.group.security"),
-      items: [{ href: "/settings/sessions", label: t("settings.sessions") }]
+      items: [
+        { href: "/settings/sessions", label: t("settings.sessions") },
+        { href: "/settings/security", label: "Security Log" }
+      ]
     },
     {
       title: t("settings.group.help"),

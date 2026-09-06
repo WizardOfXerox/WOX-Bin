@@ -21,13 +21,43 @@ export async function POST(request: Request) {
   }
 
   const url = new URL(request.url);
-  const content = await request.text();
+  let content = "";
+  const contentType = request.headers.get("content-type") || "";
+
+  if (contentType.includes("multipart/form-data")) {
+    try {
+      const formData = await request.formData();
+      const fileEntry = formData.get("file") || formData.get("f") || formData.get("data") || formData.get("content");
+      if (fileEntry instanceof File) {
+        content = await fileEntry.text();
+      } else if (typeof fileEntry === "string") {
+        content = fileEntry;
+      } else {
+        for (const value of formData.values()) {
+          if (value instanceof File) {
+            content = await value.text();
+            break;
+          } else if (typeof value === "string") {
+            content = value;
+            break;
+          }
+        }
+      }
+    } catch {
+      return textError("Could not parse multipart form data.", 400);
+    }
+  } else {
+    content = await request.text();
+  }
+
+  const expires = url.searchParams.get("expires") || request.headers.get("x-expires");
+  const burnAfterRead = url.searchParams.get("burn") === "1" || request.headers.get("x-burn") === "1";
 
   try {
     const drop = await createTextDrop({
       content,
-      expires: url.searchParams.get("expires"),
-      burnAfterRead: url.searchParams.get("burn") === "1",
+      expires,
+      burnAfterRead,
       ip,
       userAgent: request.headers.get("user-agent")
     });
@@ -46,3 +76,5 @@ export async function POST(request: Request) {
     throw error;
   }
 }
+
+export const PUT = POST;

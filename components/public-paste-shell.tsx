@@ -15,10 +15,15 @@ import {
   Image as ImageIcon,
   LockKeyhole,
   MessageSquare,
+  Play,
   Printer,
   Share2,
-  Star
+  ShieldCheck,
+  Star,
+  Terminal,
+  X
 } from "lucide-react";
+import { isE2EEPayload, decryptPasteClient } from "@/lib/paste-e2ee";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -240,6 +245,19 @@ export function PublicPasteShell({
   const [codeImageOpen, setCodeImageOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
 
+  const isInitialE2EE = isE2EEPayload(initialPaste.content);
+  const [isE2EE] = useState(isInitialE2EE);
+  const [e2eeKey, setE2eeKey] = useState("");
+  const [e2eeError, setE2eeError] = useState<string | null>(null);
+  const [isE2EEDecrypted, setIsE2EEDecrypted] = useState(false);
+
+  const [runnerOutput, setRunnerOutput] = useState<{
+    logs: Array<{ type: string; message: string }>;
+    duration?: number;
+    error?: string;
+  } | null>(null);
+  const [runningScript, setRunningScript] = useState(false);
+
   const [showLineNumbers, setShowLineNumbers] = useState(true);
   const [showLineSeparators, setShowLineSeparators] = useState(true);
   const [wrapLongLines, setWrapLongLines] = useState(true);
@@ -367,6 +385,130 @@ export function PublicPasteShell({
     const title = paste.title?.trim() || paste.slug;
     document.title = `${title} — WOX-Bin`;
   }, [paste.slug, paste.title]);
+
+  useEffect(() => {
+    if (!isInitialE2EE || typeof window === "undefined") {
+      return;
+    }
+    const hash = window.location.hash.replace(/^#/, "");
+    const match = hash.match(/key=([^&]+)/);
+    const key = match ? match[1] : null;
+    if (key) {
+      void decryptPasteClient(key, initialPaste.content)
+        .then((decrypted) => {
+          setPaste((prev) => ({
+            ...prev,
+            title: decrypted.title || prev.title,
+            content: decrypted.content,
+            files: decrypted.files || prev.files
+          }));
+          setIsE2EEDecrypted(true);
+          setE2eeError(null);
+        })
+        .catch(() => {
+          setE2eeError("Decryption key in URL is invalid.");
+        });
+    }
+  }, [initialPaste.content, isInitialE2EE]);
+
+  async function handleManualE2EEUnlock(e: FormEvent) {
+    e.preventDefault();
+    if (!e2eeKey.trim()) {
+      setE2eeError("Please enter the decryption key.");
+      return;
+    }
+    setE2eeError(null);
+    try {
+      const decrypted = await decryptPasteClient(e2eeKey.trim(), paste.content);
+      setPaste((prev) => ({
+        ...prev,
+        title: decrypted.title || prev.title,
+        content: decrypted.content,
+        files: decrypted.files || prev.files
+      }));
+      setIsE2EEDecrypted(true);
+    } catch {
+      setE2eeError("Invalid decryption key. Please check and try again.");
+    }
+  }
+
+  function runScript() {
+    setRunningScript(true);
+    setRunnerOutput(null);
+
+    try {
+      const workerCode = `
+        const logs = [];
+        const serialize = (val) => {
+          if (val === null) return "null";
+          if (val === undefined) return "undefined";
+          if (typeof val === "object") {
+            try { return JSON.stringify(val, null, 2); } catch { return String(val); }
+          }
+          return String(val);
+        };
+        const capture = (type) => (...args) => {
+          logs.push({ type, message: args.map(serialize).join(" ") });
+        };
+        console.log = capture("log");
+        console.info = capture("info");
+        console.warn = capture("warn");
+        console.error = capture("error");
+
+        self.onmessage = function(e) {
+          const code = e.data;
+          const start = performance.now();
+          try {
+            const fn = new Function(code);
+            const result = fn();
+            const duration = Math.round(performance.now() - start);
+            if (result !== undefined) {
+              logs.push({ type: "return", message: serialize(result) });
+            }
+            self.postMessage({ ok: true, logs, duration });
+          } catch (err) {
+            self.postMessage({ ok: false, error: err instanceof Error ? err.message : String(err), logs });
+          }
+        };
+      `;
+
+      const blob = new Blob([workerCode], { type: "application/javascript" });
+      const workerUrl = URL.createObjectURL(blob);
+      const worker = new Worker(workerUrl);
+
+      const timeoutId = setTimeout(() => {
+        worker.terminate();
+        URL.revokeObjectURL(workerUrl);
+        setRunningScript(false);
+        setRunnerOutput({ logs: [], error: "Execution timed out (limit: 3000ms)." });
+      }, 3000);
+
+      worker.onmessage = (e) => {
+        clearTimeout(timeoutId);
+        worker.terminate();
+        URL.revokeObjectURL(workerUrl);
+        setRunningScript(false);
+        if (e.data.ok) {
+          setRunnerOutput({ logs: e.data.logs, duration: e.data.duration });
+        } else {
+          setRunnerOutput({ logs: e.data.logs, error: e.data.error });
+        }
+      };
+
+      worker.onerror = (err) => {
+        clearTimeout(timeoutId);
+        worker.terminate();
+        URL.revokeObjectURL(workerUrl);
+        setRunningScript(false);
+        setRunnerOutput({ logs: [], error: err.message || "Script execution failed." });
+      };
+
+      worker.postMessage(paste.content);
+    } catch (e) {
+      setRunningScript(false);
+      setRunnerOutput({ logs: [], error: e instanceof Error ? e.message : "Failed to initialize runner." });
+    }
+  }
 
   async function refreshPaste() {
     const [pasteResponse, commentsResponse] = await Promise.all([
@@ -727,15 +869,48 @@ export function PublicPasteShell({
                 </form>
               </CardContent>
             </Card>
+          ) : isE2EE && !isE2EEDecrypted ? (
+            <Card className="border-emerald-500/30 bg-emerald-500/5">
+              <CardContent className="space-y-4 p-6">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-emerald-500/10 p-3 text-emerald-400">
+                    <ShieldCheck className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-foreground">Zero-Knowledge Encrypted Paste</h2>
+                    <p className="text-sm text-muted-foreground">
+                      This paste was encrypted in the creator&apos;s browser using AES-256-GCM. The decryption key is required to read its content.
+                    </p>
+                  </div>
+                </div>
+                <form className="flex flex-col sm:flex-row gap-3" onSubmit={handleManualE2EEUnlock}>
+                  <Input
+                    type="text"
+                    value={e2eeKey}
+                    onChange={(e) => setE2eeKey(e.target.value)}
+                    placeholder="Enter 256-bit decryption key (e.g. from #key=...)"
+                    className="font-mono text-xs"
+                  />
+                  <Button type="submit" className="shrink-0 bg-emerald-600 hover:bg-emerald-500 text-white">
+                    Decrypt Paste
+                  </Button>
+                </form>
+                {e2eeError ? <p className="text-sm text-destructive">{e2eeError}</p> : null}
+              </CardContent>
+            </Card>
           ) : (
             <div className="space-y-6">
-              {paste.tags.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {paste.tags.map((tag) => (
-                    <Badge key={tag}>#{tag}</Badge>
-                  ))}
-                </div>
-              ) : null}
+              <div className="flex flex-wrap items-center gap-2">
+                {isE2EEDecrypted ? (
+                  <Badge className="border-emerald-500/40 bg-emerald-500/10 text-emerald-400 gap-1.5 py-1 px-2.5">
+                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                    <span>Zero-Knowledge Decrypted (E2EE)</span>
+                  </Badge>
+                ) : null}
+                {paste.tags.map((tag) => (
+                  <Badge key={tag}>#{tag}</Badge>
+                ))}
+              </div>
 
               <div className="flex flex-col gap-3">
                 <div className="no-print flex flex-col gap-3 rounded-[1rem] border border-border/80 bg-muted/30 px-3 py-2 dark:bg-black/20 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
@@ -797,6 +972,19 @@ export function PublicPasteShell({
                     <span className="text-xs text-muted-foreground">{copy.codeView}</span>
                   )}
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                    {(paste.language === "javascript" || paste.language === "typescript") && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={runningScript}
+                        className="h-8 gap-1.5 border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10 hover:text-cyan-300"
+                        onClick={runScript}
+                      >
+                        <Play className="h-3.5 w-3.5 fill-current" />
+                        {runningScript ? "Running…" : "Run Code"}
+                      </Button>
+                    )}
                     <label className="flex cursor-pointer items-center gap-2 select-none">
                       <input
                         type="checkbox"
@@ -856,6 +1044,60 @@ export function PublicPasteShell({
                     showLineSeparators={showLineSeparators}
                     wrapLongLines={wrapLongLines}
                   />
+                )}
+
+                {runnerOutput !== null && (
+                  <div className="mt-3 rounded-[1.25rem] border border-cyan-500/30 bg-black/90 p-4 font-mono text-xs text-white shadow-xl">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-2.5 mb-3">
+                      <div className="flex items-center gap-2 text-cyan-400 font-semibold">
+                        <Terminal className="h-4 w-4" />
+                        <span>Console Output</span>
+                        {runnerOutput.duration !== undefined && (
+                          <span className="text-[11px] font-normal text-muted-foreground">({runnerOutput.duration}ms)</span>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 px-2 text-muted-foreground hover:text-white"
+                        onClick={() => setRunnerOutput(null)}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    {runnerOutput.error && (
+                      <div className="rounded bg-rose-500/10 border border-rose-500/20 p-2 text-rose-400 mb-2">
+                        Error: {runnerOutput.error}
+                      </div>
+                    )}
+                    {runnerOutput.logs.length === 0 && !runnerOutput.error ? (
+                      <p className="text-muted-foreground italic">Code executed with no output or return value.</p>
+                    ) : (
+                      <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                        {runnerOutput.logs.map((log, idx) => (
+                          <div
+                            key={idx}
+                            className={cn(
+                              "flex items-start gap-2 whitespace-pre-wrap font-mono leading-relaxed",
+                              log.type === "error"
+                                ? "text-rose-400"
+                                : log.type === "warn"
+                                ? "text-amber-300"
+                                : log.type === "return"
+                                ? "text-emerald-400"
+                                : "text-slate-200"
+                            )}
+                          >
+                            <span className="text-muted-foreground select-none opacity-60">
+                              {log.type === "return" ? "←" : ">"}
+                            </span>
+                            <span>{log.message}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 

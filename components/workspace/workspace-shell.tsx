@@ -55,6 +55,7 @@ import {
   Scissors,
   Search,
   Shield,
+  ShieldCheck,
   Share2,
   Star,
   Trash2,
@@ -97,6 +98,7 @@ import {
   type WorkspaceTutorialTour
 } from "@/components/workspace/workspace-tutorial";
 import { applyShiftTab, applyTab } from "@/lib/editor-indent";
+import { isE2EEPayload, generateE2EEKey, encryptPasteClient, decryptPasteClient } from "@/lib/paste-e2ee";
 import {
   isLightSyntaxTheme,
   normalizeSyntaxTheme,
@@ -2647,6 +2649,47 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
       updatedAt: new Date().toISOString()
     }));
     setStatus("Restored a previous version into the editor (save to persist).");
+  }
+
+  async function handleEncryptCurrentPasteE2EE() {
+    if (!selectedPaste) return;
+    try {
+      const key = generateE2EEKey();
+      const encrypted = await encryptPasteClient(key, {
+        title: selectedPaste.title,
+        content: selectedPaste.content,
+        files: selectedPaste.files
+      });
+      updateSelectedPaste((p) => ({
+        ...p,
+        content: encrypted,
+        updatedAt: new Date().toISOString()
+      }));
+      const fullUrl = `${window.location.origin}/p/${selectedPaste.slug || ""}?#key=${key}`;
+      await navigator.clipboard.writeText(fullUrl).catch(() => {});
+      setStatus("Encrypted with AES-256! Share URL with #key copied to clipboard.");
+    } catch (e) {
+      setStatus(`Encryption failed: ${e instanceof Error ? e.message : "Unknown error"}`);
+    }
+  }
+
+  async function handleDecryptCurrentPasteE2EE() {
+    if (!selectedPaste) return;
+    const key = window.prompt("Enter the 256-bit decryption key to unlock this paste:");
+    if (!key) return;
+    try {
+      const decrypted = await decryptPasteClient(key.trim(), selectedPaste.content);
+      updateSelectedPaste((p) => ({
+        ...p,
+        title: decrypted.title || p.title,
+        content: decrypted.content,
+        files: decrypted.files || p.files,
+        updatedAt: new Date().toISOString()
+      }));
+      setStatus("Successfully decrypted paste in workspace editor.");
+    } catch (e) {
+      setStatus(`Decryption failed: ${e instanceof Error ? e.message : "Invalid key"}`);
+    }
   }
 
   function leavePublicFeedForNewWorkspacePaste() {
@@ -6392,6 +6435,45 @@ export function WorkspaceShell({ sessionUser, initialForkSlug, initialTutorialRe
                       </span>
                     </span>
                   </label>
+                  <div className="rounded-[1.2rem] border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 font-medium text-emerald-400">
+                        <ShieldCheck className="h-4 w-4" />
+                        <span>Zero-Knowledge E2EE (AES-256)</span>
+                      </div>
+                      {isE2EEPayload(selectedPaste.content) ? (
+                        <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-300">
+                          Encrypted
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Client-side AES-256-GCM encryption. The key is never sent to the server and only exists in the share link fragment (#key=...).
+                    </p>
+                    <div className="mt-3 flex gap-2">
+                      {isE2EEPayload(selectedPaste.content) ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-8 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10"
+                          onClick={handleDecryptCurrentPasteE2EE}
+                        >
+                          Decrypt to Edit
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-8 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10"
+                          onClick={handleEncryptCurrentPasteE2EE}
+                        >
+                          Encrypt Client-Side
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                   <label className="flex w-full cursor-pointer items-center gap-3 rounded-[1.2rem] border border-border bg-muted/40 px-4 py-3 text-sm">
                     <input
                       checked={selectedPaste.captchaRequired}

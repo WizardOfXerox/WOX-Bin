@@ -41,10 +41,35 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const title = result.paste.title?.trim() || slug;
   const description = result.paste.content.trim().slice(0, 160) || "Shared paste on WOX-Bin.";
+  const ogImageUrl = `/api/og/paste/${slug}`;
 
   return {
     title,
-    description
+    description,
+    openGraph: {
+      title,
+      description,
+      siteName: "WOX-Bin",
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: title
+        }
+      ]
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImageUrl]
+    },
+    alternates: {
+      types: {
+        "application/json+oembed": `/api/oembed?url=/p/${encodeURIComponent(slug)}&format=json`
+      }
+    }
   };
 }
 
