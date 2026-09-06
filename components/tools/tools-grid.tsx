@@ -20,7 +20,11 @@ import {
   Scissors,
   FileText,
   Cpu,
-  ShieldCheck
+  ShieldCheck,
+  MessageCircleMore,
+  FileDiff,
+  KeyRound,
+  QrCode
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -38,7 +42,12 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Code2,
   Merge,
   Scissors,
-  FileText
+  FileText,
+  ShieldCheck,
+  MessageCircleMore,
+  FileDiff,
+  KeyRound,
+  QrCode
 };
 
 export type ToolItem = {

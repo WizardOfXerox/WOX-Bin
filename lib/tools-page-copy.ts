@@ -96,6 +96,34 @@ export const TOOLS_PAGE_COPY: Record<UiLanguage, ToolsPageCopy> = {
       "/tools/text-convert": {
         title: "Text to HTML",
         description: "Escape text to HTML or strip tags back to plain text."
+      },
+      "/tools/chat": {
+        title: "Encrypted chat",
+        description: "Spin up a temporary encrypted room where the server only sees ciphertext."
+      },
+      "/tools/snapshot": {
+        title: "Encrypted snapshot",
+        description: "Freeze a client-side encrypted text snapshot with a fragment key."
+      },
+      "/tools/proof": {
+        title: "Proof receipt",
+        description: "Hash text or files, timestamp the digest, and share a verification receipt."
+      },
+      "/tools/shorten": {
+        title: "Short link",
+        description: "Store a compact redirect slug with a privacy-focused no-referrer handoff."
+      },
+      "/tools/diff": {
+        title: "Diff checker",
+        description: "Compare text or code side-by-side with character-level accuracy."
+      },
+      "/tools/jwt": {
+        title: "JWT inspector",
+        description: "Decode and inspect JSON Web Tokens offline with claims validation."
+      },
+      "/tools/qr": {
+        title: "QR code studio",
+        description: "Generate custom vector SVG and high-res PNG QR codes offline."
       }
     }
   },
@@ -169,6 +197,34 @@ export const TOOLS_PAGE_COPY: Record<UiLanguage, ToolsPageCopy> = {
       "/tools/text-convert": {
         title: "Text to HTML",
         description: "I-escape ang text papuntang HTML o alisin ang tags pabalik sa plain text."
+      },
+      "/tools/chat": {
+        title: "Encrypted chat",
+        description: "Magbukas ng encrypted temporary room kung saan ciphertext lang ang nakikita ng server."
+      },
+      "/tools/snapshot": {
+        title: "Encrypted snapshot",
+        description: "I-freeze ang client-side encrypted text snapshot gamit ang fragment key."
+      },
+      "/tools/proof": {
+        title: "Proof receipt",
+        description: "I-hash ang text o file, lagyan ng timestamp ang digest, at magbahagi ng verification receipt."
+      },
+      "/tools/shorten": {
+        title: "Short link",
+        description: "Mag-save ng compact redirect slug gamit ang privacy-focused no-referrer handoff."
+      },
+      "/tools/diff": {
+        title: "Diff checker",
+        description: "Ihambing ang text o code nang magkatabi na may character-level accuracy."
+      },
+      "/tools/jwt": {
+        title: "JWT inspector",
+        description: "I-decode at suriin ang JSON Web Tokens offline nang may claims validation."
+      },
+      "/tools/qr": {
+        title: "QR code studio",
+        description: "Gumawa ng custom vector SVG at high-res PNG QR codes offline."
       }
     }
   },
@@ -242,6 +298,34 @@ export const TOOLS_PAGE_COPY: Record<UiLanguage, ToolsPageCopy> = {
       "/tools/text-convert": {
         title: "テキストから HTML",
         description: "テキストを HTML 用にエスケープするか、タグを取り除いてプレーンテキストへ戻します。"
+      },
+      "/tools/chat": {
+        title: "暗号化チャット",
+        description: "サーバーには暗号文しか見えない一時的な暗号化チャットルームを作成します。"
+      },
+      "/tools/snapshot": {
+        title: "暗号化スナップショット",
+        description: "フラグメントキー付きでクライアント側暗号化テキストスナップショットを固定します。"
+      },
+      "/tools/proof": {
+        title: "存在証明レシート",
+        description: "テキストやファイルをハッシュ化して時刻付きの検証レシートを発行します。"
+      },
+      "/tools/shorten": {
+        title: "短縮リンク",
+        description: "リファラーを秘匿するプライバシー対応の短い転送リンクを生成します。"
+      },
+      "/tools/diff": {
+        title: "差分チェッカー",
+        description: "テキストやコードを並べて文字単位の高精度で比較します。"
+      },
+      "/tools/jwt": {
+        title: "JWT インスペクター",
+        description: "JSON Web Token をブラウザ内でオフライン解析・検証します。"
+      },
+      "/tools/qr": {
+        title: "QR コードスタジオ",
+        description: "ベクター SVG や高解像度 PNG の QR コードをオフライン生成します。"
       }
     }
   },
@@ -315,6 +399,34 @@ export const TOOLS_PAGE_COPY: Record<UiLanguage, ToolsPageCopy> = {
       "/tools/text-convert": {
         title: "Texto a HTML",
         description: "Escapa texto a HTML o elimina etiquetas para volver a texto plano."
+      },
+      "/tools/chat": {
+        title: "Chat cifrado",
+        description: "Crea una sala temporal cifrada donde el servidor solo ve texto cifrado."
+      },
+      "/tools/snapshot": {
+        title: "Snapshot cifrado",
+        description: "Congela un snapshot de texto cifrado en el cliente con clave de fragmento."
+      },
+      "/tools/proof": {
+        title: "Recibo de prueba",
+        description: "Calcula el hash de texto o archivos y comparte un recibo de verificación con marca de tiempo."
+      },
+      "/tools/shorten": {
+        title: "Enlace corto",
+        description: "Guarda un slug de redirección compacto con transferencia privada sin remitente."
+      },
+      "/tools/diff": {
+        title: "Comparador de diferencias",
+        description: "Compara texto o código lado a lado con precisión a nivel de caracteres."
+      },
+      "/tools/jwt": {
+        title: "Inspector JWT",
+        description: "Decodifica e inspecciona JSON Web Tokens sin conexión con validación de claims."
+      },
+      "/tools/qr": {
+        title: "Estudio de códigos QR",
+        description: "Genera códigos QR personalizados en SVG vectorial y PNG de alta resolución offline."
       }
     }
   }

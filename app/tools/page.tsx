@@ -116,6 +116,62 @@ const featuredTools: ToolItem[] = [
     iconName: "FileText",
     category: "convert",
     isLocal: true
+  },
+  {
+    title: "Diff checker",
+    description: "Compare text or code side-by-side with character-level accuracy.",
+    href: "/tools/diff",
+    iconName: "FileDiff",
+    category: "data",
+    isLocal: true
+  },
+  {
+    title: "JWT inspector",
+    description: "Decode and inspect JSON Web Tokens offline with claims validation.",
+    href: "/tools/jwt",
+    iconName: "KeyRound",
+    category: "data",
+    isLocal: true
+  },
+  {
+    title: "QR code studio",
+    description: "Generate custom vector SVG and high-res PNG QR codes offline.",
+    href: "/tools/qr",
+    iconName: "QrCode",
+    category: "data",
+    isLocal: true
+  },
+  {
+    title: "Encrypted chat",
+    description: "Spin up a temporary encrypted room where the server only sees ciphertext.",
+    href: "/tools/chat",
+    iconName: "MessageCircleMore",
+    category: "privacy",
+    isLocal: true
+  },
+  {
+    title: "Encrypted snapshot",
+    description: "Freeze a client-side encrypted text snapshot with a fragment key.",
+    href: "/tools/snapshot",
+    iconName: "Lock",
+    category: "privacy",
+    isLocal: true
+  },
+  {
+    title: "Proof receipt",
+    description: "Hash text or files, timestamp the digest, and share a verification receipt.",
+    href: "/tools/proof",
+    iconName: "ShieldCheck",
+    category: "privacy",
+    isLocal: true
+  },
+  {
+    title: "Short link",
+    description: "Store a compact redirect slug with a privacy-focused no-referrer handoff.",
+    href: "/tools/shorten",
+    iconName: "Link2",
+    category: "privacy",
+    isLocal: false
   }
 ];
 
