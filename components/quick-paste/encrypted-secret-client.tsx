@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, Copy, ExternalLink, Flame, LockKeyhole, ShieldCheck } from "lucide-react";
+import { Check, Copy, ExternalLink, Eye, EyeOff, Flame, Key, LockKeyhole, RefreshCw, ShieldCheck } from "lucide-react";
 
 import { readTurnstileToken, resetTurnstileFields, TurnstileField } from "@/components/turnstile-field";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { createShareKey, encryptJsonWithKey } from "@/lib/privacy-crypto";
+import { createShareKey, deriveKeyFromPassphrase, encryptJsonWithKey } from "@/lib/privacy-crypto";
 
 const EXPIRY_OPTIONS = [
   { value: "1-day", label: "1 day" },
@@ -26,21 +26,41 @@ type SecretCreateResponse = {
   expiresAt: string | null;
 };
 
+function generateRandomPassphrase(): string {
+  const words = [
+    "amber", "breeze", "cedar", "drift", "echo", "frost", "glyph", "haven",
+    "iris", "jade", "kestrel", "lunar", "mesa", "nexus", "orbit", "prism",
+    "quartz", "ridge", "shadow", "timber", "umbra", "vapor", "whisper", "zenith"
+  ];
+  const bytes = new Uint8Array(4);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes)
+    .map((b) => words[b % words.length])
+    .join("-");
+}
+
 export function EncryptedSecretClient() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [expiresPreset, setExpiresPreset] = useState<(typeof EXPIRY_OPTIONS)[number]["value"]>("7-days");
   const [burnAfterRead, setBurnAfterRead] = useState(true);
+  const [protectionMode, setProtectionMode] = useState<"key" | "passphrase">("key");
+  const [passphrase, setPassphrase] = useState("");
+  const [showPassphrase, setShowPassphrase] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [shareUrl, setShareUrl] = useState("");
   const [manageUrl, setManageUrl] = useState("");
-  const [copied, setCopied] = useState<"share" | "manage" | null>(null);
+  const [copied, setCopied] = useState<"share" | "manage" | "passphrase" | null>(null);
 
   const sizeLabel = useMemo(() => `${new Blob([content]).size.toLocaleString()} bytes`, [content]);
 
-  async function copyValue(kind: "share" | "manage") {
-    const value = kind === "share" ? shareUrl : manageUrl;
+  async function copyValue(kind: "share" | "manage" | "passphrase") {
+    let value = "";
+    if (kind === "share") value = shareUrl;
+    else if (kind === "manage") value = manageUrl;
+    else if (kind === "passphrase") value = passphrase;
+
     if (!value) {
       return;
     }
@@ -61,7 +81,23 @@ export function EncryptedSecretClient() {
         return;
       }
 
-      const key = createShareKey();
+      if (protectionMode === "passphrase" && (!passphrase.trim() || passphrase.trim().length < 6)) {
+        setError("Passphrase must be at least 6 characters long.");
+        return;
+      }
+
+      let key: string;
+      let fragmentHash: string;
+
+      if (protectionMode === "passphrase") {
+        const derived = await deriveKeyFromPassphrase(passphrase.trim());
+        key = derived.key;
+        fragmentHash = `p:${derived.salt}`;
+      } else {
+        key = createShareKey();
+        fragmentHash = key;
+      }
+
       const encrypted = await encryptJsonWithKey(key, {
         title: title.trim() || "Encrypted secret",
         content
@@ -87,7 +123,7 @@ export function EncryptedSecretClient() {
         return;
       }
 
-      setShareUrl(`${body.shareUrl}#${key}`);
+      setShareUrl(`${body.shareUrl}#${fragmentHash}`);
       setManageUrl(`${body.manageUrl}#${body.manageToken}`);
     } finally {
       resetTurnstileFields();
@@ -141,6 +177,80 @@ export function EncryptedSecretClient() {
               <p className="text-xs text-muted-foreground">Current size: {sizeLabel}</p>
             </div>
 
+            {/* Unlock Method Selection */}
+            <div className="space-y-3">
+              <label className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Unlock Method</label>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button
+                  className={`flex flex-col items-start rounded-xl border p-3 text-left transition-all ${
+                    protectionMode === "key"
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border bg-card/40 text-muted-foreground hover:bg-muted/40"
+                  }`}
+                  onClick={() => setProtectionMode("key")}
+                  type="button"
+                >
+                  <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Key className="size-4 text-primary" /> Key in URL
+                  </span>
+                  <span className="mt-1 text-xs text-muted-foreground">
+                    Fragment key auto-unlocks when recipient opens the link.
+                  </span>
+                </button>
+                <button
+                  className={`flex flex-col items-start rounded-xl border p-3 text-left transition-all ${
+                    protectionMode === "passphrase"
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border bg-card/40 text-muted-foreground hover:bg-muted/40"
+                  }`}
+                  onClick={() => setProtectionMode("passphrase")}
+                  type="button"
+                >
+                  <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <LockKeyhole className="size-4 text-primary" /> Passphrase
+                  </span>
+                  <span className="mt-1 text-xs text-muted-foreground">
+                    Recipient must enter a passphrase to derive key and decrypt (PBKDF2).
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {protectionMode === "passphrase" ? (
+              <div className="space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-foreground">Secret Passphrase</label>
+                  <button
+                    className="flex items-center gap-1 text-xs text-primary hover:underline"
+                    onClick={() => setPassphrase(generateRandomPassphrase())}
+                    type="button"
+                  >
+                    <RefreshCw className="size-3" /> Generate random
+                  </button>
+                </div>
+                <div className="relative">
+                  <Input
+                    className="pr-10"
+                    onChange={(e) => setPassphrase(e.target.value)}
+                    placeholder="Enter at least 6 characters..."
+                    type={showPassphrase ? "text" : "password"}
+                    value={passphrase}
+                  />
+                  <button
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowPassphrase(!showPassphrase)}
+                    tabIndex={-1}
+                    type="button"
+                  >
+                    {showPassphrase ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Key is derived locally via PBKDF2 with 100,000 iterations. Passphrase is never sent to WOX servers.
+                </p>
+              </div>
+            ) : null}
+
             <label className="flex items-start gap-3 rounded-[1.25rem] border border-border bg-muted/35 px-4 py-3 text-sm">
               <input
                 checked={burnAfterRead}
@@ -170,6 +280,25 @@ export function EncryptedSecretClient() {
                   <p className="text-sm font-medium text-foreground">Secret link</p>
                   <code className="mt-2 block break-all text-xs text-primary/90">{shareUrl}</code>
                 </div>
+                {protectionMode === "passphrase" && passphrase ? (
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs">
+                    <div className="flex items-center justify-between font-medium text-amber-200">
+                      <span>Passphrase required by recipient:</span>
+                      <Button
+                        className="h-6 text-xs text-amber-300 hover:text-amber-100"
+                        onClick={() => void copyValue("passphrase")}
+                        size="sm"
+                        variant="ghost"
+                      >
+                        {copied === "passphrase" ? "Copied" : "Copy passphrase"}
+                      </Button>
+                    </div>
+                    <code className="mt-1 block font-mono text-sm text-foreground">{passphrase}</code>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Send this passphrase via a separate channel (SMS, Signal, phone call) for maximum security.
+                    </p>
+                  </div>
+                ) : null}
                 <div>
                   <p className="text-sm font-medium text-foreground">Manage link</p>
                   <code className="mt-2 block break-all text-xs text-primary/90">{manageUrl}</code>

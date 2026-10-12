@@ -110,12 +110,12 @@ export const CONVERT_TOOLS: ConvertToolDefinition[] = [
   {
     id: "ico-generator",
     name: "Favicon / ICO",
-    description: "Pack multiple PNG sizes into a simple multi-resolution ICO from source images.",
+    description: "Pack multiple PNG sizes into a multi-resolution ICO from source images.",
     tier: "client",
-    status: "planned",
+    status: "live",
     category: "images",
-    href: null,
-    tags: ["ico", "png"]
+    href: "/tools/ico",
+    tags: ["ico", "png", "favicon"]
   },
   {
     id: "zip-toolbox",
@@ -132,10 +132,10 @@ export const CONVERT_TOOLS: ConvertToolDefinition[] = [
     name: "TAR / compressed TAR",
     description: "Inspect and extract .tar, .tar.gz, .tgz archives client-side where feasible.",
     tier: "client",
-    status: "planned",
+    status: "live",
     category: "archives",
-    href: null,
-    tags: ["tar", "gzip"]
+    href: "/tools/tar-gz",
+    tags: ["tar", "gzip", "tgz"]
   },
   {
     id: "csv-json",

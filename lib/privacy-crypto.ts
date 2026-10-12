@@ -117,3 +117,41 @@ export async function sha256Hex(buffer: BufferSource) {
 export async function sha256Text(value: string) {
   return sha256Hex(new TextEncoder().encode(value));
 }
+
+export async function deriveKeyFromPassphrase(
+  passphrase: string,
+  saltBytes?: Uint8Array
+): Promise<{ key: string; salt: string }> {
+  const salt = saltBytes ?? crypto.getRandomValues(new Uint8Array(16));
+  const enc = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(passphrase),
+    { name: "PBKDF2" },
+    false,
+    ["deriveBits", "deriveKey"]
+  );
+  const derivedKey = await crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: salt as BufferSource,
+      iterations: 100000,
+      hash: "SHA-256"
+    },
+    baseKey,
+    { name: "AES-GCM", length: 256 },
+    true,
+    ["encrypt", "decrypt"]
+  );
+  const rawDerived = await crypto.subtle.exportKey("raw", derivedKey);
+  return {
+    key: encodeBytes(new Uint8Array(rawDerived)),
+    salt: encodeBytes(salt)
+  };
+}
+
+export async function deriveKeyWithSalt(passphrase: string, saltBase64: string): Promise<string> {
+  const salt = decodeBytes(saltBase64);
+  const { key } = await deriveKeyFromPassphrase(passphrase, salt);
+  return key;
+}

@@ -38,6 +38,14 @@ const featuredTools: ToolItem[] = [
     isLocal: true
   },
   {
+    title: "Favicon / ICO studio",
+    description: "Pack multiple PNG resolutions (16×16 to 256×256) into a Windows .ico favicon offline.",
+    href: "/tools/ico",
+    iconName: "ImageIcon",
+    category: "convert",
+    isLocal: true
+  },
+  {
     title: "Data lab",
     description: "CSV ↔ JSON, TSV, JSON format, Base64, SHA-256 — local.",
     href: "/tools/data-lab",
@@ -81,6 +89,14 @@ const featuredTools: ToolItem[] = [
     title: "ZIP lab",
     description: "Pack files into .zip or extract entries with fflate.",
     href: "/tools/zip-lab",
+    iconName: "FileArchive",
+    category: "data",
+    isLocal: true
+  },
+  {
+    title: "TAR & .tar.gz reader",
+    description: "Inspect, browse, and extract .tar, .tar.gz, and .tgz archives offline with zero upload.",
+    href: "/tools/tar-gz",
     iconName: "FileArchive",
     category: "data",
     isLocal: true
@@ -138,6 +154,38 @@ const featuredTools: ToolItem[] = [
     description: "Generate custom vector SVG and high-res PNG QR codes offline.",
     href: "/tools/qr",
     iconName: "QrCode",
+    category: "data",
+    isLocal: true
+  },
+  {
+    title: "Hash & HMAC suite",
+    description: "Calculate MD5, SHA-1, SHA-256, SHA-384, SHA-512 hashes and HMAC signatures offline.",
+    href: "/tools/hash",
+    iconName: "Hash",
+    category: "data",
+    isLocal: true
+  },
+  {
+    title: "Regex tester & debugger",
+    description: "Real-time regular expression tester with visual highlights and substitution preview.",
+    href: "/tools/regex",
+    iconName: "Code2",
+    category: "data",
+    isLocal: true
+  },
+  {
+    title: "UUID / ULID / NanoID generator",
+    description: "Generate cryptographically secure UUIDv4, UUIDv7, ULID, and customizable NanoIDs.",
+    href: "/tools/uuid",
+    iconName: "Fingerprint",
+    category: "data",
+    isLocal: true
+  },
+  {
+    title: "Cron expression visualizer",
+    description: "Visual breakdown of 5-field and 6-field cron expressions with next execution dates.",
+    href: "/tools/cron",
+    iconName: "CalendarClock",
     category: "data",
     isLocal: true
   },

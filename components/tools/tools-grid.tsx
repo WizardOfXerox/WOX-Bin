@@ -24,7 +24,11 @@ import {
   MessageCircleMore,
   FileDiff,
   KeyRound,
-  QrCode
+  QrCode,
+  Hash,
+  Binary,
+  Fingerprint,
+  CalendarClock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -47,7 +51,11 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   MessageCircleMore,
   FileDiff,
   KeyRound,
-  QrCode
+  QrCode,
+  Hash,
+  Binary,
+  Fingerprint,
+  CalendarClock
 };
 
 export type ToolItem = {

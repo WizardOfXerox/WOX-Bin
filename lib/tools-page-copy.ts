@@ -124,6 +124,30 @@ export const TOOLS_PAGE_COPY: Record<UiLanguage, ToolsPageCopy> = {
       "/tools/qr": {
         title: "QR code studio",
         description: "Generate custom vector SVG and high-res PNG QR codes offline."
+      },
+      "/tools/ico": {
+        title: "Favicon / ICO studio",
+        description: "Pack multiple PNG resolutions (16×16 to 256×256) into a Windows .ico favicon offline."
+      },
+      "/tools/tar-gz": {
+        title: "TAR & .tar.gz reader",
+        description: "Inspect, browse, and extract .tar, .tar.gz, and .tgz archives offline with zero upload."
+      },
+      "/tools/hash": {
+        title: "Hash & HMAC suite",
+        description: "Calculate MD5, SHA-1, SHA-256, SHA-384, SHA-512 hashes and HMAC signatures offline."
+      },
+      "/tools/regex": {
+        title: "Regex tester & debugger",
+        description: "Real-time regular expression tester with visual highlights and substitution preview."
+      },
+      "/tools/uuid": {
+        title: "UUID / ULID / NanoID generator",
+        description: "Generate cryptographically secure UUIDv4, UUIDv7, ULID, and customizable NanoIDs."
+      },
+      "/tools/cron": {
+        title: "Cron expression visualizer",
+        description: "Visual breakdown of 5-field and 6-field cron expressions with next execution dates."
       }
     }
   },
@@ -225,6 +249,30 @@ export const TOOLS_PAGE_COPY: Record<UiLanguage, ToolsPageCopy> = {
       "/tools/qr": {
         title: "QR code studio",
         description: "Gumawa ng custom vector SVG at high-res PNG QR codes offline."
+      },
+      "/tools/ico": {
+        title: "Favicon / ICO studio",
+        description: "Mag-pack ng iba't ibang resolusyon ng PNG (16×16 hanggang 256×256) sa Windows .ico favicon offline."
+      },
+      "/tools/tar-gz": {
+        title: "TAR at .tar.gz reader",
+        description: "Suriin, buksan, at i-extract ang .tar, .tar.gz, at .tgz archives offline nang walang upload."
+      },
+      "/tools/hash": {
+        title: "Hash at HMAC suite",
+        description: "Kalkulahin ang MD5, SHA-1, SHA-256, SHA-384, SHA-512 hashes at HMAC signatures offline."
+      },
+      "/tools/regex": {
+        title: "Regex tester at debugger",
+        description: "Real-time regular expression tester na may visual highlights at substitution preview."
+      },
+      "/tools/uuid": {
+        title: "UUID / ULID / NanoID generator",
+        description: "Gumawa ng secure na UUIDv4, UUIDv7, ULID, at customizable NanoIDs."
+      },
+      "/tools/cron": {
+        title: "Cron expression visualizer",
+        description: "Visual na paliwanag ng 5-field at 6-field cron expressions na may susunod na execution dates."
       }
     }
   },
@@ -326,6 +374,30 @@ export const TOOLS_PAGE_COPY: Record<UiLanguage, ToolsPageCopy> = {
       "/tools/qr": {
         title: "QR コードスタジオ",
         description: "ベクター SVG や高解像度 PNG の QR コードをオフライン生成します。"
+      },
+      "/tools/ico": {
+        title: "ファビコン / ICO スタジオ",
+        description: "複数の PNG 解像度 (16×16〜256×256) をブラウザ内で Windows .ico ファビコンに結合します。"
+      },
+      "/tools/tar-gz": {
+        title: "TAR / .tar.gz リーダー",
+        description: ".tar、.tar.gz、.tgz アーカイブをアップロード不要でオフライン閲覧・展開します。"
+      },
+      "/tools/hash": {
+        title: "ハッシュ & HMAC スイート",
+        description: "MD5、SHA-1、SHA-256、SHA-384、SHA-512 ハッシュと HMAC 署名をオフライン計算します。"
+      },
+      "/tools/regex": {
+        title: "正規表現テスター & デバッガー",
+        description: "マッチ箇所のハイライトと置換プレビューを備えたリアルタイム正規表現テスター。"
+      },
+      "/tools/uuid": {
+        title: "UUID / ULID / NanoID 生成器",
+        description: "暗号学的に安全な UUIDv4、UUIDv7、ULID、カスタム NanoID を一括生成します。"
+      },
+      "/tools/cron": {
+        title: "Cron 式ビジュアライザー",
+        description: "5フィールドおよび6フィールドの Cron 式の視覚的解説と次回実行日時のプレビュー。"
       }
     }
   },
@@ -427,6 +499,30 @@ export const TOOLS_PAGE_COPY: Record<UiLanguage, ToolsPageCopy> = {
       "/tools/qr": {
         title: "Estudio de códigos QR",
         description: "Genera códigos QR personalizados en SVG vectorial y PNG de alta resolución offline."
+      },
+      "/tools/ico": {
+        title: "Estudio de Favicon / ICO",
+        description: "Empaqueta múltiples resoluciones PNG (16×16 a 256×256) en un favicon .ico de Windows sin conexión."
+      },
+      "/tools/tar-gz": {
+        title: "Lector TAR y .tar.gz",
+        description: "Inspecciona, explora y extrae archivos .tar, .tar.gz y .tgz sin conexión y sin subidas."
+      },
+      "/tools/hash": {
+        title: "Suite de Hash y HMAC",
+        description: "Calcula hashes MD5, SHA-1, SHA-256, SHA-384, SHA-512 y firmas HMAC sin conexión."
+      },
+      "/tools/regex": {
+        title: "Probador y depurador Regex",
+        description: "Probador de expresiones regulares en tiempo real con resaltado visual y vista previa de sustitución."
+      },
+      "/tools/uuid": {
+        title: "Generador UUID / ULID / NanoID",
+        description: "Genera UUIDv4, UUIDv7, ULID y NanoIDs personalizables criptográficamente seguros."
+      },
+      "/tools/cron": {
+        title: "Visualizador de expresiones Cron",
+        description: "Desglose visual de expresiones cron de 5 y 6 campos con próximas fechas de ejecución."
       }
     }
   }
